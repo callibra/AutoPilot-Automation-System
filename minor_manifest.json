@@ -19,10 +19,11 @@
       "targetPath": "C:\\AutoPilot\\Dll\\NetMonitor.dll"
     },
 	  "name": "settings.json",
-      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/seetings.json",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/settings.json",
       "sha256": "91ABD1252546AA8787A859587358CC98D10728B133495EC7EF322A352318CA92",
       "targetPath": "C:\\AutoPilot\\JSON\\settings.json"
   ]
 }
+
 
 
