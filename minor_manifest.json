@@ -1,12 +1,12 @@
 {
   "files": [
     {
-      "name": "Docker.ps1 v1.0.0 to v1.0.1",
+      "name": "Docker.ps1",
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/Docker.ps1",
       "sha256": "2A97516C354B68848CDBD8F54A226A0A55B21ED138E207AD6C5CBB9C00AA5AEA"
     },
     {
-      "name": "Cleaner.ps1 v1.0.0 to v1.0.1",
+      "name": "Cleaner.ps1",
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/Cleaner.ps1",
       "sha256": "2A97516C354B68848CDBD8F54A226A0A55B21ED138E207AD6C5CBB9C00AA5AEA"
     }
