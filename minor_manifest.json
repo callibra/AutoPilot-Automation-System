@@ -4,19 +4,19 @@
       "name": "Docker.ps1",
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/Docker.ps1",
       "sha256": "2A97516C354B68848CDBD8F54A226A0A55B21ED138E207AD6C5CBB9C00AA5AEA",
-	  "targetPath": "C:\\AutoPilot\\"
+      "targetPath": "C:\\AutoPilot\\"
     },
     {
       "name": "Cleaner.ps1",
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/Cleaner.ps1",
       "sha256": "2A97516C354B68848CDBD8F54A226A0A55B21ED138E207AD6C5CBB9C00AA5AEA",
-	  "targetPath": "C:\\AutoPilot\\"
+      "targetPath": "C:\\AutoPilot\\"
     },
-	{
+    {
       "name": "NetMonitor.dll",
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/NetMonitor.dll",
       "sha256": "383FF0D198E8860340EC0E6EF967820124611425FC74D279C4F4F7938C817EA5",
-	  "targetPath": "C:\\AutoPilot\\Dll\\NetMonitor.dll"
+      "targetPath": "C:\\AutoPilot\\Dll\\NetMonitor.dll"
     }
   ]
-}  
+}
