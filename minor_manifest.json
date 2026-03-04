@@ -1,10 +1,10 @@
 {
   "files": [
     {
-      "name": "Docker.ps1",
-      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/Docker.ps1",
-      "sha256": "2A97516C354B68848CDBD8F54A226A0A55B21ED138E207AD6C5CBB9C00AA5AEA",
-      "targetPath": "C:\\AutoPilot\\Docker.ps1"
+      "name": "SetDocker.ps1",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/SetDocker.ps1",
+      "sha256": "86F806E1B3CBC06158B27361C3E1C4C2FD2B460A68DA411ED9729006361E6EF3",
+      "targetPath": "C:\\AutoPilot\\SetDocker.ps1"
     },
     {
       "name": "Cleaner.ps1",
@@ -26,6 +26,7 @@
     }
   ]
 }
+
 
 
 
