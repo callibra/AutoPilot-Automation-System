@@ -29,10 +29,21 @@
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Docker.ps1",
       "sha256": "A3D929D46ED64A7F218E8BCE781CD90A45AFABA51BC6F4EFFA586320FF413CE2",
       "targetPath": "C:\\AutoPilot\\Docker.ps1"
+    },
+    {
+      "name": "SetUp.pdf",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/SetUp.pdf",
+      "sha256": "D676F4CC52461C15A12A4D8935907466D3DC976D9DB3771BA4C6BA5EA22EB8E8",
+      "targetPath": "C:\\AutoPilot\\media\\SetUp.pdf"
+    },
+	{
+      "name": "ScriptsEditor.exe",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/ScriptsEditor.exe",
+      "sha256": "1A89C9065876271F96D6F44EB46006F3FD7FE0E0F2DEF49298821F54E419CBD6",
+      "targetPath": "C:\\AutoPilot\\ScriptsEditor.exe"
     }
   ]
 }
-
 
 
 
