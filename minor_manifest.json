@@ -27,7 +27,7 @@
 	{
       "name": "Docker.ps1",
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/v1.0.1/Docker.ps1",
-      "sha256": "A3D929D46ED64A7F218E8BCE781CD90A45AFABA51BC6F4EFFA586320FF413CE2",
+      "sha256": "C6F3AC57944A531490CD39902D0F777715FD005EFAC9A30622D5F5205E7F6894",
       "targetPath": "C:\\AutoPilot\\Docker.ps1"
     },
     {
