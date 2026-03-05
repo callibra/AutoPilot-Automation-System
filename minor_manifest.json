@@ -23,9 +23,16 @@
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/settings.json",
       "sha256": "91ABD1252546AA8787A859587358CC98D10728B133495EC7EF322A352318CA92",
       "targetPath": "C:\\AutoPilot\\JSON\\settings.json"
+    },
+	{
+      "name": "Docker.ps1",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/Silent/Docker.ps1",
+      "sha256": "86F806E1B3CBC06158B27361C3E1C4C2FD2B460A68DA411ED9729006361E6EF3",
+      "targetPath": "C:\\AutoPilot\\Docker.ps1"
     }
   ]
 }
+
 
 
 
