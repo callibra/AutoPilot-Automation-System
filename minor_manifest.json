@@ -41,13 +41,24 @@
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/SilentUpdate/ScriptsEditor.exe",
       "sha256": "1A89C9065876271F96D6F44EB46006F3FD7FE0E0F2DEF49298821F54E419CBD6",
       "targetPath": "C:\\AutoPilot\\ScriptsEditor.exe"
+    },
+	{
+      "name": "Defender.ps1",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/SilentUpdate/Defender.ps1",
+      "sha256": "28EFBC4FFB2211A48B0EDA127086D14EB6F364DF953660AC3ABF2730313AF9B4",
+      "targetPath": "C:\\AutoPilot\\Defender.ps1"
+    },
+    {
+      "name": "Pi.ps1",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/SilentUpdate/Pi.ps1",
+      "sha256": "3F1EDC65D8D0CEB8000F7AF002699AC92E613C3CD1A8DEB52E8AC98C88C3B2C3",
+      "targetPath": "C:\\AutoPilot\\Pi.ps1"
+    },
+	{
+      "name": "Media.ps1",
+      "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/SilentUpdate/Media.ps1",
+      "sha256": "6BB069FA22CDFFC91528C5EB294C5D91CECFD5D22587A38A1F46237706CD23EE",
+      "targetPath": "C:\\AutoPilot\\Media.ps1"
     }
   ]
 }
-
-
-
-
-
-
-
