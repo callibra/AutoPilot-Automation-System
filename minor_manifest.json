@@ -3,12 +3,13 @@
     {
       "name": "SetDocker.ps1",
       "url": "https://github.com/callibra/AutoPilot-Automation-System/releases/download/SilentUpdate/SetDocker.ps1",
-      "sha256": "86F806E1B3CBC06158B27361C3E1C4C2FD2B460A68DA411ED9729006361E6EF3",
+      "sha256": "4BC7EC6DAB914972AB94D76CFEEEA4EBDF5C4C18E4340C51572A0DCC9CB2DC4B",
       "targetPath": ".\\AutoPilot\\SetDocker.ps1"
     }
   ]
 
 }
+
 
 
 
