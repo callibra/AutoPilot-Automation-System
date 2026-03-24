@@ -6,7 +6,7 @@
 
 <div align="left">
     <h2 style="display: inline; margin-right: 10px;">Download AutoPilot Latest Release: ⬇️</h2>
-    <a href="[https://example.com/download](https://github.com/callibra/AutoPilot-Automation-System/releases)" title="Download AutoPilot Latest Release">
+    <a href="https://github.com/callibra/AutoPilot-Automation-System/releases" title="Download AutoPilot Latest Release">
         <img src="https://img.shields.io/badge/Download -A627F5?style=for-the-badge&logo=download&logoColor=fff" height="35" align="center"/>
     </a>
 </div>
