@@ -1,0 +1,13 @@
+﻿{
+    "DockerPath":  "Your Docker Path",
+    "DockerCliPath":  "Your Docker Cli",
+    "DockerDesktopPath":  "Your Docker Desktop Path",
+    "SwapFolderPath":  "Your Docker Swap Folder Path",
+    "Containers":  [
+                       "Your Docker Containers"
+                   ],
+    "wifi1":  "SSID 1",
+    "wifi2":  "SSID 2",
+    "TendaToBeniTime":  null,
+    "BeniToTendaTime":  null
+}

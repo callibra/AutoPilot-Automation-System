@@ -1,0 +1,310 @@
+{
+  "AutoCommands": {
+    "/screen": {
+      "Cmd": "Take-Screenshot",
+      "Description": "Automatically captures a screenshot at scheduled time",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/cam_start": {
+      "Cmd": "Start-CameraRecording",
+      "Description": "Starts camera video recording automatically",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/cam_stop": {
+      "Cmd": "Stop-CameraRecording",
+      "Description": "Stops the active camera video recording",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/record": {
+      "Cmd": "Take-ScreenRecord",
+      "Description": "Records the screen for a predefined duration",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/rec_start": {
+      "Cmd": "Start-Recording",
+      "Description": "Starts system audio or screen recording process",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/rec_stop": {
+      "Cmd": "Stop-Recording",
+      "Description": "Stops the currently running recording process",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/load_day": {
+      "Cmd": "Generate-LoadGraph-Day",
+      "Description": "Generates daily system load graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/load_week": {
+      "Cmd": "Generate-LoadGraph-Week",
+      "Description": "Generates weekly system load graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/load_month": {
+      "Cmd": "Generate-LoadGraph-Month",
+      "Description": "Generates monthly system load graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/load_year": {
+      "Cmd": "Generate-LoadGraph-Year",
+      "Description": "Generates yearly system load graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/load_all": {
+      "Cmd": "Generate-LoadGraph-All",
+      "Description": "Generates full historical system load graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/temp_day": {
+      "Cmd": "Generate-TempGraph-Day",
+      "Description": "Generates daily temperature graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/temp_week": {
+      "Cmd": "Generate-TempGraph-Week",
+      "Description": "Generates weekly temperature graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/temp_month": {
+      "Cmd": "Generate-TempGraph-Month",
+      "Description": "Generates monthly temperature graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/temp_year": {
+      "Cmd": "Generate-TempGraph-Year",
+      "Description": "Generates yearly temperature graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/temp_all": {
+      "Cmd": "Generate-TempGraph-All",
+      "Description": "Generates full historical temperature graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/disk_day": {
+      "Cmd": "Generate-DiskGraph-Day",
+      "Description": "Generates daily disk usage graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/disk_week": {
+      "Cmd": "Generate-DiskGraph-Week",
+      "Description": "Generates weekly disk usage graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/disk_month": {
+      "Cmd": "Generate-DiskGraph-Month",
+      "Description": "Generates monthly disk usage graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/disk_year": {
+      "Cmd": "Generate-DiskGraph-Year",
+      "Description": "Generates yearly disk usage graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/disk_all": {
+      "Cmd": "Generate-DiskGraph-All",
+      "Description": "Generates full historical disk usage graph",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/table_day": {
+      "Cmd": "Generate-TableGraph-Day",
+      "Description": "Generates daily statistics table",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/table_week": {
+      "Cmd": "Generate-TableGraph-Week",
+      "Description": "Generates weekly statistics table",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/table_month": {
+      "Cmd": "Generate-TableGraph-Month",
+      "Description": "Generates monthly statistics table",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/table_year": {
+      "Cmd": "Generate-TableGraph-Year",
+      "Description": "Generates yearly statistics table",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/table_all": {
+      "Cmd": "Generate-TableGraph-All",
+      "Description": "Generates full historical statistics table",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/monitoring_start": {
+      "Cmd": "Start-Monitoring",
+      "Description": "Starts system monitoring and data collection",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/monitoring_stop": {
+      "Cmd": "Stop-Monitoring",
+      "Description": "Stops system monitoring and data collection",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/monitoring_status": {
+      "Cmd": "Get-MonitoringStatus",
+      "Description": "Checks current monitoring service status",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/data": {
+      "Cmd": "Data-CameraRecording",
+      "Description": "Processes and archives recorded camera data",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/data_stop": {
+      "Cmd": "Stop-PythonScript",
+      "Description": "Stops background Media Data processing Server",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/shutdownPC": {
+      "Cmd": "Auto-Shutdown-System",
+      "Description": "Automation command to Shutdown PC",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/restartPC": {
+      "Cmd": "Auto-Restart-System",
+      "Description": "Automation command to Restart PC",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/pauseAP": {
+      "Cmd": "Pause-Script",
+      "Description": "Automation command to Pause AutoPilot",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    }
+  }
+}

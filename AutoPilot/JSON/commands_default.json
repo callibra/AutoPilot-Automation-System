@@ -1,0 +1,310 @@
+{
+  "AutoCommands": {
+    "/screen": {
+      "Cmd": "Take-Screenshot",
+      "Description": "Automatically captures a screenshot at scheduled time",
+      "Times": ["10:40:35"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "daily",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/cam_start": {
+      "Cmd": "Start-CameraRecording",
+      "Description": "Starts camera video recording automatically",
+      "Times": ["10:58:15", "15:58:15", "21:58:15"],
+      "RepeatIntervalMinutes": [0, 0, 0],
+      "Type": "daily",
+      "Mode": ["loop", "loop", "loop"],
+      "Day": ["", "", ""]
+    },
+    "/cam_stop": {
+      "Cmd": "Stop-CameraRecording",
+      "Description": "Stops the active camera video recording",
+      "Times": ["10:58:55", "15:58:55", "21:58:55"],
+      "RepeatIntervalMinutes": [0, 0, 0],
+      "Type": "daily",
+      "Mode": ["loop", "loop", "loop"],
+      "Day": ["", "", ""]
+    },
+    "/record": {
+      "Cmd": "Take-ScreenRecord",
+      "Description": "Records the screen for a predefined duration",
+      "Times": ["15:30:15"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "daily",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/rec_start": {
+      "Cmd": "Start-Recording",
+      "Description": "Starts system audio or screen recording process",
+      "Times": ["10:16:50", "01:24:35"],
+      "RepeatIntervalMinutes": [0, 0],
+      "Type": "daily",
+      "Mode": ["loop", "loop"],
+      "Day": ["", ""]
+    },
+    "/rec_stop": {
+      "Cmd": "Stop-Recording",
+      "Description": "Stops the currently running recording process",
+      "Times": ["10:23:15", "01:31:15"],
+      "RepeatIntervalMinutes": [0, 0],
+      "Type": "daily",
+      "Mode": ["loop", "loop"],
+      "Day": ["", ""]
+    },
+    "/load_day": {
+      "Cmd": "Generate-LoadGraph-Day",
+      "Description": "Generates daily system load graph",
+      "Times": ["11:00:00", "23:55:00"],
+      "RepeatIntervalMinutes": [0, 0],
+      "Type": "daily",
+      "Mode": ["loop", "loop"],
+      "Day": ["", ""]
+    },
+    "/load_week": {
+      "Cmd": "Generate-LoadGraph-Week",
+      "Description": "Generates weekly system load graph",
+      "Times": ["20:15:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "weekly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/load_month": {
+      "Cmd": "Generate-LoadGraph-Month",
+      "Description": "Generates monthly system load graph",
+      "Times": ["20:16:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "monthly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/load_year": {
+      "Cmd": "Generate-LoadGraph-Year",
+      "Description": "Generates yearly system load graph",
+      "Times": ["20:17:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/load_all": {
+      "Cmd": "Generate-LoadGraph-All",
+      "Description": "Generates full historical system load graph",
+      "Times": ["20:18:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/temp_day": {
+      "Cmd": "Generate-TempGraph-Day",
+      "Description": "Generates daily temperature graph",
+      "Times": ["11:01:00", "23:56:00"],
+      "RepeatIntervalMinutes": [0, 0],
+      "Type": "daily",
+      "Mode": ["loop", "loop"],
+      "Day": ["", ""]
+    },
+    "/temp_week": {
+      "Cmd": "Generate-TempGraph-Week",
+      "Description": "Generates weekly temperature graph",
+      "Times": ["20:19:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "weekly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/temp_month": {
+      "Cmd": "Generate-TempGraph-Month",
+      "Description": "Generates monthly temperature graph",
+      "Times": ["20:20:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "monthly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/temp_year": {
+      "Cmd": "Generate-TempGraph-Year",
+      "Description": "Generates yearly temperature graph",
+      "Times": ["20:21:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/temp_all": {
+      "Cmd": "Generate-TempGraph-All",
+      "Description": "Generates full historical temperature graph",
+      "Times": ["20:22:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/disk_day": {
+      "Cmd": "Generate-DiskGraph-Day",
+      "Description": "Generates daily disk usage graph",
+      "Times": ["11:02:00", "23:57:00"],
+      "RepeatIntervalMinutes": [0, 0],
+      "Type": "daily",
+      "Mode": ["loop", "loop"],
+      "Day": ["", ""]
+    },
+    "/disk_week": {
+      "Cmd": "Generate-DiskGraph-Week",
+      "Description": "Generates weekly disk usage graph",
+      "Times": ["20:23:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "weekly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/disk_month": {
+      "Cmd": "Generate-DiskGraph-Month",
+      "Description": "Generates monthly disk usage graph",
+      "Times": ["20:24:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "monthly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/disk_year": {
+      "Cmd": "Generate-DiskGraph-Year",
+      "Description": "Generates yearly disk usage graph",
+      "Times": ["20:25:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/disk_all": {
+      "Cmd": "Generate-DiskGraph-All",
+      "Description": "Generates full historical disk usage graph",
+      "Times": ["20:26:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+	"/table_day": {
+	  "Cmd": "Generate-TableGraph-Day",
+	  "Description": "Generates daily statistics table",
+	  "Times": ["23:49:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "daily",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/table_week": {
+	  "Cmd": "Generate-TableGraph-Week",
+	  "Description": "Generates weekly statistics table",
+	  "Times": ["23:50:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "weekly",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/table_month": {
+	  "Cmd": "Generate-TableGraph-Month",
+	  "Description": "Generates monthly statistics table",
+	  "Times": ["23:51:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "monthly",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/table_year": {
+	  "Cmd": "Generate-TableGraph-Year",
+	  "Description": "Generates yearly statistics table",
+	  "Times": ["23:52:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "yearly",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/table_all": {
+	  "Cmd": "Generate-TableGraph-All",
+	  "Description": "Generates full historical statistics table",
+	  "Times": ["23:53:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "yearly",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/monitoring_start": {
+	  "Cmd": "Start-Monitoring",
+	  "Description": "Starts system monitoring and data collection",
+	  "Times": ["10:10:15"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "daily",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/monitoring_stop": {
+	  "Cmd": "Stop-Monitoring",
+	  "Description": "Stops system monitoring and data collection",
+	  "Times": ["01:35:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "daily",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/monitoring_status": {
+	  "Cmd": "Get-MonitoringStatus",
+	  "Description": "Checks current monitoring service status",
+	  "Times": ["10:40:00"],
+	  "RepeatIntervalMinutes": [90],
+	  "Type": "daily",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/data": {
+	  "Cmd": "Data-CameraRecording",
+	  "Description": "Processes and archives recorded camera data",
+	  "Times": ["20:30:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "weekly",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+	"/data_stop": {
+	  "Cmd": "Stop-PythonScript",
+	  "Description": "Stops background Media Data processing Server",
+	  "Times": ["20:35:00"],
+	  "RepeatIntervalMinutes": [0],
+	  "Type": "weekly",
+	  "Mode": ["loop"],
+	  "Day": [""]
+	},
+    "/shutdownPC": {
+      "Cmd": "Auto-Shutdown-System",
+      "Description": "Automation command to Shutdown PC",
+      "Times": ["20:53:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/restartPC": {
+      "Cmd": "Auto-Restart-System",
+      "Description": "Automation command to Restart PC",
+      "Times": ["20:54:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/pauseAP": {
+      "Cmd": "Pause-Script",
+      "Description": "Automation command to Pause AutoPilot",
+      "Times": ["20:55:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    }
+  }
+}

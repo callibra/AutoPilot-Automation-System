@@ -1,0 +1,55 @@
+{
+  "ALLOWED_DAYS": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+  "MAX_RUNS": 1,
+
+  "TELEGRAM_BOT_TOKEN":  "Your Telegram Token",
+  "TELEGRAM_CHAT_ID":  "Your Telegram ID",
+  "OWNER_ID":  "Allowed Telegram ID (YOUR ID)",
+  "MEDIA_FOLDER_URL": "https://t.me/Your_Bot",
+
+  "BOT_TOKEN":  "Your Telegram Second Token",
+  "CHAT_ID":  "Your Telegram Second ID",
+  "OWNER_IDS": ["Allowed Telegram ID (YOUR ID and More)"],
+  "AUTOPILOT_URL": "https://t.me/Your_Bot",
+
+  "AUTO_START_MONITORING": true,
+  "TRAFFIC_MONITOR_AUTO_START": true,
+
+  "TEMP_CHECK_INTERVAL": 300,
+
+  "CPU_LIMIT": 50,
+  "CPU_TEMP_CRITICAL_LIMIT": 60,
+
+  "DISK_LIMIT": 45,
+  "DISK_TEMP_CRITICAL_LIMIT": 52,
+
+  "MB_LIMIT": 45,
+  "MB_TEMP_CRITICAL_LIMIT": 50,
+
+  "GPU_LIMIT": 50,
+  "GPU_TEMP_CRITICAL_LIMIT": 70,
+
+  "RAM_USAGE_ALARM_LIMIT": 60,
+  "RAM_USAGE_CRITICAL_LIMIT": 88,
+
+  "CPU_LOAD_ALARM_LIMIT": 88,
+  "CPU_LOAD_CRITICAL_LIMIT": 101,
+
+  "HardwareMonitor": {
+    "SampleIntervalSeconds": 300
+  },
+
+  "ScreenCapture": {
+    "IncludeAudio": true,
+    "AudioDevice": "Your PC Audio Device (Stereo Mix (Realtek(R) Audio))"
+  },
+
+  "CameraCapture": {
+    "VideoDevice": "Your PC Camera Device (USB2.0 Camera)",
+    "AudioDevice": "Your PC Microphone Device (Microphone Array (Realtek(R) Audio))"
+  },
+  "AUTOPILOT_TELEGRAM_ENABLED":  true,
+  "MEDIA_TELEGRAM_ENABLED":  true,
+  "ENABLE_RESTART":  true,
+  "ENABLE_SHUTDOWN":  true
+}

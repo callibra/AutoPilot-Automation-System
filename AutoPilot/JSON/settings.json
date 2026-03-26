@@ -1,0 +1,46 @@
+﻿{
+    "ALLOWED_DAYS":  [
+
+                     ],
+    "MAX_RUNS":  1,
+    "TELEGRAM_BOT_TOKEN":  "",
+    "TELEGRAM_CHAT_ID":  "",
+    "OWNER_ID":  "",
+    "MEDIA_FOLDER_URL":  "https://t.me/Your_Bot",
+    "BOT_TOKEN":  "",
+    "CHAT_ID":  "",
+    "OWNER_IDS":  [
+
+                  ],
+    "AUTOPILOT_URL":  "https://t.me/Your_Bot",
+    "AUTO_START_MONITORING":  false,
+    "TRAFFIC_MONITOR_AUTO_START":  false,
+    "TEMP_CHECK_INTERVAL":  300,
+    "CPU_LIMIT":  1,
+    "CPU_TEMP_CRITICAL_LIMIT":  80,
+    "DISK_LIMIT":  1,
+    "DISK_TEMP_CRITICAL_LIMIT":  80,
+    "MB_LIMIT":  1,
+    "MB_TEMP_CRITICAL_LIMIT":  80,
+    "GPU_LIMIT":  1,
+    "GPU_TEMP_CRITICAL_LIMIT":  80,
+    "RAM_USAGE_ALARM_LIMIT":  1,
+    "RAM_USAGE_CRITICAL_LIMIT":  80,
+    "CPU_LOAD_ALARM_LIMIT":  1,
+    "CPU_LOAD_CRITICAL_LIMIT":  80,
+    "HardwareMonitor":  {
+                            "SampleIntervalSeconds":  300
+                        },
+    "ScreenCapture":  {
+                          "IncludeAudio":  false,
+                          "AudioDevice":  "Audio"
+                      },
+    "CameraCapture":  {
+                          "VideoDevice":  "Camera",
+                          "AudioDevice":  "Microphone"
+                      },
+    "AUTOPILOT_TELEGRAM_ENABLED":  false,
+    "MEDIA_TELEGRAM_ENABLED":  false,
+    "ENABLE_RESTART":  false,
+    "ENABLE_SHUTDOWN":  false
+}

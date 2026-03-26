@@ -1,0 +1,64 @@
+{
+  "ScheduledScripts": [
+    {
+      "Path": "Defender.ps1",
+      "Description": "Automated Windows Defender scans and protection tasks",
+      "Commands": [],
+      "Times": [],
+      "DelaySeconds": [],
+      "RepeatIntervalMinutes": [],
+      "Mode": [],
+      "Day": []
+    },
+    {
+      "Path": "Pi.ps1",
+      "Description": "Maintenance and control operations for Pi-related services",
+      "Commands": [],
+      "Times": [],
+      "DelaySeconds": [],
+      "RepeatIntervalMinutes": [],
+      "Mode": [],
+      "Day": []
+    },
+    {
+      "Path": "Docker.ps1",
+      "Description": "Docker container management and automation routines",
+      "Commands": [],
+      "Times": [],
+      "DelaySeconds": [],
+      "RepeatIntervalMinutes": [],
+      "Mode": [],
+      "Day": []
+    },
+    {
+      "Path": "Cleaner.ps1",
+      "Description": "System cleanup, cache removal, and temporary file maintenance",
+      "Commands": [],
+      "Times": [],
+      "DelaySeconds": [],
+      "RepeatIntervalMinutes": [],
+      "Mode": [],
+      "Day": []
+    },
+    {
+      "Path": "Network.ps1",
+      "Description": "Network configuration checks and connectivity operations",
+      "Commands": [],
+      "Times": [],
+      "DelaySeconds": [],
+      "RepeatIntervalMinutes": [],
+      "Mode": [],
+      "Day": []
+    },
+    {
+      "Path": "NetTraffic.ps1",
+      "Description": "Network traffic monitoring and usage analysis",
+      "Commands": ["3"],
+      "Times": ["10:09:15"],
+      "DelaySeconds": [5],
+      "RepeatIntervalMinutes": [0],
+      "Mode": ["loop"],
+      "Day": [""]
+    }
+  ]
+}

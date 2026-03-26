@@ -1,0 +1,65 @@
+{
+  "ScheduledScripts": [
+    {
+      "Path": "Defender.ps1",
+      "Description": "Automated Windows Defender scans and protection tasks",
+      "Commands": ["1", "2", "3"],
+      "Times": ["10:16:00", "01:30:00", "10:30:00"],
+      "DelaySeconds": [15, 15, 15],
+      "RepeatIntervalMinutes": [500, 0, 250],
+      "Mode": ["loop", "loop", "loop"],
+      "Day": ["", "", ""]
+    },
+    {
+      "Path": "Pi.ps1",
+      "Description": "Maintenance and control operations for Pi-related services",
+      "Commands": ["1", "3", "5", "2"],
+      "Times": ["10:22:15", "01:25:00", "01:31:00", "10:37:00"],
+      "DelaySeconds": [15, 15, 15, 15],
+      "RepeatIntervalMinutes": [0, 0, 0, 90],
+      "Mode": ["loop", "loop", "loop", "loop"],
+      "Day": ["", "", "", ""]
+    },
+    {
+      "Path": "Docker.ps1",
+      "Description": "Docker container management and automation routines",
+      "Commands": ["10", "5", "2", "7", "4", "8"],
+      "Times": ["10:13:00", "10:17:00", "01:27:00", "01:28:00", "10:35:00", "10:36:00"],
+      "DelaySeconds": [15, 15, 15, 15, 15, 15],
+      "RepeatIntervalMinutes": [0, 0, 0, 0, 100, 110],
+      "Mode": ["loop", "loop", "loop", "loop", "loop", "loop"],
+      "Day": ["", "", "", "", "", ""]
+    },
+    {
+      "Path": "Cleaner.ps1",
+      "Description": "System cleanup, cache removal, and temporary file maintenance",
+      "Commands": ["8", "10", "2", "1", "12"],
+      "Times": ["10:12:00", "01:32:00", "10:15:00", "10:10:00", "01:34:00"],
+      "DelaySeconds": [15, 15, 15, 15, 15],
+      "RepeatIntervalMinutes": [0, 0, 0, 350, 0],
+      "Mode": ["loop", "loop", "loop", "loop", "loop"],
+      "Day": ["", "", "", "", ""]
+    },
+    {
+      "Path": "Network.ps1",
+      "Description": "Network configuration checks and connectivity operations",
+      "Commands": ["1", "2", "8", "8"],
+      "Times": ["01:05:00", "11:20:00", "01:10:00", "11:25:00"],
+      "DelaySeconds": [5, 5, 5, 5],
+      "RepeatIntervalMinutes": [0, 0, 0, 0],
+      "Mode": ["loop", "loop", "loop", "loop"],
+      "Day": ["", "", "", ""]
+    },
+    {
+      "Path": "NetTraffic.ps1",
+      "Description": "Network traffic monitoring and usage analysis",
+      "Commands": ["3"],
+      "Times": ["10:09:15"],
+      "DelaySeconds": [5],
+      "RepeatIntervalMinutes": [0],
+      "Mode": ["loop"],
+      "Day": [""]
+    }
+  ]
+}
+

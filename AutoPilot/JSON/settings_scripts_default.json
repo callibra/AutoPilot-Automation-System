@@ -1,0 +1,27 @@
+[
+  {
+    "Name": "Factory",
+    "DockerPath": "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe",
+    "DockerCliPath": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+    "DockerDesktopPath": "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe",
+    "SwapFolderPath": "C:\\Users\\%USERNAME%\\AppData\\Local\\Docker\\wsl\\data",
+    "Containers": ["testnet2"],
+	"wifi1": "",
+    "wifi2": "",
+    "TendaToBeniTime": null,
+    "BeniToTendaTime": null
+  },
+  {
+    "Name": "Custom",
+    "DockerPath": "E:\\Miner\\Docker\\Docker Desktop.exe",
+    "DockerCliPath": "E:\\Miner\\DockerCli.exe",
+    "DockerDesktopPath": "E:\\Miner\\Docker\\Docker Desktop.exe",
+    "SwapFolderPath": "E:\\Miner\\WSLSwap",
+    "Containers": ["testnet2"],
+	"wifi1": "Tenda_9429F0",
+    "wifi2": "Beni_1",
+    "TendaToBeniTime": "11:20",
+    "BeniToTendaTime": "01:10"
+  }
+]
+
