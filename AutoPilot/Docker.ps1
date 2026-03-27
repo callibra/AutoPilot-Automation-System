@@ -37,13 +37,15 @@ function Write-Err  { param($msg) ; Write-Host $msg -ForegroundColor Red }
 $configFile = "$PSScriptRoot\JSON\settings_scripts.json"
 if (-not (Test-Path $configFile)) {
     Write-Err "Config file does not exist: $configFile"
-    exit
+    Pause
+    return
 }
 try {
     $config = Get-Content $configFile | ConvertFrom-Json
 } catch {
     Write-Err "Cannot read config file. Error: $_"
-    exit
+    Pause
+    return
 }
 
 # Патеките и контејнерите се зачувуваат во променливи

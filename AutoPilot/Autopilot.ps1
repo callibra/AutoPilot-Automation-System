@@ -24,17 +24,24 @@ $AppRoot = $PSScriptRoot
 
 # ================= JSON LOADER =================
 $settingsPath = Join-Path -Path $PSScriptRoot -ChildPath "JSON\settings.json"
-
+$settingsScriptPath = Join-Path -Path $PSScriptRoot -ChildPath "JSON\settings_scripts.json"
+# Проверка за settings.json
 if (-not (Test-Path $settingsPath)) {
     Write-Host "Config file does not exist in $settingsPath" -ForegroundColor Red
     Pause
     return
 }
-
+# Проверка за settings_script.json
+if (-not (Test-Path $settingsScriptPath)) {
+    Write-Host "Config file does not exist in $settingsScriptPath" -ForegroundColor Red
+    Pause
+    return
+}
 try {
     $config = Get-Content $settingsPath -Raw | ConvertFrom-Json
+    $configScript = Get-Content $settingsScriptPath -Raw | ConvertFrom-Json
 } catch {
-    Write-Warning "Error Loading settings.json: $_"
+    Write-Warning "Error Loading settings.json or settings_scripts.json: $_"
     Pause
     return
 }
@@ -149,6 +156,13 @@ if ($AutoPilotTelegramEnabled) {
 	Start-Sleep -Seconds 3
 }
 
+$global:MediaTelegramDisabledLogged = $false
+
+function Is-MediaTelegramOperational {
+    # Returns $true only if enabled AND properly configured
+    return $MediaTelegramEnabled -and ($MediaTelegramConfigValid -eq $true)
+}
+
 # ================= Media Telegram Bot =================
 if ($MediaTelegramEnabled) {
     $MediaFolderUrl = $config.MEDIA_FOLDER_URL
@@ -161,13 +175,16 @@ if ($MediaTelegramEnabled) {
         Write-Host "WARNING: Media Telegram Bot is *ENABLED, but the configuration is invalid!" -ForegroundColor Yellow
         $errors | ForEach-Object { Write-Host " - $_" -ForegroundColor Yellow }
         Write-Host "Check the Media Bot settings in AutoPilot Settings." -ForegroundColor DarkCyan
+		$MediaTelegramConfigValid = $false
         Start-Sleep -Seconds 3
     } else {
         Write-Host "Media Telegram Bot is *ENABLED and properly configured." -ForegroundColor Green
+		$MediaTelegramConfigValid = $true
         Start-Sleep -Seconds 3
     }
 } else {
     Write-Host "Media Telegram Bot is *DISABLED, skipping." -ForegroundColor DarkYellow
+	$MediaTelegramConfigValid = $false
 	Start-Sleep -Seconds 3
 }
 # ================= END CONFIG LOADING =================
@@ -2702,14 +2719,7 @@ Unauthorized Access Attempt!
 							}
 						}
 						# Data Folder
-						"Data-CameraRecording" {
-							if (-not $MediaTelegramEnabled) {
-								Write-Log "Media Telegram Bot is Disabled, *Data* command Skipped."
-								Send-TelegramMessage -message "Media Telegram Bot is Disabled, *Data* command Skipped."
-								return
-							}
-							Data-CameraRecording
-						}
+						"Data-CameraRecording" { Data-CameraRecording }
 						"Stop-PythonScript" { Stop-PythonScript }
 						# Live Monitoring
 						"Monitoring-Start" { Start-Monitoring }

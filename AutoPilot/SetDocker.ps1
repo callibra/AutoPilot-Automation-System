@@ -11,9 +11,17 @@ If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 
 # Path to JSON config
 $configPath = "$PSScriptRoot\JSON\settings_scripts.json"
-
-if (-Not (Test-Path $configPath)) {
-    Throw-ErrorAndExit "Config file not found: $configPath"
+if (-not (Test-Path $configPath)) {
+    Write-Host "Config file does not exist: $configPath" -ForegroundColor Red
+    Pause
+    return
+}
+try {
+    $config = Get-Content $configPath | ConvertFrom-Json
+} catch {
+    Write-Host "Cannot read config file. Error: $_" -ForegroundColor Red
+    Pause
+    return
 }
 
 # Read JSON config
@@ -32,14 +40,6 @@ function Write-Status {
     param ([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     "$timestamp - $Message" | Out-File -FilePath $statusFile -Encoding UTF8 -Append
-}
-
-### Function to output error and exit script
-function Throw-ErrorAndExit {
-    param ([string]$Message)
-    Write-Host $Message -ForegroundColor Red
-    Write-Status $Message
-    exit 1
 }
 
 ### Function to display interactive menu
@@ -78,7 +78,7 @@ function Get-ValidInput {
         $input = Read-Host $prompt
         Write-Host "Debug: Raw input for ${type}: '$input'"
 
-        # Remove unwanted characters (e.g., spaces or special characters)
+        # Remove unwanted characters
         $input = $input.Trim()
 
         # Check for empty input
@@ -87,32 +87,34 @@ function Get-ValidInput {
             continue
         }
 
+        # Безбедно парсирање (НЕ фрла exception)
+        [int]$parsedValue = 0
+        $isNumber = [int]::TryParse($input, [ref]$parsedValue)
+
         # Validate based on type (RAM, CPU, SWAP)
         switch ($type) {
             "RAM" {
-                # Check if the value is numeric and between 1 and 999
-                if ($input -match '^\d+$' -and [int]$input -ge 1 -and [int]$input -le 999) {
+                if ($isNumber -and $parsedValue -ge 1 -and $parsedValue -le 999) {
                     $validInput = $true
-                    $input = "$input" + "GB"  # Add "GB" to RAM input
+                    $input = "$parsedValue" + "GB"
                 } else {
                     Write-Host "RAM must be a valid number greater than 0 and less than or equal to 999."
                 }
                 break
             }
             "CPU" {
-                # Check if the value is numeric and between 1 and 999
-                if ($input -match '^\d+$' -and [int]$input -ge 1 -and [int]$input -le 999) {
+                if ($isNumber -and $parsedValue -ge 1 -and $parsedValue -le 999) {
                     $validInput = $true
+                    $input = "$parsedValue"
                 } else {
                     Write-Host "CPU must be a valid number between 1 and 999."
                 }
                 break
             }
             "SWAP" {
-                # Check if the value is numeric and between 1 and 999
-                if ($input -match '^\d+$' -and [int]$input -ge 1 -and [int]$input -le 999) {
+                if ($isNumber -and $parsedValue -ge 1 -and $parsedValue -le 999) {
                     $validInput = $true
-                    $input = "$input" + "GB"  # Add "GB" to SWAP input
+                    $input = "$parsedValue" + "GB"
                 } else {
                     Write-Host "SWAP must be a valid number between 1 and 999."
                 }

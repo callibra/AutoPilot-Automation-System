@@ -525,6 +525,18 @@ function Data-CameraRecording {
     param (
         [string]$ScriptPath = "$PSScriptRoot\Camera.exe"
     )
+    # === Media Bot Guard ===
+    if (-not (Is-MediaTelegramOperational)) {
+        $statusMessage = "Media Telegram Bot is Disabled or Misconfigured, *Data* command Skipped."
+        Write-Host $statusMessage -ForegroundColor Red
+        Write-Log $statusMessage
+        # Only send Telegram if AutoPilot bot is enabled to avoid errors
+        if (Is-AutoPilotTelegramEnabled) {
+            Send-TelegramMessage -message $statusMessage
+        }
+        return
+    }
+    # === Check if process is already running ===
     $processes = Get-CimInstance Win32_Process | Where-Object {
         $_.CommandLine -match [regex]::Escape($ScriptPath)
     }
