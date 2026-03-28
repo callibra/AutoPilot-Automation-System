@@ -890,7 +890,7 @@ function Task-Add {
     }
     try {
         $action  = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$VbsPath`""
-        $trigger = New-ScheduledTaskTrigger -AtStartup # -AtStartup -AtLogOn
+        $trigger = New-ScheduledTaskTrigger -AtLogOn # -AtStartup -AtLogOn
         Register-ScheduledTask -TaskName $TaskName `
                                -Action $action `
                                -Trigger $trigger `
