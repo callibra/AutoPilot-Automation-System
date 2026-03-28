@@ -1649,7 +1649,7 @@ $btnAbout.Add_Click({
 		$lblDate.FontSize = 17
 		$lblDate.Foreground = [System.Windows.Media.Brushes]::White
 		$lblDate.Margin = [System.Windows.Thickness]::new(0,0,0,5)
-		$runLabel = New-Object System.Windows.Documents.Run("Installed: ")
+		$runLabel = New-Object System.Windows.Documents.Run("Realized: ")
 		$runLabel.FontWeight = "Bold"
 		$lblDate.Inlines.Add($runLabel)
 		$runValue = New-Object System.Windows.Documents.Run($installDate)

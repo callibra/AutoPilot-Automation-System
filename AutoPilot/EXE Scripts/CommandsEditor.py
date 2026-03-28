@@ -21,7 +21,7 @@ config_dirty = False
 CONFIG_FILE = APP_ROOT / "JSON" / "commands_edit.json"
 DEFAULT_CONFIG_FILE = APP_ROOT / "JSON" / "commands_default.json"
 ICON_PATH = APP_ROOT / "media" / "commands.ico"
-MAX_ROWS = 8
+MAX_ROWS = 35
 
 # --- Global state ---
 previous_selected_index = None
@@ -279,6 +279,7 @@ def reset_to_default():
     for widget in rows_frame.winfo_children():
         widget.destroy()
     row_widgets.clear()
+    on_frame_configure(None)
 
     for idx in range(len(cmd_data["Times"])):
         add_row(cmd_data, idx)
@@ -330,6 +331,7 @@ def reset_all_autocommands():
     for widget in rows_frame.winfo_children():
         widget.destroy()
     row_widgets.clear()
+    on_frame_configure(None)
 
     # ❌ Deselect last selected command
     current_command_key = None
@@ -439,6 +441,7 @@ def select_command(event):
     cmd_data = config["AutoCommands"][current_command_key]
     for idx in range(len(cmd_data["Times"])):
         add_row(cmd_data, idx)
+    on_frame_configure(None)      
 
     default_btn.config(state="normal")
     add_btn.config(state="normal")   # 👈 enable Add Row
@@ -682,7 +685,8 @@ def delete_row(frame):
             row_frame.grid_configure(row=i)
             row_frame.children[list(row_frame.children.keys())[0]].config(text=f"{i+1}")
         config_dirty = True  # <- now properly sets the global
-        save_btn.config(state="normal")   
+        save_btn.config(state="normal")  
+        on_frame_configure(None)   
 
 # --- Load Config ---
 config = load_config()
@@ -778,12 +782,28 @@ for i, key in enumerate(config["AutoCommands"].keys()):
 # Bind selection
 command_listbox.bind("<Button-1>", select_command)
 
-# --- Right Frame: Rows + Buttons ---
+# --- Right Frame: Headers + Rows + Buttons ---
 right_frame = tk.Frame(root, bg="#1E1E1E")
 right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
+# --- Wrapper за canvas + scrollbar ---
+canvas_frame = tk.Frame(right_frame, bg="#1E1E1E")
+canvas_frame.pack(fill="both", expand=True)
+
+canvas = tk.Canvas(canvas_frame, bg="#1E1E1E", highlightthickness=0)
+canvas.pack(side="left", fill="both", expand=True)
+
+v_scroll = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
+v_scroll.pack(side="right", fill="y")
+
+canvas.configure(yscrollcommand=v_scroll.set)
+
+scrollable_frame = tk.Frame(canvas, bg="#1E1E1E")
+canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+canvas.update_idletasks()
+
 # Headers
-headers_frame = tk.Frame(right_frame, bg="#1E1E1E")
+headers_frame = tk.Frame(scrollable_frame, bg="#1E1E1E")
 headers_frame.pack(fill="x", pady=(0,5))
 header_font = ("Segoe UI", 14, "bold")
 tk.Label(headers_frame, text="#", width=4, bg="#1E1E1E", fg="#FFD700", font=header_font).pack(side="left", padx=0)
@@ -794,8 +814,40 @@ tk.Label(headers_frame, text="Date (YY:MM:DD)", width=20, bg="#1E1E1E", fg="#1E9
 tk.Label(headers_frame, text="Interval", width=10, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,0))
 tk.Label(headers_frame, text="Delete", width=8, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(0,0))
 
-rows_frame = tk.Frame(right_frame, bg="#1E1E1E")
+# Rows frame
+rows_frame = tk.Frame(scrollable_frame, bg="#1E1E1E")
 rows_frame.pack(fill="both", expand=True, pady=10)
+
+# --- Configure canvas scrollregion ---
+def on_frame_configure(event=None):
+    canvas.update_idletasks()  # update sizes
+    
+    content_height = scrollable_frame.winfo_reqheight()
+    canvas_height = canvas.winfo_height()
+    
+    # If no rows or content fits → hide scrollbar
+    if len(row_widgets) == 0 or content_height <= canvas_height:
+        if v_scroll.winfo_ismapped():
+            v_scroll.pack_forget()
+        canvas.configure(scrollregion=(0,0,canvas.winfo_width(), canvas_height))
+        canvas.yview_moveto(0)
+    else:
+        if not v_scroll.winfo_ismapped():
+            v_scroll.pack(side="right", fill="y")
+        canvas.configure(scrollregion=(0,0,canvas.winfo_width(), content_height))
+
+scrollable_frame.bind("<Configure>", on_frame_configure)
+
+# --- Mousewheel scroll ---
+def _on_mousewheel(event):
+    content_height = scrollable_frame.winfo_reqheight()
+    canvas_height = canvas.winfo_height()
+
+    if content_height > canvas_height:
+        canvas.yview_scroll(int(-1 * (event.delta // 120)), "units")
+
+canvas.bind("<Enter>", lambda e: canvas.focus_set())
+canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
 # Buttons frame
 buttons_frame = tk.Frame(right_frame, bg="#1E1E1E")
@@ -867,7 +919,7 @@ update_status_no_command()
 # --- Долна линија текст, секогаш видлива ---
 buttons_info_label = ttk.Label(
     buttons_frame,
-    text="You can add up to 8 rows. Save Config and Default USE for every COMMAND separately. FIKS USE only when Type Selection is *daily*.",
+    text="You can add up to 35 rows. Save Config and Default USE for every COMMAND separately. FIKS USE only when Type Selection is *daily*.",
     bootstyle="secondary",
     justify="center",
     font=("Segoe UI", 11)

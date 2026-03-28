@@ -2061,8 +2061,8 @@ function Show-HelpMenu {
 /net_monitoring4  Net CSV File
 /net_monitoring5  Net Traffic Statistic
 /net_monitoring6  Net Traffic Log File
-/net_monitoring7  Live Panel Open
-/net_monitoring8  Live Panel Exit
+/net_monitoring7  Net Monitor Open
+/net_monitoring8  Net Monitor Exit
 
  *System commands:*
 /system_status  System Status  
@@ -2072,17 +2072,17 @@ function Show-HelpMenu {
 /temp  Temperature Cpu Gpu Disk MB
 /hardware_load  LHM Load
 /hardware_data  LHM Data 
-/monitor_open  Dashboard Open
-/monitor_exit  Dashboard Exit
+/monitor_open  System Monitor Open
+/monitor_exit  System Monitor Exit
 /commands_list  All Commands List
-/pause  Pause Script
-/resume  Resume Script
-/stop  Stop Script
-/status  Status Script
-/reset  Restart Script
-/hide  Hide Script 
-/show  Show Script
-/visible_status  Display Status
+/pause  Pause AutoPilot
+/resume  Resume AutoPilot
+/stop  Stop AutoPilot
+/status  Status AutoPilot
+/reset  Restart AutoPilot
+/hide  Hide AutoPilot CMD 
+/show  Show AutoPilot CMD
+/visible_status  AutoPilot CMD Status
 /autostart_enable  Auto-Start Enable
 /autostart_disable  Auto-Start Disable
 /autostart_status  Auto-Start Status
