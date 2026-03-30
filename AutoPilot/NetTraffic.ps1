@@ -412,11 +412,11 @@ function Show-LiveTraffic {
     $isRunning = Get-CimInstance Win32_Process |
                  Where-Object { $_.CommandLine -like "*NetMonitor.exe*" }
     if ($isRunning) {
-        Write-Host "Live Traffic Panel is already RUNNING!" -ForegroundColor Yellow
+        Write-Host "Net Monitor Panel is already RUNNING!" -ForegroundColor Yellow
         return
     }
     if (Test-Path $scriptPath) {
-        Write-Host "Launching Live Traffic Panel..." -ForegroundColor Cyan
+        Write-Host "Launching Net Monitor Panel..." -ForegroundColor Cyan
         Start-Process `
             -FilePath "$scriptPath" `
             -WindowStyle Hidden
@@ -431,13 +431,13 @@ function Stop-LiveTraffic {
     $running = Get-CimInstance Win32_Process |
                Where-Object { $_.CommandLine -like "*NetMonitor.exe*" }
     if ($running) {
-        Write-Host "Exit Live Traffic Panel..." -ForegroundColor Cyan
+        Write-Host "Exit Net Monitor Panel..." -ForegroundColor Cyan
         foreach ($p in $running) {
             Stop-Process -Id $p.ProcessId -Force
         }
     }
     else {
-        Write-Host "Live Traffic Panel is already EXIT!" -ForegroundColor Yellow
+        Write-Host "Net Monitor Panel is already EXIT!" -ForegroundColor Yellow
     }
 }
 

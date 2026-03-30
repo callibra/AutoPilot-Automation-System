@@ -271,7 +271,7 @@
       "Day": []
     },
     "/data_stop": {
-      "Cmd": "Stop-PythonScript",
+      "Cmd": "Stop-DataServer",
       "Description": "Stops background Media Data processing Server",
       "Times": [],
       "RepeatIntervalMinutes": [],

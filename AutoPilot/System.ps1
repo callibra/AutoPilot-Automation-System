@@ -406,17 +406,17 @@ function Show-LiveTraffic {
     $isRunning = Get-CimInstance Win32_Process |
                  Where-Object { $_.CommandLine -like "*NetMonitor.exe*" }
     if ($isRunning) {
-		Show-DarkWarning -Title "Live Traffic Panel" -Message ("Live Traffic Panel is already started. The process is ACTIVE!")
+		Show-DarkWarning -Title "Net Monitor Panel" -Message ("Net Monitor Panel is already started. The process is ACTIVE!")
         return
     }
     if (Test-Path $scriptPath) {
-		Show-DarkWarning -Title "Live Traffic Panel" -Message ("Starting Live Traffic Panel...")
+		Show-DarkWarning -Title "Net Monitor Panel" -Message ("Starting Net Monitor Panel...")
         Start-Process `
             -FilePath "$scriptPath" `
             -WindowStyle Hidden
     }
     else {
-		Show-DarkWarning -Title "Live Traffic Panel" -Message ("NetMonitor.exe not found!")
+		Show-DarkWarning -Title "Net Monitor Panel" -Message ("NetMonitor.exe not found!")
     }
 }
 
@@ -903,7 +903,7 @@ function Task-Add {
             "Time: $ts",
             "TaskName: $TaskName",
             "VBS fajl: $VbsPath",
-            "Trigger: AtStartup",
+            "Trigger: AtLogOn",
             "Auto-Start is ENABLED",
             "=============================="
         )

@@ -488,7 +488,7 @@ $ManualCommands = @{
 	"/cam_start"          = @{ Cmd = "Start-CameraRecording" }
     "/cam_stop"           = @{ Cmd = "Stop-CameraRecording" }
 	"/data"               = @{ Cmd = "Data-CameraRecording" }
-	"/data_stop"          = @{ Cmd = "Stop-PythonScript" }
+	"/data_stop"          = @{ Cmd = "Stop-DataServer" }
 	"/data_log"           = @{ Cmd = "Data-Log" }    
 	# Monitoring Start Stop Status commands
 	"/monitoring_start"   = @{ Cmd = "Monitoring-Start" }
@@ -2323,7 +2323,7 @@ Unauthorized Access Attempt!
                         Send-TelegramMessage -message "The Action has been Canceled."
                     }
                     default {
-                        Send-TelegramMessage -message "Invalid response. Reply with Y or N."
+                        Send-TelegramMessage -message "Incorrectly response. Reply with Y or N."
                     }
                 }
 
@@ -2393,7 +2393,7 @@ Unauthorized Access Attempt!
 							$response = $msgText
 							break
 						} else {
-							Send-TelegramMessage -message "Invalid response. Reply with Y or N."
+							Send-TelegramMessage -message "Incorrectly response. Reply with Y or N."
 						}
 					}
 				} catch {
@@ -2720,7 +2720,7 @@ Unauthorized Access Attempt!
 						}
 						# Data Folder
 						"Data-CameraRecording" { Data-CameraRecording }
-						"Stop-PythonScript" { Stop-PythonScript }
+						"Stop-DataServer" { Stop-DataServer }
 						# Live Monitoring
 						"Monitoring-Start" { Start-Monitoring }
 						"Monitoring-Stop" { Stop-Monitoring }
@@ -2741,7 +2741,7 @@ Unauthorized Access Attempt!
                     }
                 }
             } else {
-                Send-TelegramMessage -message "Invalid command: $text"
+                Send-TelegramMessage -message "Unknown command: $text"
             }
         $lastUpdateId.Value = $update.update_id
     }
@@ -3073,7 +3073,7 @@ Unauthorized Access Attempt!
 							$response = $msgText
 							break
 						} else {
-							Send-TelegramMessage -message "Invalid response. Reply with Y or N."
+							Send-TelegramMessage -message "Incorrectly response. Reply with Y or N."
 						}
 					}
 				} catch {

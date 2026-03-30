@@ -2517,22 +2517,33 @@ function Update-TimelineDisplay {
 			}
 		}
         $diff = $nextCmd.Time - $now
-        $parts = @()
-        if ($diff.Days -gt 0)    { $parts += "{0}d" -f $diff.Days }
-        if ($diff.Hours -gt 0)   { $parts += "{0:D2}h" -f $diff.Hours }
-        if ($diff.Minutes -gt 0) { $parts += "{0:D2}m" -f $diff.Minutes }
-        if ($diff.Seconds -ge 0) { $parts += "{0:D2}s" -f $diff.Seconds }
-        if ($diff.TotalSeconds -le 15) {
-            $txtCountdown.Text = " Next Auto Command In: " + ($parts -join " ")
-            $txtCountdown.Foreground = [System.Windows.Media.Brushes]::Red
-        } else {
-            $txtCountdown.Text = " Next Auto Command In: " + ($parts -join " ")
-            $txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
-        }
-    } else {
-        $txtCountdown.Text = " No upcoming command"
-        $txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
-    }
+		# ===== DST FIX (ако времето отиде назад/напред) =====
+		if ($diff.TotalSeconds -lt 0) {
+			while ($nextCmd.Time -le $now) {
+				switch ($nextCmd.Line.Type) {
+					"daily"   { $nextCmd.Time = $nextCmd.Time.AddDays(1) }
+					"weekly"  { $nextCmd.Time = $nextCmd.Time.AddDays(7) }
+					"monthly" { $nextCmd.Time = $nextCmd.Time.AddMonths(1) }
+					"yearly"  { $nextCmd.Time = $nextCmd.Time.AddYears(1) }
+					default   { $nextCmd.Time = $nextCmd.Time.AddDays(1) }
+				}
+			}
+			$diff = $nextCmd.Time - $now
+		}
+		$parts = @()
+		if ($diff.Days -gt 0)    { $parts += "{0}d" -f $diff.Days }
+		if ($diff.Hours -gt 0)   { $parts += "{0:D2}h" -f $diff.Hours }
+		if ($diff.Minutes -gt 0) { $parts += "{0:D2}m" -f $diff.Minutes }
+		if ($diff.Seconds -ge 0) { $parts += "{0:D2}s" -f $diff.Seconds }
+
+		if ($diff.TotalSeconds -le 15) {
+			$txtCountdown.Text = " Next Auto Command In: " + ($parts -join " ")
+			$txtCountdown.Foreground = [System.Windows.Media.Brushes]::Red
+		} else {
+			$txtCountdown.Text = " Next Auto Command In: " + ($parts -join " ")
+			$txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
+		}	
+	}
 }
 
 Load-Timeline
