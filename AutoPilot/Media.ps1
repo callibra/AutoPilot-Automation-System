@@ -557,7 +557,7 @@ function Data-CameraRecording {
 }
 
 # Funkcija za stop na Python skriptata
-function Stop-PythonScript {
+function Stop-DataServer {
     param (
         [string]$ScriptPath = "$PSScriptRoot\Camera.exe"
     )
