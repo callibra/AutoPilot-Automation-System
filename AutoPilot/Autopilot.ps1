@@ -1,4 +1,3 @@
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 # ============================================================
 # 🔐 AutoPilot SECURITY DESIGN Script
 # ============================================================
@@ -11,6 +10,31 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 # ------------------------------------------------------------
 # Status: PRODUCTION-READY
 # ============================================================
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
+# 🔧 Disable QuickEdit (prevents terminal freeze on mouse click)
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class ConsoleMode {
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern IntPtr GetStdHandle(int nStdHandle);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out int lpMode);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetConsoleMode(IntPtr hConsoleHandle, int dwMode);
+}
+"@
+
+$STD_INPUT_HANDLE      = -10
+$ENABLE_QUICK_EDIT     = 0x0040
+$ENABLE_EXTENDED_FLAGS = 0x0080
+$hConsole = [ConsoleMode]::GetStdHandle($STD_INPUT_HANDLE)
+[int]$mode = 0
+[ConsoleMode]::GetConsoleMode($hConsole, [ref]$mode) | Out-Null
+$newMode = ($mode -band (-bnot $ENABLE_QUICK_EDIT)) -bor $ENABLE_EXTENDED_FLAGS
+[ConsoleMode]::SetConsoleMode($hConsole, $newMode) | Out-Null
 
 # --- Admin authorization ---
 If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
@@ -1156,8 +1180,9 @@ function Start-Das {
     $service = Get-Service -Name RemoteSystemMonitorService -ErrorAction SilentlyContinue
     # ✅ Proverka dali servisot postoi
     if ($null -eq $service) {
-        Write-Log "Service 'RemoteSystemMonitorService' does not exist."
-        Send-TelegramMessage -message "Service 'RemoteSystemMonitorService' does not exist."
+        Write-Log "RemoteSystemMonitorService is Not Installed."
+		Write-Host "RemoteSystemMonitorService is Not Installed."
+        Send-TelegramMessage -message "RemoteSystemMonitorService is Not Installed."
         return
     }
     # Ako i EXE i servis se veќе aktivni
@@ -1174,6 +1199,7 @@ function Start-Das {
         if (Test-Path $DasPath) {
             Start-Process -FilePath $DasPath
             Write-Log "Dashboard exe is Running."
+			Write-Host "Dashboard is Started."
             Send-TelegramMessage -message "Dashboard exe is Running."
             $startedExe = $true
         }
@@ -1188,7 +1214,7 @@ function Start-Das {
     # Startuvaj servis ako ne e vo 'Running' sostojba
     if ($service.Status -ne 'Running') {
         try {
-            Start-Service -Name RemoteSystemMonitorService
+            Start-Service -Name RemoteSystemMonitorService -ErrorAction Stop
             Write-Log "Dashboard service is running."
             Send-TelegramMessage -message "Dashboard service is Running."
             $startedService = $true
@@ -1356,28 +1382,54 @@ Active Adapter  : $adapterName
 
 # VLC player функции
 function Play-VLC {
+    if (-not (Test-Path $vlcPath)) {
+		Write-Host "VLC is Not Installed."
+        return "VLC is Not Installed."
+    }
     # Затвори било кој активен VLC пред да пуштиш нов стрим
     Get-Process vlc -ErrorAction SilentlyContinue | Stop-Process -Force
     $url = $global:RadioStations[$global:CurrentStationIndex]
-    Start-Process -FilePath "C:\Program Files\VideoLAN\VLC\vlc.exe" -ArgumentList $url
+    Start-Process -FilePath $vlcPath -ArgumentList $url
+	Write-Host "VLC is Started."
     return "Station started: $url"
+	
 }
+
 function Stop-VLC {
+    if (-not (Test-Path $vlcPath)) {
+		Write-Host "VLC is Not Installed."
+        return "VLC is Not Installed."
+    }
     Get-Process vlc -ErrorAction SilentlyContinue | Stop-Process -Force
     return "VLC is closed."
 }
+
 function Next-Station {
+    if (-not (Test-Path $vlcPath)) {
+		Write-Host "VLC is Not Installed."
+        return "VLC is Not Installed."
+    }
     $global:CurrentStationIndex = ($global:CurrentStationIndex + 1) % $global:RadioStations.Count
     return Play-VLC
 }
+
 function Prev-Station {
+    if (-not (Test-Path $vlcPath)) {
+		Write-Host "VLC is Not Installed."
+        return "VLC is Not Installed."
+    }
     $global:CurrentStationIndex = ($global:CurrentStationIndex - 1)
     if ($global:CurrentStationIndex -lt 0) {
         $global:CurrentStationIndex = $global:RadioStations.Count - 1
     }
     return Play-VLC
 }
+
 function VLC-Status {
+    if (-not (Test-Path $vlcPath)) {
+		Write-Host "VLC is Not Installed."
+        return "VLC is Not Installed."
+    }
     if (Get-Process vlc -ErrorAction SilentlyContinue) {
         $url = $global:RadioStations[$global:CurrentStationIndex]
         return "VLC is running. Current station: $url"
@@ -2456,7 +2508,12 @@ Unauthorized Access Attempt!
                     switch ($cmdInfo.Cmd) {
                         "Start-TeamViewer" {
 							$teamViewerPath = "C:\Program Files\TeamViewer\TeamViewer.exe"
-							if (Test-Path $teamViewerPath) {
+							$tvProc = Get-Process -Name TeamViewer -ErrorAction SilentlyContinue
+							if ($tvProc) {
+								Write-Host "TeamViewer is already running."
+								Send-TelegramMessage -message "TeamViewer is already running."
+							}
+							elseif (Test-Path $teamViewerPath) {
 								Start-Process -FilePath $teamViewerPath -ErrorAction SilentlyContinue
 								Write-Host "TeamViewer is Started."
 								Send-TelegramMessage -message "TeamViewer is Started."
@@ -2488,7 +2545,12 @@ Unauthorized Access Attempt!
 						    # TrafficMonitor
 						"Start-TrafficMonitor" {
 							$trafficMonitorPath = "C:\TrafficMonitor\TrafficMonitor.exe"
-							if (Test-Path $trafficMonitorPath) {
+							$tmProc = Get-Process -Name TrafficMonitor -ErrorAction SilentlyContinue
+							if ($tmProc) {
+								Write-Host "TrafficMonitor is already running."
+								Send-TelegramMessage -message "TrafficMonitor is already running."
+							}
+							elseif (Test-Path $trafficMonitorPath) {
 								Start-Process -FilePath $trafficMonitorPath -ErrorAction SilentlyContinue
 								Write-Host "TrafficMonitor is Started."
 								Send-TelegramMessage -message "TrafficMonitor is Started."
