@@ -880,7 +880,7 @@ if ($TrafficMonitorAutoStart) {
         New-Item $DataFolder -ItemType Directory -Force | Out-Null
     }
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\TrafficMonitorWorker.ps1`"" -WindowStyle Hidden
-    Send-TelegramMessage "Network Monitoring is starting in $timestamp. TrafficMonitorWorker script has Started."
+    Send-TelegramMessage "Network Monitoring is Starting at $timestamp. TrafficMonitorWorker has Started."
 }
 
 # === START MONITORING ===
@@ -913,7 +913,7 @@ function Start-Monitoring {
     } else {
         Write-MonitoringLog "ERROR: SystemMonitorWorker process cannot be started!" -NoDisplay
     }
-    $msg = "System Monitoring is Starting at $timestamp. SystemMonitorWorker script has Started."
+    $msg = "System Monitoring is Starting at $timestamp. SystemMonitorWorker has Started."
     Write-MonitoringLog $msg -NoDisplay
     Send-TelegramMessage $msg
 }
@@ -994,74 +994,119 @@ function Get-MonitoringStatus {
 function Check-AutoCommands {
     if ($global:scriptStopped) { return }
     $currentTime = Get-Date
+    # ================= BUILD SORTED TASK LIST =================
+    $sortedTasks = @()
     foreach ($commandKey in $global:AutoCommands.Keys) {
         $cmdInfo = $global:AutoCommands[$commandKey]
         for ($i = 0; $i -lt $cmdInfo.Times.Count; $i++) {
             $timeStr = $cmdInfo.Times[$i]
-            $repeatMinutes = 0
-            if ($cmdInfo.ContainsKey("RepeatIntervalMinutes") -and $cmdInfo.RepeatIntervalMinutes.Count -gt $i) {
-                $repeatMinutes = $cmdInfo.RepeatIntervalMinutes[$i]
+            $mode = if ($cmdInfo.Mode.Count -gt $i) { $cmdInfo.Mode[$i] } else { "loop" }
+            $type = if ($cmdInfo.ContainsKey("Type")) {
+                if ($cmdInfo.Type -is [Array]) { $cmdInfo.Type[$i] } else { $cmdInfo.Type }
+            } else { "daily" }
+            $dayStr = if ($cmdInfo.ContainsKey("Day") -and $cmdInfo.Day.Count -gt $i -and $cmdInfo.Day[$i]) {
+                $cmdInfo.Day[$i]
+            } else { "" }
+            # ===== ИСТА TIME ЛОГИКА КАКО TIMELINE =====
+            if ($mode -eq "fixed" -and $dayStr) {
+                $dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
+            } else {
+               $today = Get-Date
+                $timeParts = $timeStr -split ":"
+                $dt = $today.Date.
+                    AddHours([int]$timeParts[0]).
+                    AddMinutes([int]$timeParts[1]).
+                    AddSeconds([int]$timeParts[2])
+                switch ($type.ToLower()) {
+                    "weekly" {
+                        while ($dt.DayOfWeek -ne [System.DayOfWeek]::Sunday) {
+                            $dt = $dt.AddDays(1)
+                        }
+                    }
+                    "monthly" {
+                        $lastDay = [datetime]::DaysInMonth($dt.Year, $dt.Month)
+                        $dt = [datetime]::new($dt.Year,$dt.Month,$lastDay,$dt.Hour,$dt.Minute,$dt.Second)
+                    }
+                    "yearly" {
+                        $dt = [datetime]::new($dt.Year,12,31,$dt.Hour,$dt.Minute,$dt.Second)
+                    }
+                }
             }
-            $targetTime = [datetime]::Today.Add([timespan]::Parse($timeStr))
-            $execKey = "$commandKey-$timeStr"
-            # ===== КАЛЕНДАРСКА ЛОГИКА ЗА ИЗВРШУВАЊЕ =====
-            $shouldRun = $true
-            $type = if ($cmdInfo.ContainsKey("Type")) { $cmdInfo.Type.ToLower() } else { "daily" }
-            switch ($type) {
-                "weekly" {
-                    if ($currentTime.DayOfWeek -ne 'Sunday') {
-                        $shouldRun = $false
-                    }
-                }
-                "monthly" {
-                    $lastDay = [DateTime]::DaysInMonth($currentTime.Year, $currentTime.Month)
-                    if ($currentTime.Day -ne $lastDay) {
-                        $shouldRun = $false
-                    }
-                }
-                "yearly" {
-                    if (!($currentTime.Month -eq 12 -and $currentTime.Day -eq 31)) {
-                        $shouldRun = $false
-                    }
-                }
-                default { } # daily, секогаш дозволено
+            $sortedTasks += [PSCustomObject]@{
+                Key = $commandKey
+                CmdInfo = $cmdInfo
+                Index = $i
+                TimeStr = $timeStr
+                DateTime = $dt
             }
-			# ===== ПРОВЕРКА НА 'Day' ПОЛЕТО =====
-            if ($shouldRun -and $cmdInfo.ContainsKey("Day") -and $cmdInfo.Day.Count -gt 0) {
-                # Доколку денешниот датум не е во списокот Day, не извршувај
-                $todayStr = $currentTime.ToString("yyyy-MM-dd")
-                if (-not ($cmdInfo.Day -contains $todayStr)) {
+        }
+    }
+
+    # ===== СОРТИРАЊЕ ПО ВРЕМЕ =====
+    $sortedTasks = $sortedTasks | Sort-Object DateTime
+    # ================= EXECUTION =================
+    foreach ($task in $sortedTasks) {
+        $commandKey = $task.Key
+        $cmdInfo = $task.CmdInfo
+        $i = $task.Index
+        $timeStr = $task.TimeStr
+        $targetTime = $task.DateTime
+        $repeatMinutes = 0
+        if ($cmdInfo.ContainsKey("RepeatIntervalMinutes") -and $cmdInfo.RepeatIntervalMinutes.Count -gt $i) {
+            $repeatMinutes = $cmdInfo.RepeatIntervalMinutes[$i]
+        }
+        $execKey = "$commandKey-$timeStr"
+        # ===== TYPE CHECK (исто како порано) =====
+        $shouldRun = $true
+        $type = if ($cmdInfo.ContainsKey("Type")) {
+            if ($cmdInfo.Type -is [Array]) { $cmdInfo.Type[$i] } else { $cmdInfo.Type }
+        } else { "daily" }
+
+        switch ($type.ToLower()) {
+            "weekly" {
+                if ($currentTime.DayOfWeek -ne 'Sunday') { $shouldRun = $false }
+            }
+            "monthly" {
+                $lastDay = [DateTime]::DaysInMonth($currentTime.Year, $currentTime.Month)
+                if ($currentTime.Day -ne $lastDay) { $shouldRun = $false }
+            }
+            "yearly" {
+                if (!($currentTime.Month -eq 12 -and $currentTime.Day -eq 31)) {
                     $shouldRun = $false
                 }
             }
-			if ($shouldRun) {
-            # --- 1) Прво извршување со толеранција од 1 минута ---
-            if ($currentTime -ge $targetTime -and $currentTime -lt $targetTime.AddMinutes(1)) {
-                if (-not $global:commandsExecuted.ContainsKey($execKey)) {
-                    Invoke-CommandAndNotify $commandKey $cmdInfo.Cmd $timeStr
-                    $global:commandsExecuted[$execKey] = $currentTime
-
-                    # Ако има repeat, зачувај го и стартното време
-                    if ($repeatMinutes -gt 0) {
-                        $global:commandsExecuted["$execKey-Repeat"] = $currentTime
-                    }
+        }
+        # ===== DAY CHECK (fixed) =====
+        if ($shouldRun -and $cmdInfo.ContainsKey("Day") -and $cmdInfo.Day.Count -gt $i -and $cmdInfo.Day[$i]) {
+            $todayStr = $currentTime.ToString("yyyy-MM-dd")
+            if ($cmdInfo.Day[$i] -ne $todayStr) {
+                $shouldRun = $false
+            }
+        }
+        if (-not $shouldRun) { continue }
+        # ===== EXECUTION WINDOW (FIXED) =====
+        $diff = ($currentTime - $targetTime).TotalSeconds
+        if ($diff -ge 0 -and $diff -le 120) {
+            if (-not $global:commandsExecuted.ContainsKey($execKey)) {
+                Invoke-CommandAndNotify $commandKey $cmdInfo.Cmd $timeStr
+                $global:commandsExecuted[$execKey] = $currentTime
+                if ($repeatMinutes -gt 0) {
+                    $global:commandsExecuted["$execKey-Repeat"] = $currentTime
                 }
             }
-            # --- 2) Повторување со толеранција од 30 секунди ---
-            if ($repeatMinutes -gt 0 -and $global:commandsExecuted.ContainsKey("$execKey-Repeat")) {
-                $lastRun = $global:commandsExecuted["$execKey-Repeat"]
-                $minutesSinceLast = ($currentTime - $lastRun).TotalMinutes
-                $secondsSinceLast = ($currentTime - $lastRun).TotalSeconds
-
-					if ($minutesSinceLast -ge $repeatMinutes -and $secondsSinceLast -lt (($repeatMinutes * 80) + 55)) {
-						Invoke-CommandAndNotify $commandKey $cmdInfo.Cmd "$timeStr-Repeat"
-						$global:commandsExecuted["$execKey-Repeat"] = $currentTime
-					}
-                }
-			}
+        }
+        # ===== REPEAT (НЕ МЕНУВАМЕ ЛОГИКА) =====
+        if ($repeatMinutes -gt 0 -and $global:commandsExecuted.ContainsKey("$execKey-Repeat")) {
+            $lastRun = $global:commandsExecuted["$execKey-Repeat"]
+            $minutesSinceLast = ($currentTime - $lastRun).TotalMinutes
+            $secondsSinceLast = ($currentTime - $lastRun).TotalSeconds
+            if ($minutesSinceLast -ge $repeatMinutes -and $secondsSinceLast -lt (($repeatMinutes * 80) + 55)) {
+                Invoke-CommandAndNotify $commandKey $cmdInfo.Cmd "$timeStr-Repeat"
+                $global:commandsExecuted["$execKey-Repeat"] = $currentTime
+            }
         }
     }
-    # Чистење на стари записи од првично извршување
+    # ================= CLEANUP =================
     $keysToRemove = @()
     foreach ($key in $global:commandsExecuted.Keys) {
         if ($key -notmatch "Repeat") {
@@ -1072,7 +1117,9 @@ function Check-AutoCommands {
             }
         }
     }
-    foreach ($k in $keysToRemove) { $global:commandsExecuted.Remove($k) }
+    foreach ($k in $keysToRemove) {
+        $global:commandsExecuted.Remove($k)
+    }
 }
 
 ###############  Invoke-CommandAndNotify Automation Code
@@ -2933,48 +2980,51 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 				$script.Day -and
 				$script.Day.Count -gt $i -and
 				-not [string]::IsNullOrWhiteSpace($script.Day[$i])
-			# ---------- BASE TIME ----------
+			# ---------- BASE TIME (FIXED + LOOP како TIMELINE) ----------
+			$now = Get-Date
 			if ($useExplicitDay) {
-				# Logika od Day (strogo za taj datum)
-				$baseTime = [DateTime]::ParseExact(
-					$script.Day[$i],
-					"yyyy-MM-dd",
+				# ===== FIXED =====
+				$baseTime = [datetime]::ParseExact(
+					"$($script.Day[$i]) $($script.Times[$i])",
+					"yyyy-MM-dd HH:mm:ss",
 					$null
-				).Add($timeSpan)
-				# Ako je vreme u proslosti, preskoci
-				if ($baseTime -lt (Get-Date)) {
+				)
+				# ако поминало → skip
+				if ($baseTime -lt $now) {
 					continue
 				}
-				$endTime = $baseTime.Date.AddDays(1)   # do kraja tog dana
+				$endTime = $baseTime.Date.AddDays(1)
 			}
 			else {
-				# Logika od prviot kod (ako nema Day)
-				$baseTime = [DateTime]::Today.Add($timeSpan)
-				if ($baseTime -lt (Get-Date)) {
+				# ===== LOOP =====
+				$today = $now.Date
+				$timeParts = $script.Times[$i] -split ":"
+				$baseTime = $today.
+					AddHours([int]$timeParts[0]).
+					AddMinutes([int]$timeParts[1]).
+					AddSeconds([int]$timeParts[2])
+				# ако поминало → утре
+				if ($baseTime -lt $now) {
 					$baseTime = $baseTime.AddDays(1)
 				}
-
-				$endTime = $baseTime.AddDays(1)        # narednih 24h
+				$endTime = $baseTime.AddDays(1)
 			}
 			# ---------- GENERISANJE EXEC TIMES ----------
 			if ($repeatInterval -gt 0) {
 				$currentExecTime = $baseTime
 				while ($currentExecTime -lt $endTime) {
 					$execTime = $currentExecTime.AddSeconds($delaySeconds)
-
 					$allCommands += [PSCustomObject]@{
 						ScriptPath   = $script.Path
 						Command      = $script.Commands[$i]
 						ExecTime     = $execTime
 						DelaySeconds = $delaySeconds
 					}
-
 					$currentExecTime = $currentExecTime.AddMinutes($repeatInterval)
 				}
 			}
 			else {
 				$execTime = $baseTime.AddSeconds($delaySeconds)
-
 				$allCommands += [PSCustomObject]@{
 					ScriptPath   = $script.Path
 					Command      = $script.Commands[$i]
