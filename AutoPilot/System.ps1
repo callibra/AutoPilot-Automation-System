@@ -612,7 +612,7 @@ function Stop-Workers {
 
 # AutoPilot Path
 $AutopilotFolder = "$PSScriptRoot\Autopilot_Data"
-$AutoPilotScript = "$PSScriptRoot\AutoPilot.ps1"
+$AutoPilotScript = "$PSScriptRoot\Autopilot.ps1"
 
 # 🟩 INICIJALIZACIJA NA LOGOVI ZA AUTOPILOT Main ***
 $Global:logDate = Get-Date -Format 'yyyy-MM-dd'
@@ -630,8 +630,8 @@ function Start-AutoPilot {
     try {
         if (-not (Test-Path $AutopilotFolder)) {
             New-Item -ItemType Directory -Path $AutopilotFolder | Out-Null
-            $result += "Created AutoPilot_Data folder.`n"
-            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Created AutoPilot_Data folder."
+            $result += "Created Autopilot_Data folder.`n"
+            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Created Autopilot_Data folder."
         }
         $existing = Get-CimInstance Win32_Process | Where-Object {
             $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape($AutoPilotScript)
@@ -667,7 +667,7 @@ function Stop-AutoPilot {
 
     try {
         $scriptsToStop = @(
-            $AutoPilotScript,
+            "$PSScriptRoot\Autopilot.ps1",
             "$PSScriptRoot\SystemMonitorWorker.ps1",
             "$PSScriptRoot\TrafficMonitorWorker.ps1"
         )
@@ -688,8 +688,8 @@ function Stop-AutoPilot {
                         foreach ($child in $childProcs) {
                             try {
                                 Stop-Process -Id $child.ProcessId -Force
-                                $result += "Child Processs $($child.ProcessId) na $($proc.ProcessId) has been Closed.`n"
-                                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Child Process $($child.ProcessId) na $($proc.ProcessId) has been Closed."
+                                $result += "Child Processs $($child.ProcessId) of parent $($proc.ProcessId) has been Closed.`n"
+                                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Child Process $($child.ProcessId) of parent $($proc.ProcessId) has been Closed."
                             } catch {
                                 $msg = "Cannot close the child process $($child.ProcessId): $_"
                                 $result += "$msg`n"
@@ -742,7 +742,7 @@ function Restart-AutoPilotWithLog {
 
     try {
         $scriptsToStop = @(
-            "$PSScriptRoot\AutoPilot.ps1",
+            "$PSScriptRoot\Autopilot.ps1",
             "$PSScriptRoot\SystemMonitorWorker.ps1",
             "$PSScriptRoot\TrafficMonitorWorker.ps1"
         )
@@ -791,7 +791,7 @@ function Restart-AutoPilotWithLog {
         if ($foundProcess) {
             if (-not (Test-Path $AutopilotFolder)) {
                 New-Item -ItemType Directory -Path $AutopilotFolder | Out-Null
-                $msg = "Create AutoPilot_Data folder."
+                $msg = "Create Autopilot_Data folder."
                 $result += "$msg`n"
                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
             }
@@ -822,7 +822,7 @@ function Restart-AutoPilotWithLog {
 # === AUTOPILOT STATUS ===
 function Get-AutoPilotStatus {
     $autoPilotRunning = Get-CimInstance Win32_Process | Where-Object {
-        $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape("$PSScriptRoot\AutoPilot.ps1")
+        $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape("$PSScriptRoot\Autopilot.ps1")
     }
     if ($autoPilotRunning) {
         return "ACTIVE"
@@ -1143,7 +1143,7 @@ function Commands-ListAll {
 # Show Terminal
 function Show-CMDWindow {
     $scriptPS1 = Join-Path $PSScriptRoot "Autopilot.ps1"
-    $scriptLnk = Join-Path $PSScriptRoot "Shortcuts\Autopilot.lnk"
+    $scriptLnk = Join-Path $PSScriptRoot "Shortcuts\AutoPilot.lnk"
     # Проверка дали Autopilot.ps1 е активна
     $proc = Get-CimInstance Win32_Process | Where-Object {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape($scriptPS1)
@@ -1183,7 +1183,7 @@ function Show-CMDWindow {
         if (Test-Path $scriptLnk) {
             Start-Process -WindowStyle Normal -FilePath $scriptLnk
         } else {
-            Show-DarkWarning -Title "Error" -Message "Autopilot.lnk not found!"
+            Show-DarkWarning -Title "Error" -Message "AutoPilot.lnk not found!"
         }
     }
 }
@@ -1191,7 +1191,7 @@ function Show-CMDWindow {
 # Hide Terminal
 function Hide-CMDWindow {
     $scriptPS1 = Join-Path $PSScriptRoot "Autopilot.ps1"
-    $scriptLnk = Join-Path $PSScriptRoot "Shortcuts\Autopilot.lnk"
+    $scriptLnk = Join-Path $PSScriptRoot "Shortcuts\AutoPilot.lnk"
     # Проверка дали Autopilot.ps1 е активna
     $proc = Get-CimInstance Win32_Process | Where-Object {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape($scriptPS1)
@@ -1231,7 +1231,7 @@ function Hide-CMDWindow {
         if (Test-Path $scriptLnk) {
             Start-Process -WindowStyle Hidden -FilePath $scriptLnk
         } else {
-            Show-DarkWarning -Title "Error" -Message "Autopilot.lnk not found!"
+            Show-DarkWarning -Title "Error" -Message "AutoPilot.lnk not found!"
         }
     }
 }

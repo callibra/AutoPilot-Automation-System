@@ -8,6 +8,8 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 # -- Пат до ThrottleStop.ini и ThrottleStop.exe --
 $iniPath = "C:\ThrottleStop\ThrottleStop.ini"
 $throttleStopExe = "C:\ThrottleStop\ThrottleStop.exe"
+# --- Проверка дали ThrottleStop постои ---
+$ThrottleStopInstalled = (Test-Path $throttleStopExe) -and (Test-Path $iniPath)
 
 # --- Функции за ThrottleStop профили ---
 function Get-ThrottleStopProfile {
@@ -35,6 +37,10 @@ function Set-ThrottleStopProfile {
 }
 
 function Restart-ThrottleStop {
+	if (-not $ThrottleStopInstalled) {
+    Write-Host "ThrottleStop is not installed!" -ForegroundColor Red
+    return
+    }
     $proc = Get-Process -Name "ThrottleStop" -ErrorAction SilentlyContinue
     if ($proc) {
         Write-Host "Closing ThrottleStop..." -ForegroundColor Yellow
@@ -51,6 +57,11 @@ function Show-ThrottleStopMenu {
     $profileNames = @("Profile Power (3.5)", "Profile Cool (3.0)", "Profile Medium (2.8)", "Profile Low End (2.6)")
     Clear-Host
     Write-Host "=== ThrottleStop Menu ===" -ForegroundColor Cyan
+	# --- НОВО ---
+    if (-not $ThrottleStopInstalled) {
+        Write-Host "Status: ThrottleStop NOT installed! Install to this path C:\ThrottleStop" -ForegroundColor Red
+        Write-Host ""
+    }
     Write-Host "Current profile: " -NoNewline
     if ($currentProfile -ge 0 -and $currentProfile -lt $profileNames.Length) {
         Write-Host "$($profileNames[$currentProfile])" -ForegroundColor Green
@@ -70,6 +81,12 @@ function ThrottleStopMenu {
         $selection = Read-Host "Enter option number"
         switch ($selection) {
             "1" {
+				if (-not $ThrottleStopInstalled) {
+					Write-Host "ThrottleStop is not installed. Action unavailable." -ForegroundColor Red
+					Start-Sleep -Seconds 2
+					$continueMenu = $true
+					continue
+				}
                 Write-Host "Select a profile for ThrottleStop:" -ForegroundColor Cyan
                 Write-Host " -0 = Profile Power"
                 Write-Host " -1 = Profile Cool"
@@ -89,6 +106,12 @@ function ThrottleStopMenu {
                 $continueMenu = $true
             }
             "2" {
+				if (-not $ThrottleStopInstalled) {
+					Write-Host "ThrottleStop is not installed." -ForegroundColor Red
+					Start-Sleep -Seconds 2
+					$continueMenu = $true
+					continue
+				}
                 $currentProfile = Get-ThrottleStopProfile
                 Write-Host "Current profile: " -NoNewline
                 switch ($currentProfile) {
