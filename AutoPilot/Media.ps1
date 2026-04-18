@@ -206,7 +206,7 @@ function Take-ScreenRecord {
         }
 
         if (Test-Path $path) {
-            $caption = "Command: /record`nPeriod: $($startTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* Autopilot | Start Menu - /start"
+            $caption = "Command: /record`nPeriod: $($startTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
             Send-TelegramVideo -videoPath $path -caption $caption
         } else {
             Send-TelegramMessage -message " Error: Recording not found ($path)"
@@ -356,7 +356,7 @@ function Stop-Recording {
         return $null
     }
 
-    $caption = "Command: /rec_stop`nPeriod: $($stopTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($global:LastDesktopRecordingStartTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n* Autopilot | Start Menu - /start"
+    $caption = "Command: /rec_stop`nPeriod: $($stopTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($global:LastDesktopRecordingStartTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n* AutoPilot | Start Menu - /start"
     Send-TelegramVideo -videoPath $videoPath -caption $caption
 
     return @{ Video=$videoPath; Start=$global:LastDesktopRecordingStartTime; Stop=$stopTime; Duration=$duration }
@@ -509,7 +509,7 @@ function Stop-CameraRecording {
         return $null
     }
 
-    $caption = "Command: /cam_stop`nPeriod: $($stopTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($global:LastCameraRecordingStartTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n* Video folder: /data`n* Autopilot | Start Menu - /start"
+    $caption = "Command: /cam_stop`nPeriod: $($stopTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($global:LastCameraRecordingStartTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n* Video folder: /data`n* AutoPilot | Start Menu - /start"
     Send-TelegramVideo -videoPath $videoPath -caption $caption
 
     return @{ Video=$videoPath; Start=$global:LastCameraRecordingStartTime; Stop=$stopTime; Duration=$duration }

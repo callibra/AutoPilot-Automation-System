@@ -302,6 +302,9 @@ function Main {
 
 					Run-DiskCleanup
 					$operationsDone += "Disk Cleanup is completed"
+					# ===== FINAL TOTAL SUMMARY =====
+					$totalMB = [math]::Round($totalDeletedSize / 1MB, 2)
+					Write-Colored "TOTAL CLEANED: $totalDeletedFiles files | $totalMB MB freed" Green
 				}
 				11 {
 					Write-Colored "`STATUS REPORT" Cyan
@@ -462,6 +465,9 @@ function Main {
 
                     Run-DiskCleanup
                     $operationsDone += "Disk Cleanup completed"
+					# ===== FINAL TOTAL SUMMARY =====
+					$totalMB = [math]::Round($totalDeletedSize / 1MB, 2)
+					Write-Colored "TOTAL CLEANED: $totalDeletedFiles files | $totalMB MB freed" Green
                     Write-Colored "Bulk cleanup completed." Green
                     Read-Host "`Press ENTER to return to the Main Menu..."
                 }

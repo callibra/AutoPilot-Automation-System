@@ -1069,61 +1069,114 @@ function Commands-ListAll {
     $timeline = @()
     # ================= SCRIPTS =================
     foreach($scr in $scrJson.ScheduledScripts){
-        for($i=0; $i -lt $scr.Times.Count; $i++){
-            $mode = $scr.Mode[$i]
-            $type = "daily"
-            $timeStr = $scr.Times[$i]
-            $dayStr = if($scr.Day[$i] -and $scr.Day[$i].Trim() -ne "") { $scr.Day[$i] } else { "No Data" }
-            if($mode -eq "fixed" -and $dayStr){
-                $dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
-            } else {
-                $today = Get-Date
-                $timeParts = $timeStr -split ":"
-                $dt = $today.Date.AddHours([int]$timeParts[0]).AddMinutes([int]$timeParts[1]).AddSeconds([int]$timeParts[2])
-            }
-            $status = if($mode -eq "fixed") { "FIKS" } else { "LOOP" }
-            $timeline += [PSCustomObject]@{
-                Time = $dt
-                Text = "$status | SCRIPT ($([System.IO.Path]::GetFileName($scr.Path))) Command: $($scr.Commands[$i]) | Time: $timeStr | Delay: $($scr.DelaySeconds[$i]) sec | Repeat: $($scr.RepeatIntervalMinutes[$i]) min | Day: $dayStr"
-            }
-        }
-    }
+		for($i=0; $i -lt $scr.Times.Count; $i++){
+			$mode = $scr.Mode[$i]
+			$type = "daily"
+			$timeStr = $scr.Times[$i]
+			$dayStr = if($scr.Day[$i] -and $scr.Day[$i].Trim() -ne "") { $scr.Day[$i] } else { "No Data" }
+			# ===== ИСТА ЛОГИКА КАКО Load-Timeline =====
+			if($mode -eq "fixed" -and $dayStr){
+				$dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
+			} else {
+				$today = Get-Date
+				$timeParts = $timeStr -split ":"
+				$dt = $today.Date.AddHours([int]$timeParts[0]).AddMinutes([int]$timeParts[1]).AddSeconds([int]$timeParts[2])
+			}
+			# ===== STATUS ИСТ КАКО ПРВИОТ КОД =====
+			switch ($mode.ToLower()){
+				"fixed" { $status = "Interval: FIKS" }
+				"loop"  { $status = "Interval: LOOP" }
+				default { $status = "" }
+			}
+			$timeline += [PSCustomObject]@{
+				Time = $dt
+				Text = "$status | SCRIPT ($([System.IO.Path]::GetFileName($scr.Path))) Command: $($scr.Commands[$i]) | Time: $timeStr | Delay: $($scr.DelaySeconds[$i]) sec | Repeat: $($scr.RepeatIntervalMinutes[$i]) min | Mode: $mode | Day: $dayStr"
+			}
+		}
+	}
     # ================= AUTO COMMANDS =================
     foreach($cmd in $cmdJson.AutoCommands.PSObject.Properties.Value){
-        for($i=0; $i -lt $cmd.Times.Count; $i++){
-            $mode = $cmd.Mode[$i]
-            $type = if ($cmd.Type -is [Array]) { $cmd.Type[$i] } else { $cmd.Type }
-            $timeStr = $cmd.Times[$i]
-            $dayStr = if($cmd.Day[$i] -and $cmd.Day[$i].Trim() -ne "") { $cmd.Day[$i] } else { "No Data" }
-            if($mode -eq "fixed" -and $dayStr){
-                $dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
-            } else {
-                $today = Get-Date
-                $timeParts = $timeStr -split ":"
-                $dt = $today.Date.AddHours([int]$timeParts[0]).AddMinutes([int]$timeParts[1]).AddSeconds([int]$timeParts[2])
-            }
-            $status = if($mode -eq "fixed") { "FIKS" } else { "LOOP" }
-            switch ($type.ToLower()){
-                "daily"   { $typeText = "" }
-                "weekly"  { $typeText = " WEEK" }
-                "monthly" { $typeText = " MONTH" }
-                "yearly"  { $typeText = " YEAR" }
-                default   { $typeText = "" }
-            }
-            $timeline += [PSCustomObject]@{
-                Time = $dt
-                Text = "$status$typeText | AUTO COMMAND ($($cmd.Cmd)) | Time: $timeStr | Repeat: $($cmd.RepeatIntervalMinutes[$i]) min | Day: $dayStr"
-            }
-        }
-    }
+		for($i=0; $i -lt $cmd.Times.Count; $i++){
+			$mode = $cmd.Mode[$i]
+			$type = if ($cmd.Type -is [Array]) { $cmd.Type[$i] } else { $cmd.Type }
+			$timeStr = $cmd.Times[$i]
+			$dayStr = if($cmd.Day[$i] -and $cmd.Day[$i].Trim() -ne "") { $cmd.Day[$i] } else { "No Data" }
+			# ===== ИСТА ЛОГИКА КАКО Load-Timeline =====
+			if($mode -eq "fixed" -and $dayStr){
+				$dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
+			} else {
+				$today = Get-Date
+				$timeParts = $timeStr -split ":"
+				$dt = $today.Date.AddHours([int]$timeParts[0]).AddMinutes([int]$timeParts[1]).AddSeconds([int]$timeParts[2])
+				switch ($type.ToLower()) {
+					"weekly" {
+						while($dt.DayOfWeek -ne [System.DayOfWeek]::Sunday){
+							$dt = $dt.AddDays(1)
+						}
+					}
+					"monthly" {
+						$lastDay = [datetime]::DaysInMonth($dt.Year, $dt.Month)
+						$dt = [datetime]::new($dt.Year,$dt.Month,$lastDay,$dt.Hour,$dt.Minute,$dt.Second)
+					}
+					"yearly" {
+						$dt = [datetime]::new($dt.Year,12,31,$dt.Hour,$dt.Minute,$dt.Second)
+					}
+					default { }
+				}
+			}
+			# ===== STATUS =====
+			switch ($mode.ToLower()){
+				"fixed" { $status = "Interval: FIKS" }
+				"loop"  { $status = "Interval: LOOP" }
+				default { $status = "" }
+			}
+			# ===== TYPE TEXT (исто како Load-Timeline) =====
+			switch ($type.ToLower()){
+				"daily"   { $typeText = "" }
+				"weekly"  { $typeText = " Mode: WEEK" }
+				"monthly" { $typeText = " Mode: MONTH" }
+				"yearly"  { $typeText = " Mode: YEAR" }
+				default   { $typeText = "" }
+			}
+			$timeline += [PSCustomObject]@{
+				Time = $dt
+				Text = "$status$typeText | AUTO COMMAND ($($cmd.Cmd)) | Time: $timeStr | Repeat: $($cmd.RepeatIntervalMinutes[$i]) min | Mode: $mode | Day: $dayStr"
+			}
+		}
+	}
     # ================= SORT =================
     $timeline = $timeline | Sort-Object Time
+	$now = Get-Date
+	$pastItems = $timeline | Where-Object { $_.Time -le $now }
+	$currentItem = $pastItems | Select-Object -Last 1
+	$prevItem    = $pastItems | Select-Object -Last 2 | Select-Object -First 1
+	$nextItem    = $timeline | Where-Object { $_.Time -gt $now } | Select-Object -First 1
+	# ===================== TOTAL + EXECUTED =====================
+	$todayDate = $now.Date
+	$totalCommands = @($timeline).Count
+	$executedCommands = @($timeline | Where-Object {
+		$_.Time -le $now
+	}).Count
+	$leaveCommands = @($timeline | Where-Object {
+		$_.Time -gt $now -and $_.Time.Date -eq $todayDate
+	}).Count
     # ================= CREATE TELEGRAM MESSAGES =================
     $messages = @()
-    $currentMessage = "*Timeline Commands:*`n`n"
+    $currentMessage = "*Timeline Commands*`n"
+    $currentMessage += "Total: $totalCommands | Complete: $executedCommands | Remaing: $leaveCommands`n`n"
     $counter = 1
     foreach($item in $timeline){
-        $line = "$counter. $($item.Text)`n"
+        $marker = ""
+			if ($prevItem -and $item.Time -eq $prevItem.Time -and $item.Text -eq $prevItem.Text) {
+				$marker = "[ * PREV * ]  -  "
+			}
+			elseif ($currentItem -and $item.Time -eq $currentItem.Time -and $item.Text -eq $currentItem.Text) {
+				$marker = "[ *** CURRENT *** ]  -  "
+			}
+			elseif ($nextItem -and $item.Time -eq $nextItem.Time -and $item.Text -eq $nextItem.Text) {
+				$marker = "[ * NEXT * ]  -  "
+			}
+			$line = "$counter. $marker$($item.Text)`n"
         $line += "`n"  
         if (($currentMessage.Length + $line.Length) -gt $TelegramMaxLength) {
             $messages += $currentMessage
@@ -1132,6 +1185,7 @@ function Commands-ListAll {
         $currentMessage += $line
         $counter++
     }
+	$currentMessage += "Total: $totalCommands | Complete: $executedCommands | Remaing: $leaveCommands`n`n"
     if ($currentMessage.Length -gt 0) { $messages += $currentMessage }
     # ================= SEND TO TELEGRAM =================
     foreach ($msg in $messages) {
@@ -1234,6 +1288,49 @@ function Hide-CMDWindow {
             Show-DarkWarning -Title "Error" -Message "AutoPilot.lnk not found!"
         }
     }
+}
+
+# === DASHBOARD OPEN (AUTOPILOT) ===
+function Dashboard-Open {
+    $scriptPath = Join-Path $PSScriptRoot "AutoPilot.exe"
+    $isRunning = Get-CimInstance Win32_Process |
+                 Where-Object { $_.CommandLine -like "*AutoPilot.exe*" }
+    if ($isRunning) {
+        $msg = "Dashboard is already Open. The process is ACTIVE!"
+		Write-Host "Dashboard is already Open. The process is ACTIVE!" -ForegroundColor Yellow
+		Send-TelegramMessage -message $msg
+        return
+    }
+    if (Test-Path $scriptPath) {
+		$msg = "Starting Dashboard..."
+        Write-Host "Starting Dashboard..." -ForegroundColor Cyan
+        Start-Process `
+            -FilePath "$scriptPath" `
+            -WindowStyle Hidden
+    }
+    else {
+		$msg = "AutoPilot.exe not found!"
+        Write-Host "AutoPilot.exe not found!" -ForegroundColor Red
+    }
+	Send-TelegramMessage -message $msg
+}
+
+# === DASHBOARD EXIT (AUTOPILOT) ===
+function Dashboard-Stop {
+    $running = Get-CimInstance Win32_Process |
+               Where-Object { $_.CommandLine -like "*AutoPilot.exe*" }
+    if ($running) {
+		$msg = "Exit Dashboard..."
+        Write-Host "Exit Dashboard..." -ForegroundColor Cyan
+        foreach ($p in $running) {
+            Stop-Process -Id $p.ProcessId -Force
+        }
+    }
+    else {
+		$msg = "Dashboard is already EXIT!"
+        Write-Host "Dashboard is already EXIT!" -ForegroundColor Yellow
+    }
+	Send-TelegramMessage -message $msg
 }
 
 ########################################################################################################################### System End.

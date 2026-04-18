@@ -43,6 +43,32 @@ If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     Exit
 }
 
+# ================= INIT UI STATE (START OF RUN) =================
+$statePath = "$PSScriptRoot\JSON\autopilot_state.json"
+try {
+    if (Test-Path $statePath) {
+        Remove-Item $statePath -Force -ErrorAction SilentlyContinue
+		Start-Sleep -Milliseconds 50  # 🛡️ 
+    }
+$global:runStatus = "Initializing"
+$global:finishReason = $null
+$global:skippedDay = $null
+@{
+    runId          = $global:runId
+    status         = $global:runStatus
+    reason         = "Starting"
+    cycle          = 0
+    totalCompleted = 0
+    total          = if ($maxRuns -eq 0) { "LOOP" } else { $maxRuns }
+    skippedDay     = $null
+    timestamp      = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    } | ConvertTo-Json -Depth 5 | Set-Content $statePath -Encoding UTF8
+}
+catch {
+    Write-Host "UI State reset failed: $_" -ForegroundColor Yellow
+}
+# ===============================================================
+
 # --- App ROOT ---
 $AppRoot = $PSScriptRoot
 
@@ -291,17 +317,20 @@ function Load-AutoCommandsFromJson {
     )
     if (-not (Test-Path $JsonPath)) {
         Write-Host " JSON file for AutoCommands not found: $JsonPath" -ForegroundColor Yellow
-        Start-Sleep -Seconds 3
+        Start-Sleep -Seconds 5
+		exit
     } else {
         try {
             $jsonContent = Get-Content -Path $JsonPath -Raw | ConvertFrom-Json
             if (-not $jsonContent.AutoCommands -or $jsonContent.AutoCommands.PSObject.Properties.Count -eq 0) {
                 Write-Host " JSON file is empty or contains no AutoCommands: $JsonPath" -ForegroundColor Cyan
-                Start-Sleep -Seconds 3
+                Start-Sleep -Seconds 8
+				exit
             }
         } catch {
             Write-Host " Error reading JSON file: $JsonPath" -ForegroundColor Red
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 8
+			exit
         }
     }
     $global:AutoCommands = @{ }
@@ -311,21 +340,24 @@ function Load-AutoCommandsFromJson {
         $repeatArray = @($command.RepeatIntervalMinutes)
         # ---------- LOGIKA ZA Day ----------
         $dayArray = @()
-        if ($command.PSObject.Properties.Name -contains "Day" -and
-            $command.Day -and
-            $command.Day.Count -gt 0) {
-            for ($i = 0; $i -lt $command.Day.Count; $i++) {
-                if (-not [string]::IsNullOrWhiteSpace($command.Day[$i])) {
-                    # Formatiraj datum da se osiguraju 2 cifri za mesec i dan
-                    $parts = $command.Day[$i] -split "-"
-                    $year = $parts[0]
-                    $month = "{0:D2}" -f [int]$parts[1]
-                    $day = "{0:D2}" -f [int]$parts[2]
-                    $dayArray += "$year-$month-$day"
-                }
-                # Ako je prazno -> NE dodavaj, ostane prazno
-            }
-        }
+		if ($command.PSObject.Properties.Name -contains "Day" -and
+			$command.Day -and
+			$command.Day.Count -gt 0) {
+			for ($i = 0; $i -lt $command.Day.Count; $i++) {
+				if (-not [string]::IsNullOrWhiteSpace($command.Day[$i])) {
+					# Formatiraj datum da se osiguraju 2 cifri za mesec i dan
+					$parts = $command.Day[$i] -split "-"
+					$year = $parts[0]
+					$month = "{0:D2}" -f [int]$parts[1]
+					$day = "{0:D2}" -f [int]$parts[2]
+					$dayArray += "$year-$month-$day"
+				}
+				else {
+					# 🔥 НОВО: зачувај позиција (ИСТО како Scripts loader)
+					$dayArray += ""
+				}
+			}
+		}
         # ---------- Dodavanje u AutoCommands ----------
         $global:AutoCommands[$key] = @{
             Cmd = $command.Cmd
@@ -373,29 +405,33 @@ $global:CommandToImagePath = @{
 $configPath = "$PSScriptRoot\JSON\scripts_edit.json"
 if (-not (Test-Path $configPath)) {
     Write-Host " JSON file for Scripts not found: $configPath" -ForegroundColor Yellow
-    Start-Sleep -Seconds 3
+    Start-Sleep -Seconds 5
 } else {
     try {
         $config = Get-Content $configPath -Raw | ConvertFrom-Json
         if (-not $config.ScheduledScripts -or $config.ScheduledScripts.Count -eq 0) {
             Write-Host " JSON file is empty or contains no Scripts: $configPath" -ForegroundColor Cyan
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 8
+			exit
         }
     } catch {
         Write-Host " Error reading JSON file: $configPath" -ForegroundColor Red
-        Start-Sleep -Seconds 3
+        Start-Sleep -Seconds 8
+		exit
     }
 }
 $ScheduledScripts = @()
 foreach ($script in $config.ScheduledScripts) {
-    $scriptPath = Join-Path $PSScriptRoot $script.Path # Kreiraj novi hashtable za svaki script
+    $scriptPath = Join-Path $PSScriptRoot $script.Path
+    # DIRECT PASS THROUGH (NO REBUILD)
     $ScheduledScripts += @{
-        Path = $scriptPath # Path = $script.Path
+        Path = $scriptPath
         Commands = $script.Commands
         Times = $script.Times
         DelaySeconds = $script.DelaySeconds
         RepeatIntervalMinutes = $script.RepeatIntervalMinutes
-        Day = @()  # Start empty, only fill if JSON has real Day
+        Mode = $script.Mode
+        Day = $script.Day
     }
     # Popuni Day array samo ako JSON ima vrednosti
     for ($i = 0; $i -lt $script.Commands.Count; $i++) {
@@ -493,6 +529,8 @@ $ManualCommands = @{
 	"/netusage"           = @{ Cmd = "Net-Usage" }
 	"/monitor_open"       = @{ Cmd = "Open-SystemMonitor" }
 	"/monitor_exit"       = @{ Cmd = "Stop-SystemMonitor" }
+	"/dashboard_open"     = @{ Cmd = "Dashboard-Open" }
+	"/dashboard_exit"     = @{ Cmd = "Dashboard-Stop" }
 	"/commands_list"      = @{ Cmd = "Commands-ListAll" }
 	"/hardware_load"      = @{ Cmd = "Get-LoadOnlyHardwareData" }
     "/hardware_data"      = @{ Cmd = "Get-NonLoadHardwareData" }
@@ -658,7 +696,7 @@ function Send-TelegramMessage {
         return
     }
 	# Header Footer
-    $Footer = "`n" + ("-" * 18) + "`n* Autopilot | Start Menu - /start"
+    $Footer = "`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
     $Message = $message + $Footer 
     
 	$uri = "https://api.telegram.org/bot$telegramBotToken/sendMessage"
@@ -1055,7 +1093,8 @@ function Check-AutoCommands {
         if ($cmdInfo.ContainsKey("RepeatIntervalMinutes") -and $cmdInfo.RepeatIntervalMinutes.Count -gt $i) {
             $repeatMinutes = $cmdInfo.RepeatIntervalMinutes[$i]
         }
-        $execKey = "$commandKey-$timeStr"
+        $execKey = "$commandKey|$i|$timeStr"   # delimiter
+        # $execKey = "$commandKey-$i-$timeStr"
         # ===== TYPE CHECK (исто како порано) =====
         $shouldRun = $true
         $type = if ($cmdInfo.ContainsKey("Type")) {
@@ -1110,7 +1149,9 @@ function Check-AutoCommands {
     $keysToRemove = @()
     foreach ($key in $global:commandsExecuted.Keys) {
         if ($key -notmatch "Repeat") {
-            $timeStr = ($key -split '-')[ -1 ]
+            $parts = $key -split '\|'   # delimiter
+            $timeStr = $parts[-1]   # delimiter
+            # $timeStr = ($key -split '-')[ -1 ]
             $targetTime = [datetime]::Today.Add([timespan]::Parse($timeStr))
             if ($currentTime -ge $targetTime.AddMinutes(2)) {
                 $keysToRemove += $key
@@ -1137,7 +1178,7 @@ function Invoke-CommandAndNotify {
 		& $cmdToRun
 
 		$now = Get-Date
-		$captionBase = "Automatic command: $commandKey`nTime: $($now.ToString('dd.MM.yyyy - HH:mm:ss'))`n" + ("-" * 18) + "`n* Autopilot | Start Menu - /start"
+		$captionBase = "Automatic command: $commandKey`nTime: $($now.ToString('dd.MM.yyyy - HH:mm:ss'))`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
 
 		# 📸 Ако има слика → прати ја
 		if ($global:CommandToImagePath -and $global:CommandToImagePath.ContainsKey($cmdToRun)) {
@@ -2173,6 +2214,8 @@ function Show-HelpMenu {
 /hardware_data  LHM Data 
 /monitor_open  System Monitor Open
 /monitor_exit  System Monitor Exit
+/dashboard_open  Dashboard Open
+/dashboard_exit  Dashboard Exit
 /commands_list  All Commands List
 /pause  Pause AutoPilot
 /resume  Resume AutoPilot
@@ -2785,7 +2828,7 @@ Unauthorized Access Attempt!
 							$result = Take-Screenshot
 							$now = Get-Date
 							$periodInfo = $now.ToString("dddd, dd MMMM yyyy")
-							$caption = "Command: /screen`nPeriod: $periodInfo`nTime: $($now.ToString('HH:mm:ss'))" + "`n" + ("-" * 18) + "`n* Autopilot | Start Menu - /start"
+							$caption = "Command: /screen`nPeriod: $periodInfo`nTime: $($now.ToString('HH:mm:ss'))" + "`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
 							if ($result -is [string]) {
 								Send-TelegramMessage -message $result
 							}
@@ -2805,7 +2848,7 @@ Unauthorized Access Attempt!
 								$stopTime  = $result.Stop
 								$duration  = $result.Duration
 								$periodInfo = $startTime.ToString("dddd, dd MMMM yyyy")
-								$caption = "Command: /rec_stop`nPeriod: $periodInfo`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* Autopilot | Start Menu - /start"
+								$caption = "Command: /rec_stop`nPeriod: $periodInfo`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
 								Send-TelegramVideo -videoPath $result.Video -caption $caption
 							} else {
 								Write-Host " No valid video to send." -ForegroundColor Yellow
@@ -2821,7 +2864,7 @@ Unauthorized Access Attempt!
 								$stopTime  = $result.Stop
 								$duration  = $result.Duration
 								$periodInfo = $startTime.ToString("dddd, dd MMMM yyyy")
-								$caption = "Command: /cam_stop`nPeriod: $periodInfo`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* Video Folder: /data`n* Autopilot | Start Menu - /start"
+								$caption = "Command: /cam_stop`nPeriod: $periodInfo`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* Video Folder: /data`n* AutoPilot | Start Menu - /start"
 								Send-TelegramVideo -videoPath $result.Video -caption $caption
 							} else {
 								Write-Host " No valid video to send." -ForegroundColor Yellow
@@ -2843,6 +2886,8 @@ Unauthorized Access Attempt!
 						"Pause-Script"  { Pause-Script }
 						"Open-SystemMonitor" { Open-SystemMonitor }
 	                    "Stop-SystemMonitor" { Stop-SystemMonitor }
+						"Dashboard-Open" { Dashboard-Open }
+	                    "Dashboard-Stop" { Dashboard-Stop }
 						"Commands-ListAll" { Commands-ListAll }
                         Default {
                             Send-TelegramMessage -message "Unknown system command: $($cmdInfo.Cmd)"
@@ -2948,14 +2993,44 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 
     $now = Get-Date
     if ($allowedDays -notcontains $now.DayOfWeek.ToString()) {
+	# ================= SKIPPED DAY =================
+	$global:runStatus = "Finished"
+	$global:finishReason = "SkippedDay"
+	$global:skippedDay = $now.DayOfWeek.ToString()
+	@{
+		runId          = $global:runId
+		status         = $global:runStatus
+		reason         = $global:finishReason
+		skippedDay     = $global:skippedDay
+		cycle          = $r
+		total          = if ($maxRuns -eq 0) { "LOOP" } else { $maxRuns }
+		timestamp      = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+	} | ConvertTo-Json -Depth 5 | Set-Content "$PSScriptRoot\JSON\autopilot_state.json"
+	# =====================================================
         Write-Log "Skip: Day not allowed ($($now.DayOfWeek))"
+		Write-Host "" 
+		Write-Host "Skip: Day not allowed ($($now.DayOfWeek))" -ForegroundColor DarkYellow
+		Write-Host ""
         if ($AutoPilotTelegramEnabled) {
+			Write-Host "The script did not run today ($($now.DayOfWeek))." -ForegroundColor DarkYellow
             Send-TelegramMessage -message "The script did not run today ($($now.DayOfWeek))."
         }
         break
     }
 
     Write-Log "Repetition number: $r" -Display
+	# ================= REPETITION =================
+	$global:runStatus = "Running"
+	$global:finishReason = $null
+	@{
+		runId          = $global:runId
+		status         = $global:runStatus
+		reason         = "ActiveCycle"
+		cycle          = $r
+		total          = if ($maxRuns -eq 0) { "LOOP" } else { $maxRuns }
+		timestamp      = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+	} | ConvertTo-Json -Depth 5 | Set-Content "$PSScriptRoot\JSON\autopilot_state.json"
+	# =====================================================
     Write-Host ""
     Write-Host "-List of completed automatic commands:" -ForegroundColor Yellow
     if ($AutoPilotTelegramEnabled) {
@@ -3257,7 +3332,20 @@ Unauthorized Access Attempt!
 
     $r++
 }
-
+# ================= COMPLETED =================
+$global:runStatus = "Finished"
+$global:finishReason = "Completed"
+@{
+    runId          = $global:runId
+    status         = $global:runStatus
+    reason         = $global:finishReason
+    skippedDay     = $global:skippedDay
+    totalCompleted = ($r - 1)
+    cycle          = ($r - 1)
+    total          = if ($maxRuns -eq 0) { "LOOP" } else { $maxRuns }
+    timestamp      = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+} | ConvertTo-Json -Depth 5 | Set-Content "$PSScriptRoot\JSON\autopilot_state.json"
+# ==============================================
 Write-Host "" 
 Write-Log "=== END OF AUTOPILOT ===" -Display
 Write-Host ""
@@ -3265,16 +3353,18 @@ if ($AutoPilotTelegramEnabled) {
     $endTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $duration = ((Get-Date) - $scriptStartTime).ToString("hh\:mm\:ss")
     $message = "AutoPilot has Finished...`nEnd: $endTime`nExecution time: $duration`nRepetitions: $($r - 1)"
+	Write-Host "AutoPilot has Finished...`nEnd: $endTime`nExecution time: $duration`nRepetitions: $($r - 1)" -ForegroundColor DarkGreen
+	Write-Host ""
     Send-TelegramMessage -message $message
 }
 # ⛔ Stop All Worker Scripts
 Stop-WorkerScripts
-# Za da ostane skriptata 15 sekundi pred da se zatvori:
-Write-Host " *AutoPilot Cmd will close in 15 seconds ..." -ForegroundColor Red
+# Za da ostane skriptata 35 sekundi pred da se zatvori:
+Write-Host " *AutoPilot will Close in 35 seconds ..." -ForegroundColor Red
 Write-Host ""
 Write-Host " *AutoPilot by Ivance" -ForegroundColor Blue
 Write-Host "===============================" -ForegroundColor Cyan
-Start-Sleep -Seconds 15
+Start-Sleep -Seconds 35
 ############################################################################################################################################################################################ 888 AutoPilot Script.
 
 #  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass

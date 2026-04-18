@@ -965,7 +965,7 @@ $xaml = @"
 			</StackPanel>
 			<!-- Uptime Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderUptime" CornerRadius="10" Height="45" Width="120" Background="#36918C" Padding="5" Margin="0,0,20,0">
+				<Border x:Name="borderUptime" CornerRadius="10" Height="45" Width="120" Background="#0D73BA" Padding="5" Margin="0,0,20,0">
 					<TextBlock x:Name="txtUptime" Text="Start..." FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
 				<TextBlock Text="Uptime" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
@@ -983,13 +983,32 @@ $xaml = @"
 	<!-- LIVE TIMELINE -->
     <Border Background="#AA2D2D30" CornerRadius="15" Padding="10" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,5">
     <StackPanel Orientation="Vertical" VerticalAlignment="Center">
-        <!-- TITLE -->
-        <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#4BD6DE" Margin="0,0,0,5">
-            Commands Timeline
-            <InlineUIContainer BaselineAlignment="Center">
-                <Image Source="$AppRoot\media\list.png" Width="25" Height="25" Margin="6,0,0,0"/>
-            </InlineUIContainer>
-        </TextBlock>
+       <!-- TITLE -->
+        <Grid Margin="0,0,0,5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />     <!-- Title -->
+                <ColumnDefinition Width="Auto" />  <!-- Sound button -->
+                <ColumnDefinition Width="Auto" />  <!-- Refresh button -->
+            </Grid.ColumnDefinitions>
+            <!-- LEFT: TITLE -->
+            <TextBlock Grid.Column="0" FontSize="23" FontWeight="SemiBold" Foreground="#4BD6DE" VerticalAlignment="Center">
+                Commands Timeline
+                <InlineUIContainer BaselineAlignment="Center">
+                    <Image Source="$AppRoot\media\list.png" Width="25" Height="25" Margin="6,0,0,0"/>
+                </InlineUIContainer>
+            </TextBlock>
+            <!-- MIDDLE: SOUND TOGGLE BUTTON -->
+            <Button x:Name="btnRefreshTimeline" Grid.Column="1" Content=" ⭮ " Style="{StaticResource ModernButton}" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="10,4">
+                <!-- ToolTip Notification -->
+                <Button.ToolTip>
+                    <ToolTip Background="#FF2D2D30" Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
+                        <TextBlock Text="Refresh Timeline" TextWrapping="Wrap" FontSize="17"/>
+                    </ToolTip>
+                </Button.ToolTip>
+            </Button>
+            <!-- RIGHT: REFRESH BUTTON -->
+			<Button x:Name="btnSound" Content="🔕" Style="{StaticResource ModernButton}" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4"/>
+        </Grid>
 		<!-- Center Clock Placeholder -->
         <StackPanel x:Name="centerClockContainer" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,15"/>
         <!-- Timeline Grid -->
@@ -1002,19 +1021,20 @@ $xaml = @"
             <StackPanel x:Name="liveTimelineStack" Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
                 <!-- PREV -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
-                    <TextBlock Text="⏮️ Prev  " Foreground="#9E9E9E" FontSize="17" VerticalAlignment="Center"/>
+                    <TextBlock Text="⏮️ Prev  " FontWeight="SemiBold" Foreground="#9E9E9E" FontSize="17" VerticalAlignment="Center"/>
                     <TextBlock x:Name="txtPrev" Foreground="#D6A8ED" FontSize="17" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
                 <!-- CURRENT -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
-                    <TextBlock Text="🔁 Last  " Foreground="#9E9E9E" FontSize="18" VerticalAlignment="Center"/>
+                    <TextBlock Text="🔁 Last  " FontWeight="SemiBold" Foreground="#9E9E9E" FontSize="18" VerticalAlignment="Center"/>
                     <TextBlock x:Name="txtCurrent" Foreground="#00FF00" FontSize="18" FontWeight="Bold" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
                 <!-- NEXT -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
-                    <TextBlock Text="⏭ Next  " Foreground="#9E9E9E" FontSize="17" VerticalAlignment="Center"/>
+                    <TextBlock Text="⏭ Next  " FontWeight="SemiBold" Foreground="#9E9E9E" FontSize="17" VerticalAlignment="Center"/>
                     <TextBlock x:Name="txtNext" Foreground="#3399FF" FontSize="17" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
+				<TextBlock x:Name="txtStats" FontSize="20" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
             </StackPanel>
             <!-- STATUS MESSAGE -->
             <TextBlock x:Name="txtLiveTimelineMessage" Visibility="Collapsed" Foreground="Gray" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="27"/>
@@ -1037,12 +1057,19 @@ $xaml = @"
 		<!-- MODERN TEXT WATERMARK -->
 		<TextBlock Grid.Column="1" Text="©️ 𝘼𝙪𝙩𝙤𝙋𝙞𝙡𝙤𝙩 𝘼𝙪𝙩𝙤𝙢𝙖𝙩𝙞𝙤𝙣 𝙎𝙮𝙨𝙩𝙚𝙢" FontSize="30" FontWeight="Bold" Foreground="#33FFFFFF"   VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" Opacity="0.3"/>            
 		<!-- BUTTON RIGHT -->
-		<Button x:Name="btnTimelineList" Grid.Column="2" Content="📜 List All" Style="{StaticResource ModernButton}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-		<Button x:Name="btnAction" Content="❶ Mode" Style="{StaticResource ModernButton}" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4">
+		<Button x:Name="btnTimelineList" Grid.Column="2" Content="📜 List" Style="{StaticResource ModernButton}" VerticalAlignment="Center" HorizontalAlignment="Right">
+		    <!-- ToolTip Notification -->
+			<Button.ToolTip>
+				<ToolTip Background="#FF2D2D30"  Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
+					<TextBlock Text="Timeline Commands (All Commands)" TextWrapping="Wrap" FontSize="17"/>
+				</ToolTip>
+			</Button.ToolTip>
+		</Button>
+		<Button x:Name="btnAction" Content="❶ Mod" Style="{StaticResource ModernButton}" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4">
 			<!-- ToolTip Notification -->
 			<Button.ToolTip>
 				<ToolTip Background="#FF2D2D30"  Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
-					<TextBlock Text="Use Mode 2 or 3 for Smallers Display" TextWrapping="Wrap" FontSize="17"/>
+					<TextBlock Text="Use Mod 2 or 3 for Smallers Display" TextWrapping="Wrap" FontSize="17"/>
 				</ToolTip>
 			</Button.ToolTip>
 		</Button>
@@ -1227,22 +1254,26 @@ $xaml = @"
                 </WrapPanel>
             </StackPanel>
         </Border>
-		<!-- WATERMARK -->
+        <!-- WATERMARK -->
 		<Border Margin="0,0,0,0" Background="Transparent">
-        <Grid VerticalAlignment="Center">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <!-- CENTER (logo + text) -->
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center"  Grid.Column="1">
-            <Image Source="$AppRoot\media\autopilot.ico" Width="28" Height="28" Margin="0,0,6,0"/>
-            <TextBlock Text=" AutoPilot Automation System by Ivance" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" Opacity="0.8" Foreground="#F0F0F0"/>
-        </StackPanel>
-        <!-- RIGHT BUTTON -->
-		<TextBlock Text=" © All Rights Reserved" FontSize="15" FontWeight="Bold" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Opacity="0.8" Foreground="#F0F0F0"/>
-       </Grid>
+		<Grid VerticalAlignment="Center">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/> <!-- LEFT: Version -->
+				<ColumnDefinition Width="*"/>    <!-- Spacer left -->
+				<ColumnDefinition Width="Auto"/> <!-- CENTER: logo + text -->
+				<ColumnDefinition Width="*"/>    <!-- Spacer right -->
+				<ColumnDefinition Width="Auto"/> <!-- RIGHT: All Rights -->
+			</Grid.ColumnDefinitions>
+			<!-- LEFT: VERSION -->
+			<TextBlock Text="⚙️ AutoPilot Dashboard" FontSize="15" FontWeight="Bold" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Opacity="0.8" Foreground="#F0F0F0"/>
+			<!-- CENTER (logo + text) -->
+			<StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Column="2">
+				<Image Source="$AppRoot\media\autopilot.ico" Width="28" Height="28" Margin="0,0,6,0"/>
+				<TextBlock Text=" AutoPilot Automation System by Ivance" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" Opacity="0.8" Foreground="#F0F0F0"/>
+			</StackPanel>
+			<!-- RIGHT -->
+			<TextBlock Text=" © All Rights Reserved" FontSize="15" FontWeight="Bold" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Opacity="0.8" Foreground="#F0F0F0"/>
+		</Grid>
       </Border>
     </StackPanel>
    </ScrollViewer>
@@ -1334,6 +1365,11 @@ $txtPrev   = $window.FindName("txtPrev")
 $txtCurrent  = $window.FindName("txtCurrent")
 $txtNext   = $window.FindName("txtNext")
 $txtCountdown = $window.FindName("txtCountdown")
+# Проверка на сите TextBlock-и
+if(-not ($txtPrev -and $txtCurrent -and $txtNext -and $txtCountdown)) {
+    Write-Host "ERROR: Some Timeline TextBlocks not found!"
+    return
+}
 $imgStatus = $window.FindName("imgAutoPilotStatus")
 # ===================== Mode Batton =====================
 $btnAction = $window.FindName("btnAction")
@@ -1343,12 +1379,181 @@ $rightClockContainer = $window.FindName("rightClockContainer")
 $centerClockContainer = $window.FindName("centerClockContainer")
 $borderUptime = $Window.FindName("borderUptime")
 $wpDashboard = $window.FindName("wpDashboard")
+$txtStats = $window.FindName("txtStats")
+# ===================== RefreshTimeline Batton =====================
+$btnRefreshTimeline = $window.FindName("btnRefreshTimeline")
+if ($btnRefreshTimeline) {
+    $btnRefreshTimeline.Add_Click({
+        try {
+            # ================= ROTATE ANIMATION =================
+            $rotateTransform = New-Object System.Windows.Media.RotateTransform
+            $btnRefreshTimeline.RenderTransformOrigin = [System.Windows.Point]::new(0.5,0.5)
+            $btnRefreshTimeline.RenderTransform = $rotateTransform
+            $anim = New-Object System.Windows.Media.Animation.DoubleAnimation
+            $anim.From = 0
+            $anim.To = 360
+            $anim.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(400))
+            $anim.AccelerationRatio = 0.3
+            $anim.DecelerationRatio = 0.7
+            $rotateTransform.BeginAnimation([System.Windows.Media.RotateTransform]::AngleProperty, $anim)
+            # ================= CLEANUP OLD POPUPS =================
+            $parentGrid = $btnRefreshTimeline.Parent
+            if ($parentGrid) {
+                $oldPopups = $parentGrid.Children | Where-Object {
+                    $_ -is [System.Windows.Controls.TextBlock] -and $_.Text -eq "Timeline Refreshed!"
+                }
+                foreach ($popup in $oldPopups) {
+                    $parentGrid.Children.Remove($popup)
+                }
+            }
+            # ================= CREATE FRESH POPUP =================
+            $txtPopup = New-Object System.Windows.Controls.TextBlock
+            $txtPopup.Text = "Timeline Refreshed!"
+            $txtPopup.Foreground = [System.Windows.Media.Brushes]::LightGreen
+            $txtPopup.FontWeight = "SemiBold"
+            $txtPopup.FontSize = 28
+            $txtPopup.Opacity = 1
+            $txtPopup.VerticalAlignment = "Top"
+            $txtPopup.HorizontalAlignment = "Center"
+            $txtPopup.Margin = [System.Windows.Thickness]::new(0,10,0,0)
+			# ================= CHECK AUTOPILOT STATUS =================
+            if (-not (Get-AutoPilotRunning)) {
+                $txtPopup.Text = "AutoPilot is STOPPED"
+                $txtPopup.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(220, 120, 120)   # побледа црвена
+			)
+            } elseif (Test-Path $Global:pauseFlagPath) {
+                $txtPopup.Text = "AutoPilot is PAUSED"
+                $txtPopup.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(220, 190, 120)   # побледа жолта
+			)
+            } else {
+                $txtPopup.Text = "Timeline Refreshed!"
+                $txtPopup.Foreground = [System.Windows.Media.Brushes]::LightGreen
+            }
+            # Scale for zoom effect
+            $scale = New-Object System.Windows.Media.ScaleTransform(0.5,0.5)
+            $txtPopup.RenderTransform = $scale
+            $txtPopup.RenderTransformOrigin = [System.Windows.Point]::new(0.5,0.5)
+            if ($parentGrid) { $parentGrid.Children.Add($txtPopup) }
+            # ================= ANIMATIONS =================
+            $moveUp = New-Object System.Windows.Media.Animation.ThicknessAnimation
+            $moveUp.From = $txtPopup.Margin
+            $moveUp.To   = [System.Windows.Thickness]::new(0,-55,0,0)
+            $moveUp.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(1500))
+            $txtPopup.BeginAnimation([System.Windows.FrameworkElement]::MarginProperty, $moveUp)
 
-# Проверка на сите TextBlock-и
-if(-not ($txtPrev -and $txtCurrent -and $txtNext -and $txtCountdown)) {
-    Write-Host "ERROR: Some Timeline TextBlocks not found!"
-    return
+            $fade = New-Object System.Windows.Media.Animation.DoubleAnimation
+            $fade.From = 1
+            $fade.To = 0
+            $fade.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(600))
+            $fade.BeginTime = [TimeSpan]::FromMilliseconds(600)
+            $txtPopup.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fade)
+
+            $zoom = New-Object System.Windows.Media.Animation.DoubleAnimation
+            $zoom.From = 0.5
+            $zoom.To   = 1
+            $zoom.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(600))
+            $txtPopup.RenderTransform.BeginAnimation([System.Windows.Media.ScaleTransform]::ScaleXProperty, $zoom)
+            $txtPopup.RenderTransform.BeginAnimation([System.Windows.Media.ScaleTransform]::ScaleYProperty, $zoom)
+            # ================= LOGIC =================
+            Load-Timeline
+            $window.Dispatcher.InvokeAsync({
+                Update-TimelineDisplay
+            }, [System.Windows.Threading.DispatcherPriority]::Render)
+
+        } catch {
+            Write-Host "Refresh error: $_"
+        }
+    })
 }
+# ===================== Sound ON/OFF Batton =====================
+$btnSound = $window.FindName("btnSound")
+# default: muted
+$Global:SoundEnabled = $false
+$btnSound.Content = "🔕"
+# create modern dark tooltip
+$tooltip = New-Object System.Windows.Controls.ToolTip
+# create a solid color brush for dark background
+$bgColor = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(45,45,48))
+$tooltip.Background = $bgColor
+$tooltip.Foreground = [System.Windows.Media.Brushes]::White
+$tooltip.Padding = [System.Windows.Thickness]::new(13)
+$tooltip.HasDropShadow = $true
+$tooltip.Placement = "Top"
+# create text block for tooltip
+$textBlock = New-Object System.Windows.Controls.TextBlock
+$textBlock.Text = "Sound is OFF"
+$textBlock.FontSize = 17
+$textBlock.TextWrapping = "Wrap"
+$tooltip.Content = $textBlock
+$btnSound.ToolTip = $tooltip
+# prepare sound player
+$player = New-Object System.Media.SoundPlayer "$AppRoot\media\sound.wav"
+$player.Load()
+# helper function for status popup
+function Show-SoundStatusPopup {
+    param ([bool]$SoundOn)
+    $parentGrid = $btnSound.Parent
+    if (-not $parentGrid) { return }
+    # remove old sound popups
+    $oldPopups = $parentGrid.Children | Where-Object { $_ -is [System.Windows.Controls.TextBlock] -and $_.Tag -eq "SoundPopup" }
+    foreach ($popup in $oldPopups) { $parentGrid.Children.Remove($popup) }
+    # create new popup
+    $txtPopup = New-Object System.Windows.Controls.TextBlock
+    $txtPopup.Tag = "SoundPopup"
+    $txtPopup.Text = if ($SoundOn) { "Sound is ON" } else { "Sound is OFF" }
+    $txtPopup.Foreground = if ($SoundOn) {
+    [System.Windows.Media.Brushes]::LightGreen
+	} else {
+		[System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(220, 120, 120)
+		)
+	}
+    $txtPopup.FontWeight = "SemiBold"
+    $txtPopup.FontSize = 28
+    $txtPopup.Opacity = 1
+    $txtPopup.VerticalAlignment = "Top"
+    $txtPopup.HorizontalAlignment = "Center"
+    $txtPopup.Margin = [System.Windows.Thickness]::new(0,10,0,0)
+    # zoom effect
+    $scale = New-Object System.Windows.Media.ScaleTransform(0.5,0.5)
+    $txtPopup.RenderTransform = $scale
+    $txtPopup.RenderTransformOrigin = [System.Windows.Point]::new(0.5,0.5)
+    $parentGrid.Children.Add($txtPopup)
+    # animations
+    $moveUp = New-Object System.Windows.Media.Animation.ThicknessAnimation
+    $moveUp.From = $txtPopup.Margin
+    $moveUp.To   = [System.Windows.Thickness]::new(0,-55,0,0)
+    $moveUp.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(1500))
+    $txtPopup.BeginAnimation([System.Windows.FrameworkElement]::MarginProperty, $moveUp)
+    $fade = New-Object System.Windows.Media.Animation.DoubleAnimation
+    $fade.From = 1
+    $fade.To = 0
+    $fade.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(600))
+    $fade.BeginTime = [TimeSpan]::FromMilliseconds(600)
+    $txtPopup.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fade)
+    $zoom = New-Object System.Windows.Media.Animation.DoubleAnimation
+    $zoom.From = 0.5
+    $zoom.To   = 1
+    $zoom.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(600))
+    $txtPopup.RenderTransform.BeginAnimation([System.Windows.Media.ScaleTransform]::ScaleXProperty, $zoom)
+    $txtPopup.RenderTransform.BeginAnimation([System.Windows.Media.ScaleTransform]::ScaleYProperty, $zoom)
+}
+# button click toggle
+$btnSound.Add_Click({
+    if ($Global:SoundEnabled) {
+        $Global:SoundEnabled = $false
+        $btnSound.Content = "🔕"
+        $textBlock.Text = "Sound is OFF"
+    } else {
+        $Global:SoundEnabled = $true
+        $btnSound.Content = " 🕭 "
+        $textBlock.Text = "Sound is ON"
+    }
+    # show status popup in color
+    Show-SoundStatusPopup -SoundOn $Global:SoundEnabled
+})
 
 # ===================== Function Update UI - AutoPilot =====================
 function Update-AutoPilotStatusUI {
@@ -1577,7 +1782,9 @@ function Update-ModeUI {
         if (-not $enableRestart -and -not $enableShutdown) {
             # ===== TEST MODE =====
             $txtMode.Text = "TEST MODE"
-            $borderMode.Background = [System.Windows.Media.Brushes]::DarkGreen
+            $borderMode.Background = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(1, 107, 83)
+			)
         } else {
             # ===== PRO MODE =====
             $txtMode.Text = "PRO MODE"
@@ -1789,6 +1996,7 @@ $btnCheck.Add_Click({
     Show-AboutPopupWPF
 })
 
+# ===================== BUTTON LOCK SYSTEM =====================
 $btnLock = $window.FindName("btnLock")
 $btnLock.Add_Click({
 
@@ -1974,14 +2182,14 @@ function Toggle-DashboardSize {
     if ($Global:mode -gt 3) { $Global:mode = 1 }
     # ===================== MODE 2 =====================
     if ($Global:mode -eq 2) {
-        $btnAction.Content = "❷ Mode"
+        $btnAction.Content = "❷ Mod"
         $headerGrid.Margin = "0,0,0,5"
 		$Global:popupMaxHeight = 855
 		$Global:statusMaxHeight = 855
     }
     # ===================== MODE 3 =====================
     elseif ($Global:mode -eq 3) {
-        $btnAction.Content = "❸ Mode"
+        $btnAction.Content = "❸ Mod"
         $headerGrid.Margin = "0,0,0,5"
         $Global:popupMaxHeight = 655
 		$Global:statusMaxHeight = 655
@@ -1992,7 +2200,7 @@ function Toggle-DashboardSize {
     }
     # ===================== MODE 1 =====================
     else {
-        $btnAction.Content = "❶ Mode"
+        $btnAction.Content = "❶ Mod"
         $headerGrid.Margin = "0,0,0,20"
         $Global:popupMaxHeight = 1015
 		$Global:statusMaxHeight = 1000
@@ -2129,13 +2337,78 @@ $btnTimelineList.Add_Click({
 	$logo.Width  = 55     # custom width
 	$logo.Height = 55     # custom height
 	$logo.Margin = [System.Windows.Thickness]::new(0,0,10,0)
+	# ===== TITLE DINAMIC TEXT =====
+	$totalCommands = @($global:timeline).Count
+	$executedCommands = @($global:timeline | Where-Object { $_.Time -le (Get-Date) }).Count
+	$now = Get-Date
+	$todayDate = $now.Date
+	$leaveCommands = @($global:timeline | Where-Object {
+    $_.Time -gt (Get-Date) -and $_.Time.Date -eq (Get-Date).Date
+    }).Count
 	# ===== TITLE TEXT =====
 	$titleText = New-Object System.Windows.Controls.TextBlock
-	$titleText.Text = "Automation Commands List (All Commands)"
 	$titleText.FontSize = 25
 	$titleText.FontWeight = 'Bold'
-	$titleText.Foreground = [System.Windows.Media.Brushes]::White
 	$titleText.VerticalAlignment = "Center"
+	$run1 = New-Object System.Windows.Documents.Run
+	$run1.Text = "Automation Commands List  "
+	$run1.Foreground = [System.Windows.Media.Brushes]::White
+	$run2a = New-Object System.Windows.Documents.Run
+	$run2a.Text = " 🛢️ Total: "
+	$run2a.Foreground = [System.Windows.Media.Brushes]::White
+	$run2b = New-Object System.Windows.Documents.Run
+	$run2b.Text = "$totalCommands"
+	$run2b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+    [System.Windows.Media.Color]::FromRgb(51, 153, 255)
+    )
+	$run3 = New-Object System.Windows.Documents.Run
+	$run3.Text = "  🡺  "
+	$run3.Foreground = [System.Windows.Media.Brushes]::White
+	$run4a = New-Object System.Windows.Documents.Run
+	$run4a.Text = "🔥 Complete: "
+	$run4a.Foreground = [System.Windows.Media.Brushes]::White
+	$run4b = New-Object System.Windows.Documents.Run
+	$run4b.Text = "$executedCommands"
+	$run4b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+    [System.Windows.Media.Color]::FromRgb(214, 168, 237)
+    )
+	# динамичка боја (подобро UX)
+	if ($executedCommands -eq 0) {
+		$run4b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+		[System.Windows.Media.Color]::FromRgb(240, 84, 84)
+		)
+	} else {
+		$run4b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(214, 168, 237)
+		)
+	}
+	$run5 = New-Object System.Windows.Documents.Run
+	$run5.Text = "  🡸  "
+	$run5.Foreground = [System.Windows.Media.Brushes]::White
+	$run6 = New-Object System.Windows.Documents.Run
+	$run6.Text = "🕤 Remaing: "
+	$run6.Foreground = [System.Windows.Media.Brushes]::White
+	$run7 = New-Object System.Windows.Documents.Run
+	$run7.Text = "$leaveCommands"
+	# color logic
+	if ($leaveCommands -eq 0) {
+		$run7.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(240, 84, 84)
+			)
+	} else {
+		$run7.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(240, 170, 84)
+		)
+	}
+	$titleText.Inlines.Add($run1)
+	$titleText.Inlines.Add($run2a)
+	$titleText.Inlines.Add($run2b)
+	$titleText.Inlines.Add($run3)
+	$titleText.Inlines.Add($run4a)
+	$titleText.Inlines.Add($run4b)
+	$titleText.Inlines.Add($run5)
+	$titleText.Inlines.Add($run6)
+	$titleText.Inlines.Add($run7)
 	# ===== ADD TO CONTAINER =====
 	$titleContainer.Children.Add($logo)
 	$titleContainer.Children.Add($titleText)
@@ -2372,6 +2645,10 @@ function Load-Timeline {
     $global:timeline = $timeline | Sort-Object Time
 }
 
+# ===================== UPDATE DISPLAY GLOBAL =====================
+$Global:lastDate = (Get-Date).Date
+$Global:lastNextText = ""
+
 # ===================== UPDATE DISPLAY =====================
 function Update-TimelineDisplay {
     # ===================== UI ELEMENTS =====================
@@ -2384,7 +2661,10 @@ function Update-TimelineDisplay {
     if (-not $autoPilotRunning) {
         if ($liveTimelinePanel)   { $liveTimelinePanel.Visibility = 'Collapsed' }
         if ($liveTimelineMessage) {
-            $liveTimelineMessage.Text = "AutoPilot is STOPPED"
+            $liveTimelineMessage.Text = "⏹️ AutoPilot is STOPPED"
+			$liveTimelineMessage.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(220, 120, 120)
+			)
             $liveTimelineMessage.Visibility = 'Visible'
         }
 		if($imgStatus){
@@ -2395,8 +2675,9 @@ function Update-TimelineDisplay {
         $txtPrev.Text     = "none"
         $txtCurrent.Text  = "none"
         $txtNext.Text     = "none"
-        $txtCountdown.Text = "Auto Commands are not Running!"
+        $txtCountdown.Text = "Auto Commands are not Running ⏹"
         $txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
+		$txtCountdown.FontWeight = "SemiBold"
         return
     }
     # ===================== CHECK PAUSE =====================
@@ -2404,7 +2685,10 @@ function Update-TimelineDisplay {
     if ($isPaused) {
         if ($liveTimelinePanel)   { $liveTimelinePanel.Visibility = 'Collapsed' }
         if ($liveTimelineMessage) {
-            $liveTimelineMessage.Text = "AutoPilot is PAUSED"
+            $liveTimelineMessage.Text = "⏸️ AutoPilot is PAUSED"
+			$liveTimelineMessage.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(220, 190, 120)
+			)
             $liveTimelineMessage.Visibility = 'Visible'
         }
 		if($imgStatus){
@@ -2415,10 +2699,85 @@ function Update-TimelineDisplay {
         $txtPrev.Text     = "none"
         $txtCurrent.Text  = "none"
         $txtNext.Text     = "none"
-        $txtCountdown.Text = "Auto Commands are not Running!"
+        $txtCountdown.Text = "Auto Commands are not Running ⏸️"
         $txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
+		$txtCountdown.FontWeight = "SemiBold"
         return
     }
+	# ===================== CHECK FINISHED STATE =====================
+	$statePath = "$AppRoot\JSON\autopilot_state.json"
+	if (Test-Path $statePath) {
+		$state = Get-Content $statePath -Raw | ConvertFrom-Json
+		# Ignore different run sessions
+		if ($state.runId -ne $global:runId) {
+			return
+		}
+		if ($state.status -eq "Finished") {
+			if ($liveTimelinePanel) {
+				$liveTimelinePanel.Visibility = 'Collapsed'
+			}
+			if ($liveTimelineMessage) {
+				$liveTimelineMessage.Visibility = 'Visible'
+				# ================= MESSAGE BUILD (DETERMINISTIC) =================
+				$msg = " 🏁 AutoPilot Finished  "
+				if ($state.total -eq "LOOP" -and $null -ne $state.cycle) {
+					$msg += " 🔄 Loop Session: $($state.cycle)"
+				}
+				elseif ($null -ne $state.totalCompleted) {
+					$msg += " ✅ Completed Session: $($state.totalCompleted)"
+				}
+				if ($null -ne $state.total -and $state.total -ne "") {
+					$msg += " / $($state.total)  "
+				}
+				if (-not [string]::IsNullOrWhiteSpace($state.skippedDay)) {
+					$msg += " 📆 Skipped Day: $($state.skippedDay)"
+				}
+				$liveTimelineMessage.Text = $msg
+				$liveTimelineMessage.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+					[System.Windows.Media.Color]::FromRgb(161, 227, 150)
+				)
+			}
+			# ================= IMAGE =================
+			$imgStatus.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
+				[System.Uri]::new("$AppRoot\media\finish.png")
+			)
+			# ================= COUNTDOWN TEXT =================
+			$txtCountdown.Text = " Finished  "
+			if ($state.total -eq "LOOP" -and $null -ne $state.cycle) {
+				$txtCountdown.Text += " 🔄 Loop Repetition: $($state.cycle)"
+			}
+			elseif ($null -ne $state.totalCompleted) {
+				$txtCountdown.Text += " 🔄 Repetition: $($state.totalCompleted)"
+			}
+			if ($null -ne $state.total -and $state.total -ne "") {
+				$txtCountdown.Text += " / $($state.total)"
+			}
+			return
+		}
+	}
+	# ===================== NO COMMANDS =====================
+	if (-not $global:timeline -or $global:timeline.Count -eq 0) {
+		if ($liveTimelinePanel)   { $liveTimelinePanel.Visibility = 'Collapsed' }
+		if ($liveTimelineMessage) {
+			$liveTimelineMessage.Text = "📝 No commands! Set up commands in the Scripts Edit (MANDATORY)"
+			$liveTimelineMessage.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(126, 172, 222)
+			)
+			$liveTimelineMessage.Visibility = 'Visible'
+		}
+		if ($imgStatus){
+			$imgStatus.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
+				[System.Uri]::new("$AppRoot\media\info.png")
+			)
+		}
+		$txtPrev.Text     = "none"
+		$txtCurrent.Text  = "none"
+		$txtNext.Text     = "none"
+		$txtCountdown.Text = "No commands configured 🚫"
+		$txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
+		$txtCountdown.FontWeight = "SemiBold"
+		return
+	}
     # ===================== SHOW TIMELINE =====================
     if ($liveTimelinePanel)   { $liveTimelinePanel.Visibility = 'Visible' }
     if ($liveTimelineMessage) { $liveTimelineMessage.Visibility = 'Collapsed' }
@@ -2431,12 +2790,29 @@ function Update-TimelineDisplay {
         $txtPrev.Text = "none"
         $txtCurrent.Text = "none"
         $txtNext.Text = "none"
-        $txtCountdown.Text = " No timeline data"
+        $txtCountdown.Text = " No timeline data ℹ️"
         $txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
+		$txtCountdown.FontWeight = "SemiBold"
         return
     }
     $now   = Get-Date
     $today = $now.Date
+	# ===================== MIDNIGHT AUTO REFRESH =====================
+	if ($Global:lastDate -ne $today) {
+		# new day detected → force refresh
+		$Global:lastDate = $today
+		# reload timeline data (CRITICAL FIX)
+		Load-Timeline
+		# reset cached values so animations trigger correctly
+		$Global:lastNextText = ""
+		$txtPrev.Text    = ""
+		$txtCurrent.Text = ""
+		$txtNext.Text    = ""
+		# force immediate UI refresh (important)
+		$window.Dispatcher.InvokeAsync({
+			Update-TimelineDisplay
+		}, [System.Windows.Threading.DispatcherPriority]::Render)
+	}
     # ===================== FILTER DISPLAY LINES =====================
     $displayTimeline = $global:timeline | Where-Object {
         if ($_.Mode -eq "loop") {
@@ -2448,9 +2824,12 @@ function Update-TimelineDisplay {
                 default   { return $true }
             }
         }
-        elseif ($_.Mode -eq "fixed" -and $_.Time.Date -eq $today) {
-            return $true
-        }
+        #elseif ($_.Mode -eq "fixed" -and $_.Time.Date -eq $today) {
+        #    return $true
+        #}
+		elseif ($_.Mode -eq "fixed" -and $_.Time.Date -eq $today -and $_.Time -ge $today) {
+			return $true
+		}
         return $false
     }
     if (-not $displayTimeline) {
@@ -2463,41 +2842,326 @@ function Update-TimelineDisplay {
         if ($i -lt 0 -or $i -ge $displayTimeline.Count) { return "-" }
         return "{0}. {1}" -f ($i + 1), $displayTimeline[$i].Text
     }
-    $txtPrev.Text    = GetText($index - 1)
-    $txtCurrent.Text = GetText($index)
-    $txtNext.Text    = GetText($index + 1)
+    # get the new text values
+	$newPrev    = GetText($index - 1)  # $txtPrev.Text    = GetText($index - 1)
+	$newCurrent = GetText($index)      # $txtCurrent.Text = GetText($index)
+	$newNext    = GetText($index + 1)  # $txtNext.Text    = GetText($index + 1)
+	# ===================== TOTAL / EXECUTED DISPLAY =====================
+	if ($txtStats) {
+		$txtStats.Inlines.Clear()
+		$totalCommands = @($global:timeline).Count
+		$executedCommands = @($global:timeline | Where-Object { $_.Time -le (Get-Date) }).Count
+		$now = Get-Date
+		$todayDate = $now.Date
+		$leaveCommands = @($global:timeline | Where-Object {
+		$_.Time -gt (Get-Date) -and $_.Time.Date -eq (Get-Date).Date
+		}).Count
+		# ===================== LOAD SETTINGS JSON (MULTI CHECK) =====================
+		$settingsPath         = "$AppRoot\JSON\settings.json"
+		$commandsEditPath     = "$AppRoot\JSON\commands_edit.json"
+		$scriptsEditPath      = "$AppRoot\JSON\scripts_edit.json"
+		$settingsScriptsPath  = "$AppRoot\JSON\settings_scripts.json"
+		$allowedDaysCount = 0
+		$maxRunsDisplay   = ""
+		$jsonStatus = @()
+		$jsonFiles = @(
+			@{ Path = $settingsPath;        Name = "settings.json" },
+			@{ Path = $commandsEditPath;    Name = "commands_edit.json" },
+			@{ Path = $scriptsEditPath;     Name = "scripts_edit.json" },
+			@{ Path = $settingsScriptsPath; Name = "settings_scripts.json" }
+		)
+		foreach ($file in $jsonFiles) {
+			if (-not (Test-Path $file.Path)) {
+				$jsonStatus += "NOT_FOUND: $($file.Name -replace '\.json','')"
+				continue
+			}
+			try {
+				$content = Get-Content $file.Path -Raw | ConvertFrom-Json
+				if ($file.Name -eq "settings.json") {
+					if ($content.ALLOWED_DAYS) {
+						$allowedDays = @($content.ALLOWED_DAYS)   # 🔥 first
+						$allowedDaysCount = $allowedDays.Count    # 🔥 second
+					}
+					else {
+						$allowedDays = @()
+						$allowedDaysCount = 0
+					}
+					if ($content.MAX_RUNS -eq 0) {
+						$maxRunsDisplay = "LOOP"
+					} else {
+						$maxRunsDisplay = "$($content.MAX_RUNS)"
+					}
+				}
+			}
+			catch {
+				$jsonStatus += "DAMAGED: $($file.Name -replace '\.json','')"
+				continue
+			}
+		}
+		# ===== TITLE TEXT =====
+		$run1 = New-Object System.Windows.Documents.Run
+		$run1.Text = " 🛢️ Total: "
+		$run1.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+		[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		$run2 = New-Object System.Windows.Documents.Run
+		$run2.Text = "$totalCommands"
+		$run2.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+		[System.Windows.Media.Color]::FromRgb(51, 153, 255)
+		)
+		$run3 = New-Object System.Windows.Documents.Run
+		$run3.Text = "  🡺  "
+		$run3.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+		[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		$run4 = New-Object System.Windows.Documents.Run
+		$run4.Text = "🔥 Complete: "
+		$run4.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+		[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		$run5 = New-Object System.Windows.Documents.Run
+		$run5.Text = "$executedCommands"
+		$run5.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+		[System.Windows.Media.Color]::FromRgb(214, 168, 237)
+		)
+		# динамичка боја (подобро UX)
+		if ($executedCommands -eq 0) {
+			$run5.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(240, 84, 84)
+			)
+		} else {
+			$run5.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(214, 168, 237)
+			)
+		}
+		$run6 = New-Object System.Windows.Documents.Run
+		$run6.Text = "  🡸  "
+		$run6.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		$run7 = New-Object System.Windows.Documents.Run
+		$run7.Text = "🕤 Remaing: "
+		$run7.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		$run8 = New-Object System.Windows.Documents.Run
+		$run8.Text = "$leaveCommands"
+		# боја (UX style)
+		if ($leaveCommands -eq 0) {
+			$run8.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(240, 84, 84)
+			)
+		} else {
+			$run8.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(240, 170, 84)
+			)
+		}
+		# ===== SEPARATOR =====
+		$run9 = New-Object System.Windows.Documents.Run
+		$run9.Text = "  ╰┈➤  " # ❯❯❯❯
+		$run9.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		if ($jsonStatus.Count -gt 0) {
+			# ===== ERROR DISPLAY =====
+			$runError = New-Object System.Windows.Documents.Run
+			$runError.Text = "⛔ " + ($jsonStatus -join "  *  ")
+			$runError.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(217, 113, 113)  # црвено
+			)
+			$txtStats.Inlines.Add($runError)
+		} else {
+		# ===== DAYS LABEL =====
+		$run10 = New-Object System.Windows.Documents.Run
+		$run10.Text = "📆 Days: "
+		$run10.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(158, 158, 158)  # сиво
+		)
+		# ===== DAYS VALUE =====
+		$run10Value = New-Object System.Windows.Documents.Run
+		if ($allowedDaysCount -eq 0) {
+			$run10Value.Text = "Default (All)"
+			$run10Value.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(164, 222, 64)
+			)
+		}
+		elseif ($allowedDaysCount -eq 7) {
+			$run10Value.Text = "All"
+			$run10Value.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(164, 222, 64)
+			)
+		}
+		elseif ($allowedDaysCount -eq 1) {
+			$run10Value.Text = $allowedDays[0]
+			$run10Value.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(164, 222, 64)
+			)
+		}
+		else {
+			$run10Value.Text = "$allowedDaysCount"
+			$run10Value.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(164, 222, 64)
+			)
+		}
+		# ===== REPEAT LABEL =====
+		$run11 = New-Object System.Windows.Documents.Run
+		$run11.Text = "  🔄 Repeat: "
+		$run11.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		# ===================== READ CYCLE STATE =====================
+		$cycleStatePath = "$AppRoot\JSON\autopilot_state.json"
+		$currentRun = 1
+		if (Test-Path $cycleStatePath) {
+			try {
+				$cycleData = Get-Content $cycleStatePath -Raw | ConvertFrom-Json
+				$currentRun = $cycleData.cycle
+			} catch {
+				$currentRun = 1
+			}
+		}
+		# ===================== REPEAT DISPLAY =====================
+		$run12 = New-Object System.Windows.Documents.Run
+		if ($maxRunsDisplay -eq "LOOP") {
+			$run12.Text = "LOOP"
+			$run12.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(110, 212, 210)
+			)
+		} else {
+			$run12.Text = "$currentRun/$maxRunsDisplay"
+			$run12.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(110, 212, 210)
+			)
+		  }
+		}
+		$txtStats.Inlines.Add($run1)
+		$txtStats.Inlines.Add($run2)
+		$txtStats.Inlines.Add($run3)
+		$txtStats.Inlines.Add($run4)
+		$txtStats.Inlines.Add($run5)
+		$txtStats.Inlines.Add($run6)
+		$txtStats.Inlines.Add($run7)
+		$txtStats.Inlines.Add($run8)
+		$txtStats.Inlines.Add($run9)
+		if ($jsonStatus) {
+			$txtStats.Inlines.Add($runError)
+		}
+		else {
+			$txtStats.Inlines.Add($run10)
+			$txtStats.Inlines.Add($run10Value)
+			$txtStats.Inlines.Add($run11)
+			$txtStats.Inlines.Add($run12)
+		}
+		$txtStats.FontWeight = "SemiBold"
+	}
+	# fade animation (modern style)
+	$fadeOut = New-Object System.Windows.Media.Animation.DoubleAnimation(1, 0, [TimeSpan]::FromMilliseconds(355))
+	$fadeIn  = New-Object System.Windows.Media.Animation.DoubleAnimation(0, 1, [TimeSpan]::FromMilliseconds(355))
+	# modern easing: smooth “soft” in/out, more stylish than cubic
+	$fadeOut.EasingFunction = New-Object System.Windows.Media.Animation.QuadraticEase
+	$fadeOut.EasingFunction.EasingMode = [System.Windows.Media.Animation.EasingMode]::EaseIn
+	$fadeIn.EasingFunction  = New-Object System.Windows.Media.Animation.QuadraticEase
+	$fadeIn.EasingFunction.EasingMode  = [System.Windows.Media.Animation.EasingMode]::EaseOut
+	# PREV
+	if ($txtPrev.Text -ne $newPrev) {
+		$txtPrev.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $null)
+		$txtPrev.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fadeOut)
+		Start-Sleep -Milliseconds 120
+		$txtPrev.Text = $newPrev
+		$txtPrev.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fadeIn)
+	}
+	# CURRENT
+	if ($txtCurrent.Text -ne $newCurrent) {
+		$txtCurrent.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $null)
+		$txtCurrent.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fadeOut)
+		Start-Sleep -Milliseconds 120
+		$txtCurrent.Text = $newCurrent
+		$txtCurrent.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fadeIn)
+    # play sound only if enabled
+    if ($Global:SoundEnabled) {
+        $player.Play()  # non-blocking
+    }
+}
+	# NEXT
+	if ($Global:lastNextText -ne $newNext) {
+		$txtNext.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $null)
+		$txtNext.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fadeOut)
+		Start-Sleep -Milliseconds 120
+		$txtNext.Text = $newNext
+		$txtNext.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fadeIn)
+		# store last value
+		$Global:lastNextText = $newNext
+	}
     # ===================== LINE COLORS =====================
     #$txtCurrent.Foreground = [System.Windows.Media.Brushes]::Lime
     #$txtPrev.Foreground    = [System.Windows.Media.Brushes]::Gray
     # ===================== NEXT COMMAND =====================
     $upcomingLines = $global:timeline | ForEach-Object {
-        $lineTime = $_.Time
-        $nextTime = $null
-        if ($_.Mode -eq "loop") {
-            $nextTime = $today.Date.AddHours($lineTime.Hour).AddMinutes($lineTime.Minute).AddSeconds($lineTime.Second)
-            switch ($_.Type) {
-                "daily"   { if ($nextTime -le $now) { $nextTime = $nextTime.AddDays(1) } }
-                "weekly"  { while ($nextTime.DayOfWeek -ne [DayOfWeek]::Sunday) { $nextTime = $nextTime.AddDays(1) } }
-                "monthly" { $lastDay = [DateTime]::DaysInMonth($today.Year, $today.Month)
-                            if ($today.Day -lt $lastDay) { $nextTime = $today.AddDays($lastDay - $today.Day).AddHours($lineTime.Hour).AddMinutes($lineTime.Minute).AddSeconds($lineTime.Second) } 
-                            elseif ($nextTime -le $now) { $nextTime = $nextTime.AddMonths(1); $nextTime = $nextTime.AddDays([DateTime]::DaysInMonth($nextTime.Year,$nextTime.Month)-$nextTime.Day) } }
-                "yearly"  { $nextTime = Get-Date -Year $today.Year -Month 12 -Day 31 -Hour $lineTime.Hour -Minute $lineTime.Minute -Second $lineTime.Second
-                            if ($nextTime -le $now) { $nextTime = $nextTime.AddYears(1) } }
-                default   { if ($nextTime -le $now) { $nextTime = $nextTime.AddDays(1) } }
-            }
-        }
-        elseif ($_.Mode -eq "fixed") {
-            $nextTime = $_.Time
-            if ($nextTime -lt $now) { $nextTime = $null } # ако поминало, игнорирај
-        }
-        if ($nextTime) {
-            [PSCustomObject]@{
-                Line = $_
-                Time = $nextTime
-            }
-        }
-    }
-    $nextCmd = $upcomingLines | Sort-Object Time | Select-Object -First 1
+    $lineTime = $_.Time
+    $nextTime = $null
+    if ($_.Mode -eq "loop") {
+        # базно време за денес
+        $nextTime = $_.Time
+			switch ($_.Type) {
+				"daily" {
+					if ($nextTime -le $now) {
+						$nextTime = $nextTime.AddDays(1)
+					}
+				}
+				"weekly" {
+					# најди следна недела (Sunday)
+					while ($nextTime.DayOfWeek -ne [DayOfWeek]::Sunday) {
+						$nextTime = $nextTime.AddDays(1)
+					}
+					# ако е веќе поминато → следна недела
+					if ($nextTime -le $now) {
+						$nextTime = $nextTime.AddDays(7)
+					}
+				}
+				"monthly" {
+					# тековен месец - последен ден
+					$lastDay = [DateTime]::DaysInMonth($today.Year, $today.Month)
+					$nextTime = Get-Date -Year $today.Year -Month $today.Month -Day $lastDay `
+						-Hour $lineTime.Hour -Minute $lineTime.Minute -Second $lineTime.Second
+					# ако поминало → следен месец
+					if ($nextTime -le $now) {
+						$nextMonth = $today.AddMonths(1)
+						$lastDayNext = [DateTime]::DaysInMonth($nextMonth.Year, $nextMonth.Month)
+						$nextTime = Get-Date -Year $nextMonth.Year -Month $nextMonth.Month -Day $lastDayNext `
+							-Hour $lineTime.Hour -Minute $lineTime.Minute -Second $lineTime.Second
+					}
+				}
+				"yearly" {
+					# 31 декември
+					$nextTime = Get-Date -Year $today.Year -Month 12 -Day 31 `
+						-Hour $lineTime.Hour -Minute $lineTime.Minute -Second $lineTime.Second
+					# ако поминало → следна година
+					if ($nextTime -le $now) {
+						$nextTime = $nextTime.AddYears(1)
+					}
+				}
+				default {
+					if ($nextTime -le $now) {
+						$nextTime = $nextTime.AddDays(1)
+					}
+				}
+			}
+		}
+		elseif ($_.Mode -eq "fixed") {
+			$nextTime = $_.Time
+			# ако поминало → ignore
+			if ($nextTime -lt $now) {
+				$nextTime = $null
+			}
+		}
+		if ($nextTime) {
+			[PSCustomObject]@{
+				Line = $_
+				Time = $nextTime
+			}
+		}
+	}
+	$nextCmd = $upcomingLines | Sort-Object Time | Select-Object -First 1
     if ($nextCmd) {
 		# ако има уште линии во displayTimeline → користи нормален display број
 		if (($index + 1) -lt $displayTimeline.Count) {
@@ -2537,11 +3201,17 @@ function Update-TimelineDisplay {
 		if ($diff.Seconds -ge 0) { $parts += "{0:D2}s" -f $diff.Seconds }
 
 		if ($diff.TotalSeconds -le 15) {
-			$txtCountdown.Text = " Next Auto Command In: " + ($parts -join " ")
-			$txtCountdown.Foreground = [System.Windows.Media.Brushes]::Red
+			$txtCountdown.Text = " Next Auto Command In: $($parts -join ' ') 🚀"
+			$txtCountdown.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(220, 120, 120)
+			)
+			$txtCountdown.FontWeight = "SemiBold"
 		} else {
-			$txtCountdown.Text = " Next Auto Command In: " + ($parts -join " ")
-			$txtCountdown.Foreground = [System.Windows.Media.Brushes]::Gray
+			$txtCountdown.Text = " Next Auto Command In: $($parts -join ' ') 🕓"
+			$txtCountdown.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+			)
+			$txtCountdown.FontWeight = "SemiBold"
 		}	
 	}
 }

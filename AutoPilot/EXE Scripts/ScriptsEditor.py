@@ -525,9 +525,20 @@ def add_row(script=None, idx=None):
     date_frame = tk.Frame(frame, bg="#1E1E1E")
     date_frame.pack(side="left", padx=(0,10))
 
-    # Year/Month/Day spinboxes
-    year_spin = tk.Spinbox(date_frame, from_=today.year, to=today.year+10, width=5, textvariable=year_var,
-                   state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center", font=spin_font)
+    # Year/Month/Day and OLD Date spinboxes
+    min_year = y if script else today.year
+    year_spin = tk.Spinbox(
+        date_frame,
+        from_=min_year,
+        to=today.year + 10,
+        width=5,
+        textvariable=year_var,
+        state="readonly",
+        readonlybackground=spin_bg,
+        fg=spin_fg,
+        justify="center",
+        font=spin_font
+    )
     year_spin.pack(side="left")
     tk.Label(date_frame, text="-", bg="#1E1E1E", fg=spin_fg, font=spin_font).pack(side="left")
     month_spin = tk.Spinbox(date_frame, from_=1, to=12, width=3, textvariable=month_var,
@@ -540,23 +551,30 @@ def add_row(script=None, idx=None):
 
     def update_day_spinbox(*args):
         try:
-            y_val = int(year_var.get())
-            m_val = int(month_var.get())
-            max_day = calendar.monthrange(y_val, m_val)[1]
-            min_day = today.day if (y_val == today.year and m_val == today.month) else 1
-            current_day = int(day_var.get())
-            if current_day < min_day:
-                day_var.set(str(min_day))
-            elif current_day > max_day:
-                day_var.set(str(max_day))
-            day_spin.config(from_=min_day, to=max_day)
+            year = int(year_var.get())
+            month = int(month_var.get())
         except ValueError:
-            pass
+            return
+        max_day = calendar.monthrange(year, month)[1]
+        day_spin.config(to=max_day)
+        try:
+            current_day = int(day_var.get())
+        except ValueError:
+            current_day = 1
+        if current_day > max_day:
+            day_var.set(f"{max_day:02d}")
+        # --- Limit past dates ---
+        if year == today.year and month == today.month and int(day_var.get()) < today.day:
+            day_var.set(f"{today.day:02d}")
+        if year < today.year:
+            year_var.set(str(today.year))
+        elif year == today.year and month < today.month:
+            month_var.set(f"{today.month:02d}")
 
     year_var.trace_add("write", update_day_spinbox)
     month_var.trace_add("write", update_day_spinbox)
-    update_day_spinbox()
-
+    day_var.trace_add("write", update_day_spinbox)
+    
     # --- Mode Toggle (Loop / Fixed) ---
     mode_val = script["Mode"][idx] if script and "Mode" in script else "loop"
     mode_var = tk.StringVar(value=mode_val)

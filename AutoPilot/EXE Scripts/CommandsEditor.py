@@ -567,8 +567,20 @@ def add_row(cmd_data=None, idx=None):
     date_frame = tk.Frame(frame, bg="#1E1E1E")
     date_frame.pack(side="left", padx=(0,10))
 
-    year_spin = tk.Spinbox(date_frame, from_=today.year, to=today.year+10, width=5, textvariable=year_var,
-                            state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center", font=spin_font)
+    # Year/Month/Day and OLD Date spinboxes
+    min_year = y if (cmd_data and "Day" in cmd_data) else today.year
+    year_spin = tk.Spinbox(
+        date_frame,
+        from_=min_year,
+        to=today.year + 10,
+        width=5,
+        textvariable=year_var,
+        state="readonly",
+        readonlybackground=spin_bg,
+        fg=spin_fg,
+        justify="center",
+        font=spin_font
+    )
     year_spin.pack(side="left")
     tk.Label(date_frame, text="-", bg="#1E1E1E", fg=spin_fg, font=spin_font).pack(side="left")
     month_spin = tk.Spinbox(date_frame, from_=1, to=12, width=3, textvariable=month_var,
