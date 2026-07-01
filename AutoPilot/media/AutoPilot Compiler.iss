@@ -61,7 +61,11 @@ begin
   Exec('taskkill', '/IM Camera.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM Lock.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM Updater.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-
+  Exec('taskkill', '/IM Data.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/IM Settings.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/IM SettingsScripts.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/IM NetMonitor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/IM SystemMonitor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   { --- CLOSE ALL AUTOPILOT POWERSHELL SCRIPTS --- }
   Exec(ExpandConstant('{win}\System32\WindowsPowerShell\v1.0\powershell.exe'),

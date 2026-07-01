@@ -42,5 +42,6 @@
     "AUTOPILOT_TELEGRAM_ENABLED":  false,
     "MEDIA_TELEGRAM_ENABLED":  false,
     "ENABLE_RESTART":  false,
-    "ENABLE_SHUTDOWN":  false
+    "ENABLE_SHUTDOWN":  false,
+	"VIDEO_RETENTION_DAYS":  15
 }

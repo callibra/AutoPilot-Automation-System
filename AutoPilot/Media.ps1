@@ -1,4 +1,4 @@
-$global:RecordingStateFile = "$PSScriptRoot\Autopilot_Data\last_recording.json"
+﻿$global:RecordingStateFile = "$PSScriptRoot\Autopilot_Data\last_recording.json"
 $global:CameraRecordingStateFile = "$PSScriptRoot\Autopilot_Data\last_camera_recording.json"
 $global:CameraFolder = "$PSScriptRoot\Camera"
 
@@ -119,13 +119,13 @@ function Take-ScreenRecord {
 	
 	if (-not $global:ScreenCaptureConfigured) {
 		Write-Host "Recording is not configured properly. Skipping..." -ForegroundColor Red
-		Send-TelegramMessage -message "Recording is not configured properly. Recording cannot be Started."
+		Send-TelegramMessage -message "🎦 Recording is not configured properly.`n🎦 Recording cannot ⛔ be Started."
 		return
 	}
 
     $ffmpegPath = Join-Path -Path $PSScriptRoot -ChildPath "ffmpeg\bin\ffmpeg.exe"
     if (-not (Test-Path $ffmpegPath)) {
-        $msg = " FFMPEG file not found at location: $ffmpegPath`nRecording cannot start."
+        $msg = "⚠️ FFMPEG file not found at location: $ffmpegPath`n🎦 Recording cannot Start."
         Send-TelegramMessage -message $msg
         Write-Host $msg -ForegroundColor Red
         return
@@ -139,7 +139,7 @@ function Take-ScreenRecord {
     if ($global:ScreenRecordingProcess -and -not $global:ScreenRecordingProcess.HasExited) {
         $elapsed = (Get-Date) - $global:ScreenRecordingStartTime
         $remaining = [math]::Max(0, $global:ScreenRecordingDuration - $elapsed.TotalSeconds)
-        $msg = " Recording is in progress! Start time: $($global:ScreenRecordingStartTime)`n Remaining time: $([math]::Round($remaining)) seconds"
+        $msg = "🎦 Recording is in progress!`n🕓 Start time: $($global:ScreenRecordingStartTime)`n⏳ Remaining time: $([math]::Round($remaining)) seconds"
         Send-TelegramMessage -message $msg
         Write-Host $msg -ForegroundColor Yellow
         return
@@ -177,7 +177,7 @@ function Take-ScreenRecord {
     $global:ScreenRecordingDuration = $Duration
 
     # Испрати порака дека започнало снимањето
-    $msg = " Recording has started!`n Recording time: $Duration seconds`n File: $filePath"
+    $msg = "🎦 Recording has Started!`n🕓 Recording time: $Duration seconds`n🎬 File: $filePath"
     Send-TelegramMessage -message $msg
     Write-Host $msg -ForegroundColor Green
 
@@ -192,7 +192,7 @@ function Take-ScreenRecord {
         $duration = New-TimeSpan -Start $startTime -End $stopTime
 
         # Чекај фајлот да се ослободи ако е заклучен
-        $maxWait = 10
+        $maxWait = 15
         $waited = 0
         while ($waited -lt $maxWait) {
             try {
@@ -206,10 +206,10 @@ function Take-ScreenRecord {
         }
 
         if (Test-Path $path) {
-            $caption = "Command: /record`nPeriod: $($startTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
+            $caption = "⚙️ Command: /record`n📆 Period: $($startTime.ToString('dddd, dd MMMM yyyy'))`n🕒 Start: $($startTime.ToString('HH:mm:ss'))`n🕘 Stop: $($stopTime.ToString('HH:mm:ss'))`n⏳ Duration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n📁 Video Folder: /data`n🔰 AutoPilot | Start Menu - /start"
             Send-TelegramVideo -videoPath $path -caption $caption
         } else {
-            Send-TelegramMessage -message " Error: Recording not found ($path)"
+            Send-TelegramMessage -message "⚠️ Error: 🎦 Recording not found ($path)"
         }
 
         # Чистење на глобални вредности
@@ -220,7 +220,7 @@ function Take-ScreenRecord {
 
         # Unregister event
         Unregister-Event -SourceIdentifier $eventId
-    }
+    } | Out-Null
 }
 
 ################# DESKTOP RECORDING ###########################
@@ -230,22 +230,22 @@ function Start-Recording {
     param([string]$OutputFolder = "$PSScriptRoot\Recording")
 	
 	if (-not $global:ScreenCaptureConfigured) {
-        Write-Host "Start Recording is not configured properly. Skipping..." -ForegroundColor Red
-	    Send-TelegramMessage -message "Start Recording is not configured properly. Start Recording cannot be Started."
+        Write-Host "Desktop Recording is not configured properly. Skipping..." -ForegroundColor Red
+	    Send-TelegramMessage -message "🖥️ Desktop Recording is not configured properly.`n🖥️ Desktop Recording cannot ⛔ be Started."
         return
     }
 	
 	$ffmpegPath = Join-Path -Path $PSScriptRoot -ChildPath "ffmpeg\bin\ffmpeg.exe"
     # === Проверка дали постои ffmpeg ===
     if (-not (Test-Path $ffmpegPath)) {
-        $msg = " FFMPEG file not found at location: $ffmpegPath`nRecording cannot start."
+        $msg = "⚠️ FFMPEG file not found at location: $ffmpegPath`n🖥️ Desktop Recording cannot Start."
         Send-TelegramMessage -message $msg
         Write-Host $msg -ForegroundColor Red
         return
     }
 
     if ($global:DesktopRecordingProcess -and -not $global:DesktopRecordingProcess.HasExited) {
-        $msg = "Desktop recording is already started! Start time: $($global:DesktopRecordingStartTime)`nTo stop it press: /rec_stop"
+        $msg = "🖥️ Desktop recording is already Started!`n🕒 Start time: $($global:DesktopRecordingStartTime)`nTo ⏹️ Stop it press: /rec_stop"
         Send-TelegramMessage -message $msg
         Write-Host $msg -ForegroundColor Yellow
         return
@@ -279,7 +279,7 @@ function Start-Recording {
     $global:DesktopRecordingFile = $filePath
     $global:DesktopRecordingStartTime = Get-Date
 
-    $msg = "Desktop recording is Starting! Start time: $($global:DesktopRecordingStartTime)`nTo stop it press: /rec_stop"
+    $msg = "🖥️ Desktop Recording is Starting!`n🕒 Start time: $($global:DesktopRecordingStartTime)`nTo ⏹️ Stop it press: /rec_stop"
     Send-TelegramMessage -message $msg
     Write-Host $msg -ForegroundColor Green
 }
@@ -315,12 +315,12 @@ function Load-RecordingState {
 function Stop-Recording {
     if (-not $global:DesktopRecordingProcess -or $global:DesktopRecordingProcess.HasExited) {
         if ($global:LastDesktopRecordingFile -and (Test-Path $global:LastDesktopRecordingFile)) {
-            $msg = "Desktop recording is already stopped. Last recording: $($global:LastDesktopRecordingFile)"
+            $msg = "🖥️ Desktop Recording is already ⏹️ Stopped.`n🎬 Last recording: $($global:LastDesktopRecordingFile)"
             Send-TelegramMessage -message $msg
             Write-Host $msg -ForegroundColor Yellow
             return @{ Video=$global:LastDesktopRecordingFile; Start=$global:LastDesktopRecordingStartTime; Stop=$global:LastDesktopRecordingStopTime; Duration=$global:LastDesktopRecordingDuration }
         } else {
-            $msg = "No desktop recording is in progress to stop, or the last file does not exist."
+            $msg = "No Desktop Recording 🖥️ is in progress to ⏹️ Stop, or the last 🎬 File does not Exist."
             Send-TelegramMessage -message $msg
             Write-Host $msg -ForegroundColor Red
             return $null
@@ -329,9 +329,9 @@ function Stop-Recording {
 
     try {
         $global:DesktopRecordingProcess.StandardInput.WriteLine("q")
-        $global:DesktopRecordingProcess.WaitForExit(5000)
-        Write-Host "Desktop recording is stopped." -ForegroundColor Green
-        Send-TelegramMessage -message "Desktop recording is stopped."
+        $global:DesktopRecordingProcess.WaitForExit(15000)
+        Write-Host "Desktop Recording is Stopped." -ForegroundColor Green
+        Send-TelegramMessage -message "🖥️ Desktop Recording is ⏹️ Stopped."
     } catch { Write-Host "Error stopping: $_" -ForegroundColor Red; Send-TelegramMessage -message "Error stopping: $_" }
 
     $videoPath = $global:DesktopRecordingFile
@@ -350,13 +350,13 @@ function Stop-Recording {
     $global:DesktopRecordingStartTime = $null
 
     if (-not $videoPath -or -not (Test-Path $videoPath)) {
-        $msg = "Video file does not exist: $videoPath"
+        $msg = "🎬 Video file does not exist: $videoPath"
         Write-Host $msg -ForegroundColor Red
         Send-TelegramMessage -message $msg
         return $null
     }
 
-    $caption = "Command: /rec_stop`nPeriod: $($stopTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($global:LastDesktopRecordingStartTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n* AutoPilot | Start Menu - /start"
+    $caption = "⚙️ Command: /rec_stop`n📆 Period: $($stopTime.ToString('dddd, dd MMMM yyyy'))`n🕒 Start: $($global:LastDesktopRecordingStartTime.ToString('HH:mm:ss'))`n🕘 Stop: $($stopTime.ToString('HH:mm:ss'))`n⏳ Duration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n📁 Video Folder: /data`n🔰 AutoPilot | Start Menu - /start"
     Send-TelegramVideo -videoPath $videoPath -caption $caption
 
     return @{ Video=$videoPath; Start=$global:LastDesktopRecordingStartTime; Stop=$stopTime; Duration=$duration }
@@ -373,14 +373,14 @@ function Start-CameraRecording {
 	
 	if (-not $global:CameraCaptureConfigured) {
         Write-Host "Camera Recording is not configured properly. Skipping..." -ForegroundColor Red
-        Send-TelegramMessage -message "Camera Recording is not configured properly. Camera Recording cannot be Started."
+        Send-TelegramMessage -message "📸 Camera Recording is not configured properly.`n📸 Camera Recording cannot ⛔ be Started."
         return
     }
 	
 	$ffmpegPath = Join-Path -Path $PSScriptRoot -ChildPath "ffmpeg\bin\ffmpeg.exe"
     # === Проверка дали постои ffmpeg ===
     if (-not (Test-Path $ffmpegPath)) {
-        $msg = " FFMPEG file not found at location: $ffmpegPath`nRecording cannot start."
+        $msg = "⚠️ FFMPEG file not found at location: $ffmpegPath`n📸 Recording cannot Start."
         Send-TelegramMessage -message $msg
         Write-Host $msg -ForegroundColor Red
         return
@@ -393,14 +393,14 @@ function Start-CameraRecording {
     $ffmpegOutput = & $ffmpegPath -list_devices true -f dshow -i dummy 2>&1
     $cameraFound = $ffmpegOutput | Where-Object { $_ -match "`"$cameraName`"\s+\(video\)" }
     if (-not $cameraFound) {
-        $msg = " Camera device: '$cameraName' not found.`nRecording cannot start."
+        $msg = "📸 Camera device: '$cameraName' not found.`n📸 Recording cannot Start."
         Send-TelegramMessage -message $msg
         Write-Host $msg -ForegroundColor Red
         return
     }
 
     if ($global:RecordingProcess -and -not $global:RecordingProcess.HasExited) {
-        $msg = "Camera is already started! Start time: $($global:RecordingStartTime)`nTo stop it press: /cam_stop"
+        $msg = "📸 Camera is already Started!`n🕒 Start time: $($global:RecordingStartTime)`nTo ⏹️ Stop it press: /cam_stop"
         Send-TelegramMessage -message $msg
         Write-Host $msg -ForegroundColor Yellow
         return
@@ -431,7 +431,7 @@ function Start-CameraRecording {
     $global:RecordingFile = $filePath
     $global:RecordingStartTime = Get-Date
 
-    $msg = "Camera has started!`nFile: $filePath`nStart time: $global:RecordingStartTime`nTo stop it press: /cam_stop"
+    $msg = "📸 Camera has Started!`n🎬 File: $filePath`n🕒 Start time: $global:RecordingStartTime`nTo ⏹️ Stop it press: /cam_stop"
     Send-TelegramMessage -message $msg
     Write-Host $msg -ForegroundColor Green
 }
@@ -468,12 +468,12 @@ function Load-CameraRecordingState {
 function Stop-CameraRecording {
     if (-not $global:RecordingProcess -or $global:RecordingProcess.HasExited) {
         if ($global:LastCameraRecordingFile -and (Test-Path $global:LastCameraRecordingFile)) {
-            $msg = "Camera is already stopped. Last recording: $($global:LastCameraRecordingFile)"
+            $msg = "📸 Camera is already ⏹️ Stopped.`n🎬 Last recording: $($global:LastCameraRecordingFile)"
             Send-TelegramMessage -message $msg
             Write-Host $msg -ForegroundColor Yellow
             return @{ Video=$global:LastCameraRecordingFile; Start=$global:LastCameraRecordingStartTime; Stop=$global:LastCameraRecordingStopTime; Duration=$global:LastCameraRecordingDuration }
         } else {
-            $msg = "No recording in progress to stop, or the last file does not exist."
+            $msg = "No recording 📸 in progress to ⏹️ Stop, or the last File 🎬 does not Exist."
             Send-TelegramMessage -message $msg
             Write-Host $msg -ForegroundColor Red
             return $null
@@ -482,9 +482,9 @@ function Stop-CameraRecording {
 
     try {
         $global:RecordingProcess.StandardInput.WriteLine("q")
-        $global:RecordingProcess.WaitForExit(5000)
-        Write-Host "Camera is stopped." -ForegroundColor Green
-        Send-TelegramMessage -message "Camera is stopped."
+        $global:RecordingProcess.WaitForExit(15000)
+        Write-Host "Camera is Stopped." -ForegroundColor Green
+        Send-TelegramMessage -message "📸 Camera is ⏹️ Stopped."
     } catch { Write-Host "Error stopping: $_" -ForegroundColor Red; Send-TelegramMessage -message "Error stopping: $_" }
 
     $videoPath = $global:RecordingFile
@@ -503,13 +503,13 @@ function Stop-CameraRecording {
     $global:RecordingStartTime = $null
 
     if (-not $videoPath -or -not (Test-Path $videoPath)) {
-        $msg = "Video file does not exist: $videoPath"
+        $msg = "🎬 Video file does not exist: $videoPath"
         Write-Host $msg -ForegroundColor Red
         Send-TelegramMessage -message $msg
         return $null
     }
 
-    $caption = "Command: /cam_stop`nPeriod: $($stopTime.ToString('dddd, dd MMMM yyyy'))`nStart: $($global:LastCameraRecordingStartTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n* Video folder: /data`n* AutoPilot | Start Menu - /start"
+    $caption = "⚙️ Command: /cam_stop`n📆 Period: $($stopTime.ToString('dddd, dd MMMM yyyy'))`n🕒 Start: $($global:LastCameraRecordingStartTime.ToString('HH:mm:ss'))`n🕘 Stop: $($stopTime.ToString('HH:mm:ss'))`n⏳ Duration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-"*18) + "`n📁 Video Folder: /data`n🔰 AutoPilot | Start Menu - /start"
     Send-TelegramVideo -videoPath $videoPath -caption $caption
 
     return @{ Video=$videoPath; Start=$global:LastCameraRecordingStartTime; Stop=$stopTime; Duration=$duration }
@@ -527,7 +527,7 @@ function Data-CameraRecording {
     )
     # === Media Bot Guard ===
     if (-not (Is-MediaTelegramOperational)) {
-        $statusMessage = "Media Telegram Bot is Disabled or Misconfigured, *Data* command Skipped."
+        $statusMessage = "🎬 Media Telegram Bot is Disabled or Misconfigured.`n💾 Data command Skipped."
         Write-Host $statusMessage -ForegroundColor Red
         Write-Log $statusMessage
         # Only send Telegram if AutoPilot bot is enabled to avoid errors
@@ -541,13 +541,13 @@ function Data-CameraRecording {
         $_.CommandLine -match [regex]::Escape($ScriptPath)
     }
     $message = @"
-- DATA Server $(if ($processes) {"already Started"} else {"is Started"})!
+ 💾 DATA Server $(if ($processes) {"already Started"} else {"is Started"})!
 
-- Enter in Media Folder:* [Click here]($global:MediaFolderUrl)
+ 🗂️ Enter in Media Folder:* [Click here]($global:MediaFolderUrl)
 
-- If you want to stop the DATA Server, press: /data_stop
+ ⏹️ If you want to stop the DATA Server, press: /data_stop
 
-- To restart the DATA Server, press: /data
+ 🔄 To restart the DATA Server, press: /data
 "@
     Send-TelegramMessage -message $message
     if (-not $processes) {
@@ -568,12 +568,12 @@ function Stop-DataServer {
         foreach ($p in $processes) {
             Stop-Process -Id $p.ProcessId -Force
         }
-        $statusMessage = " DATA Server is Stopped!"
+        $statusMessage = "💾 DATA Server is Stopped!"
         Send-TelegramMessage -message $statusMessage
         Write-Host " DATA Server is Stopped!"
     }
     else {
-        $statusMessage = " DATA Server is not Started.."
+        $statusMessage = "💾 DATA Server is not Started.."
         Send-TelegramMessage -message $statusMessage
         Write-Host " DATA Server is not Started.."
     }

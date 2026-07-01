@@ -1,4 +1,4 @@
-# FUNKCIJA ZA GENERIRANJE NA GRAFIKON - DAY / WEEK / MONTH / YEAR / ALL
+﻿# FUNKCIJA ZA GENERIRANJE NA GRAFIKON - DAY / WEEK / MONTH / YEAR / ALL
 
 #################  LOAD  ###################
 function Generate-LoadGraph-Day   { return Generate-LoadGraph -PeriodDays 1 }
@@ -28,25 +28,61 @@ function Preprocess-Data {
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [AllowNull()]
-        [Object]$PeriodDays  # Прифаќа и "All"
+        [Object]$PeriodDays
     )
 
+    # ================= FAST SAFE HELPERS =================
     function Format-Number {
         param([double]$num)
         if ($null -eq $num -or [double]::IsNaN($num)) { return 0 }
-        return "{0:N2}" -f $num
+        return [math]::Round($num, 2)
+    }
+
+    function Get-Double {
+        param($v)
+        if ($null -eq $v -or $v -eq "") { return $null }
+        # fast path
+        if ($v -is [double]) { return $v }
+        $r = 0.0
+        if ([double]::TryParse(
+            $v.ToString(),
+            [System.Globalization.NumberStyles]::Any,
+            [System.Globalization.CultureInfo]::InvariantCulture,
+            [ref]$r
+        )) {
+            return $r
+        }
+        return $null
+    }
+
+    function Get-AverageFast {
+        param($group, $prop)
+        $sum = 0.0
+        $count = 0
+        foreach ($x in $group) {
+            $v = Get-Double $x.$prop
+            if ($null -ne $v) {
+                $sum += $v
+                $count++
+            }
+        }
+        if ($count -eq 0) { return 0 }
+        return [math]::Round(($sum / $count), 2)
     }
 
     if (-not $data -or $data.Count -eq 0) { return @() }
 
-    # Автоматски одреди дали е Timestamp или Date
-    $dateField = if ($data[0].PSObject.Properties.Name -contains "Timestamp") { "Timestamp" } else { "Date" }
+    # ================= DATE FIELD DETECTION =================
+    $dateField = if ($data[0].PSObject.Properties.Name -contains "Timestamp") {
+        "Timestamp"
+    } else {
+        "Date"
+    }
 
-    # === ФИЛТРИРАЊЕ според период (освен за "All") ===
+    # ================= FILTER =================
     if ($PeriodDays -ne "All") {
         $startDate = (Get-Date).AddDays(-[int]$PeriodDays)
         $endDate = Get-Date
-
         $data = $data | Where-Object {
             try {
                 $dt = [datetime]::Parse($_.$dateField)
@@ -57,54 +93,83 @@ function Preprocess-Data {
 
     if (-not $data -or $data.Count -eq 0) { return @() }
 
-    # ==== 1 ДЕН (24 часа) ====
+    # ================= 1 DAY =================
     if ($PeriodDays -eq 1) {
         foreach ($item in $data) {
             foreach ($prop in $item.PSObject.Properties.Name | Where-Object { $_ -ne $dateField }) {
-                $val = [double]$item.$prop
-                $item.$prop = Format-Number $val
+                $v = Get-Double $item.$prop
+                if ($null -eq $v) { $v = 0 }
+                $item.$prop = Format-Number $v
             }
         }
         return $data
     }
 
-    # ==== 7 ДЕНА - групирање по утро/пладне/вечер ====
+    # ================= 7 DAYS =================
     elseif ($PeriodDays -eq 7) {
         $grouped = $data | Group-Object {
             $dt = [datetime]::Parse($_.$dateField)
-            $date = $dt.Date
-            if ($dt.Hour -lt 12) { "$date-Morning" }
-            elseif ($dt.Hour -lt 18) { "$date-Noon" }
-            else { "$date-Evening" }
+            $d = $dt.Date
+            if ($dt.Hour -lt 12) { "$d-Morning" }
+            elseif ($dt.Hour -lt 18) { "$d-Noon" }
+            else { "$d-Evening" }
         }
 
         return $grouped | ForEach-Object {
             $obj = New-Object PSObject
             $obj | Add-Member NoteProperty Timestamp ([datetime]::Parse($_.Group[0].$dateField))
             foreach ($prop in $_.Group[0].PSObject.Properties.Name | Where-Object { $_ -ne $dateField }) {
-                $avg = ($_.Group | ForEach-Object { [double]($_.$prop) }) | Measure-Object -Average
-                $obj | Add-Member NoteProperty $prop (Format-Number $avg.Average)
+                $obj | Add-Member NoteProperty $prop (Get-AverageFast $_.Group $prop)
             }
             $obj
         }
     }
 
-    # ==== 30 ДЕНА - групирање по ден ====
+    # ================= 30 DAYS =================
+	elseif ($PeriodDays -eq 30) {
+		$grouped = $data | Group-Object { [datetime]::Parse($_.$dateField).Date }
+		foreach ($g in $grouped) {
+			$timestamp = [datetime]::Parse($g.Group[0].$dateField).Date
+			$props = $g.Group[0].PSObject.Properties.Name | Where-Object { $_ -ne $dateField }
+			$obj = [pscustomobject]@{
+				Timestamp = $timestamp
+			}
+			foreach ($prop in $props) {
+				$avg = ($g.Group | ForEach-Object {
+					$v = $_.$prop
+					if ($null -eq $v -or $v -eq "") { return $null }
+					if ($v -is [double]) { return $v }
+					$r = 0.0
+					if ([double]::TryParse(
+						$v.ToString(),
+						[System.Globalization.NumberStyles]::Any,
+						[System.Globalization.CultureInfo]::InvariantCulture,
+						[ref]$r
+					)) {
+						return $r
+					}
+					return $null
+				}) | Measure-Object -Average
+				$obj | Add-Member NoteProperty $prop (Format-Number $avg.Average)
+			}
+			$obj
+		}
+	}
+	
+	<# ================= 30 DAYS =================
     elseif ($PeriodDays -eq 30) {
         $grouped = $data | Group-Object { [datetime]::Parse($_.$dateField).Date }
-
         return $grouped | ForEach-Object {
             $obj = New-Object PSObject
             $obj | Add-Member NoteProperty Timestamp ([datetime]::Parse($_.Group[0].$dateField).Date)
             foreach ($prop in $_.Group[0].PSObject.Properties.Name | Where-Object { $_ -ne $dateField }) {
-                $avg = ($_.Group | ForEach-Object { [double]($_.$prop) }) | Measure-Object -Average
-                $obj | Add-Member NoteProperty $prop (Format-Number $avg.Average)
+                $obj | Add-Member NoteProperty $prop (Get-AverageFast $_.Group $prop)
             }
             $obj
         }
-    }
+    } #>
 
-    # ==== 365 ДЕНА - групирање по недела ====
+    # ================= 365 DAYS =================
     elseif ($PeriodDays -eq 365) {
         $grouped = $data | Group-Object {
             $dt = [datetime]::Parse($_.$dateField)
@@ -121,42 +186,36 @@ function Preprocess-Data {
             $obj = New-Object PSObject
             $obj | Add-Member NoteProperty Timestamp ([datetime]::Parse($_.Group[0].$dateField).Date)
             foreach ($prop in $_.Group[0].PSObject.Properties.Name | Where-Object { $_ -ne $dateField }) {
-                $avg = ($_.Group | ForEach-Object { [double]($_.$prop) }) | Measure-Object -Average
-                $obj | Add-Member NoteProperty $prop (Format-Number $avg.Average)
+                $obj | Add-Member NoteProperty $prop (Get-AverageFast $_.Group $prop)
             }
             $obj
         }
     }
 
-    # ==== ALL - групирање по месец (YYYY-MM) ====
-	elseif ($PeriodDays -eq "All") {
-		# Групирање по месец (YYYY-MM), но само до денес (без идни датуми)
-		$today = Get-Date
-		$filtered = $data | Where-Object {
-			try {
-				$dt = [datetime]::Parse($_.$dateField)
-				$dt -le $today
-			} catch { $false }
-		}
+    # ================= ALL (MONTHLY) =================
+    elseif ($PeriodDays -eq "All") {
+        $today = Get-Date
+        $filtered = $data | Where-Object {
+            try {
+                $dt = [datetime]::Parse($_.$dateField)
+                $dt -le $today
+            } catch { $false }
+        }
+        if (-not $filtered -or $filtered.Count -eq 0) { return @() }
+        $grouped = $filtered | Group-Object {
+            $dt = [datetime]::Parse($_.$dateField)
+            "{0:yyyy-MM}" -f $dt
+        }
 
-		if (-not $filtered -or $filtered.Count -eq 0) { return @() }
-
-		$grouped = $filtered | Group-Object {
-			$dt = [datetime]::Parse($_.$dateField)
-			"{0:yyyy-MM}" -f $dt
-		}
-
-		return $grouped | ForEach-Object {
-			$obj = New-Object PSObject
-			# Зачувуваме првиот датум од месецот како Timestamp
-			$obj | Add-Member NoteProperty Timestamp ([datetime]::Parse($_.Group[0].$dateField))
-			foreach ($prop in $_.Group[0].PSObject.Properties.Name | Where-Object { $_ -ne $dateField }) {
-				$avg = ($_.Group | ForEach-Object { [double]($_.$prop) }) | Measure-Object -Average
-				$obj | Add-Member NoteProperty $prop (Format-Number $avg.Average)
-			}
-			$obj
-		}
-	}
+        return $grouped | ForEach-Object {
+            $obj = New-Object PSObject
+            $obj | Add-Member NoteProperty Timestamp ([datetime]::Parse($_.Group[0].$dateField))
+            foreach ($prop in $_.Group[0].PSObject.Properties.Name | Where-Object { $_ -ne $dateField }) {
+                $obj | Add-Member NoteProperty $prop (Get-AverageFast $_.Group $prop)
+            }
+            $obj
+        }
+    }
 }
 
 ##########  Funkcija za Title  ##############
@@ -247,7 +306,7 @@ function Generate-LoadGraph {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 
-    $fontLegend = New-Object System.Drawing.Font("Segoe UI", 10)
+    $fontLegend = New-Object System.Drawing.Font("Segoe UI Emoji", 10)
     $fontTitle = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $fontAxis = New-Object System.Drawing.Font("Segoe UI", 9)
     $fontStats = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -353,7 +412,7 @@ function Generate-LoadGraph {
 
         $hasData = Has-ValidData -data $dataSeries
         $series = New-Object System.Windows.Forms.DataVisualization.Charting.Series
-        $series.Name = if ($hasData) { $seriesInfo.Name } else { "$($seriesInfo.Name) (not measured)" }
+        $series.Name = if ($hasData) { $seriesInfo.Name } else { "$($seriesInfo.Name)❗" }
         $series.ChartType='Line'; $series.Color=Get-SeriesColor $seriesInfo.ColorIndex; $series.BorderWidth=3; $series.XValueType='DateTime'
 
         $xValues = $loadData | ForEach-Object { $_.Timestamp }
@@ -415,9 +474,9 @@ function Generate-LoadGraph {
 
 	# --- Footer текст ---
 	$footer = [Windows.Forms.DataVisualization.Charting.TextAnnotation]::new()
-	$footer.Text = "*Load Graph   $((Get-Date).ToString('dddd, dd MMMM yyyy - HH:mm:ss'))"
+	$footer.Text = "📊 Load Graph   $((Get-Date).ToString('dddd, dd MMMM yyyy - HH:mm:ss'))"
 	$footer.ForeColor = [Drawing.Color]::DarkMagenta
-	$footer.Font = [Drawing.Font]::new("Segoe UI",13,[Drawing.FontStyle]::Bold)
+	$footer.Font = [Drawing.Font]::new("Segoe UI Emoji",13,[Drawing.FontStyle]::Bold)
 	$footer.Alignment = [Drawing.ContentAlignment]::BottomCenter
 	$footer.AnchorX, $footer.AnchorY = 50, 92
 	$chart.Annotations.Add($footer)
@@ -558,7 +617,7 @@ function Generate-TempGraph {
     $chart.ChartAreas.Add($chartArea)
 
     $legend = New-Object System.Windows.Forms.DataVisualization.Charting.Legend
-    $legend.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $legend.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 10)
     $legend.Docking = 'Top'; $legend.Alignment = 'Center'
     $chart.Legends.Add($legend)
 
@@ -570,7 +629,7 @@ function Generate-TempGraph {
 
         $hasData = Has-ValidData -data $dataSeries
         $series = New-Object System.Windows.Forms.DataVisualization.Charting.Series
-        $series.Name = if ($hasData) { $col } else { "$col (not measured)" }
+        $series.Name = if ($hasData) { $col } else { "$col❗" }
         $series.ChartType = 'Line'
         $series.Color = Get-SeriesColor $index
         $series.BorderWidth = 3
@@ -638,9 +697,9 @@ function Generate-TempGraph {
 
 	# --- Footer текст ---
 	$footer = [Windows.Forms.DataVisualization.Charting.TextAnnotation]::new()
-	$footer.Text = "*Temp Graph   $((Get-Date).ToString('dddd, dd MMMM yyyy - HH:mm:ss'))"
+	$footer.Text = "📊 Temp Graph   $((Get-Date).ToString('dddd, dd MMMM yyyy - HH:mm:ss'))"
 	$footer.ForeColor = [Drawing.Color]::DarkMagenta
-	$footer.Font = [Drawing.Font]::new("Segoe UI",13,[Drawing.FontStyle]::Bold)
+	$footer.Font = [Drawing.Font]::new("Segoe UI Emoji",13,[Drawing.FontStyle]::Bold)
 	$footer.Alignment = [Drawing.ContentAlignment]::BottomCenter
 	$footer.AnchorX, $footer.AnchorY = 50, 92
 	$chart.Annotations.Add($footer)
@@ -727,7 +786,7 @@ function Generate-DiskGraph {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 
-    $fontLegend = New-Object System.Drawing.Font("Segoe UI", 10)
+    $fontLegend = New-Object System.Drawing.Font("Segoe UI Emoji", 10)
     $fontTitle = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $fontAxis = New-Object System.Drawing.Font("Segoe UI", 9)
 
@@ -785,7 +844,7 @@ function Generate-DiskGraph {
         $dataSeries = $diskData | ForEach-Object { $_.$col }
         $hasData = Has-ValidData -data $dataSeries
         $series = New-Object System.Windows.Forms.DataVisualization.Charting.Series
-        $series.Name = if ($hasData) { $col } else { "$col (not measured)" }
+        $series.Name = if ($hasData) { $col } else { "$col❗" }
         $series.ChartType = 'Line'; $series.Color = Get-SeriesColor $i; $series.BorderWidth = 3; $series.XValueType='DateTime'
 
         $xValues = $diskData | ForEach-Object { $_.Timestamp }
@@ -858,9 +917,9 @@ function Generate-DiskGraph {
 
 	# --- Footer текст ---
 	$footer = [Windows.Forms.DataVisualization.Charting.TextAnnotation]::new()
-	$footer.Text = "*Disk Load Graph   $((Get-Date).ToString('dddd, dd MMMM yyyy - HH:mm:ss'))"
+	$footer.Text = "📊 Disk Load Graph   $((Get-Date).ToString('dddd, dd MMMM yyyy - HH:mm:ss'))"
 	$footer.ForeColor = [Drawing.Color]::DarkMagenta
-	$footer.Font = [Drawing.Font]::new("Segoe UI",13,[Drawing.FontStyle]::Bold)
+	$footer.Font = [Drawing.Font]::new("Segoe UI Emoji",13,[Drawing.FontStyle]::Bold)
 	$footer.Alignment = [Drawing.ContentAlignment]::BottomCenter
 	$footer.AnchorX, $footer.AnchorY = 50, 92
 	$chart.Annotations.Add($footer)

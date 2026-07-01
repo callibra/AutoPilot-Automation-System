@@ -1,4 +1,4 @@
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+﻿Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase
 # APP ROOT
 if (-not $AppRoot) {
@@ -809,13 +809,13 @@ function Start-UptimeTimer {
             $minutes = $elapsed.Minutes
             $seconds = $elapsed.Seconds
             if ($days -gt 0) {
-                $txtUptime.Text = "{0}d {1:D2}:{2:D2}:{3:D2}" -f $days, $hours, $minutes, $seconds
+                $txtUptime.Text = "🕓 {0}d {1:D2}:{2:D2}:{3:D2}" -f $days, $hours, $minutes, $seconds
             }
             elseif ($hours -gt 0) {
-                $txtUptime.Text = "{0:D2}:{1:D2}:{2:D2}" -f $hours, $minutes, $seconds
+                $txtUptime.Text = "🕓 {0:D2}:{1:D2}:{2:D2}" -f $hours, $minutes, $seconds
             }
             else {
-                $txtUptime.Text = "{0:D2}:{1:D2}" -f $minutes, $seconds
+                $txtUptime.Text = "🕓 {0:D2}:{1:D2}" -f $minutes, $seconds
             }
         } catch {
             # Silent fail, можно log ако треба
@@ -837,12 +837,26 @@ $xaml = @"
         Title="AutoPilot Dashboard" Width="1700" Height="900"
         FontFamily="Segoe UI" WindowStartupLocation="CenterScreen">
     <Window.Background>
-    <DrawingBrush Stretch="None" TileMode="None" AlignmentX="Center" AlignmentY="Center" Opacity="0.38">
-        <DrawingBrush.Drawing>
-            <ImageDrawing Rect="0,0,555,555" ImageSource="$AppRoot\media\autopilot.ico"/>
-        </DrawingBrush.Drawing>
-    </DrawingBrush>
-    </Window.Background>
+		<VisualBrush>
+			<VisualBrush.Visual>
+				<Grid Width="1700" Height="900">
+					<!-- COLOR BACKGROUND -->
+					<Rectangle Fill="#0F0F0F"/>
+					<!-- IMAGE OVER COLOR -->
+					<Rectangle Opacity="0.38">
+						<Rectangle.Fill>
+							<DrawingBrush Stretch="None" TileMode="None" AlignmentX="Center" AlignmentY="Center">
+								<DrawingBrush.Drawing>
+									<ImageDrawing Rect="0,0,555,555"
+												  ImageSource="$AppRoot\media\autopilot.ico"/>
+								</DrawingBrush.Drawing>
+							</DrawingBrush>
+						</Rectangle.Fill>
+					</Rectangle>
+				</Grid>
+			</VisualBrush.Visual>
+		</VisualBrush>
+	</Window.Background>
     <Window.Resources>
         <!-- Modern button style -->
         <Style x:Key="ModernButton" TargetType="Button">
@@ -989,12 +1003,13 @@ $xaml = @"
                 <ColumnDefinition Width="*" />     <!-- Title -->
                 <ColumnDefinition Width="Auto" />  <!-- Sound button -->
                 <ColumnDefinition Width="Auto" />  <!-- Refresh button -->
+				<ColumnDefinition Width="Auto" />  <!-- Theme button -->
             </Grid.ColumnDefinitions>
             <!-- LEFT: TITLE -->
             <TextBlock Grid.Column="0" FontSize="23" FontWeight="SemiBold" Foreground="#4BD6DE" VerticalAlignment="Center">
                 Commands Timeline
                 <InlineUIContainer BaselineAlignment="Center">
-                    <Image Source="$AppRoot\media\list.png" Width="25" Height="25" Margin="6,0,0,0"/>
+                    <Image Source="$AppRoot\media\list.png" Width="20" Height="20" Margin="0,5,0,0"/>
                 </InlineUIContainer>
             </TextBlock>
             <!-- MIDDLE: SOUND TOGGLE BUTTON -->
@@ -1008,6 +1023,15 @@ $xaml = @"
             </Button>
             <!-- RIGHT: REFRESH BUTTON -->
 			<Button x:Name="btnSound" Content="🔕" Style="{StaticResource ModernButton}" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4"/>
+			<!-- RIGHT: THEME COLOR BUTTON -->
+            <Button x:Name="btnThemeColor" Grid.Column="3" Content="🎨" Style="{StaticResource ModernButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4">
+                <!-- ToolTip -->
+				<Button.ToolTip>
+					<ToolTip Background="#FF2D2D30" Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
+						<TextBlock Text="Change Background Color" TextWrapping="Wrap" FontSize="17"/>
+					</ToolTip>
+				</Button.ToolTip>
+			</Button>
         </Grid>
 		<!-- Center Clock Placeholder -->
         <StackPanel x:Name="centerClockContainer" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,15"/>
@@ -1083,7 +1107,7 @@ $xaml = @"
 				<TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#FFD700" Margin="0,0,0,5">
 					 Script Launcher
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\power.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\power.png" Width="20" Height="20" Margin="0,6,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
 				<WrapPanel x:Name="wpDashboard" Orientation="Horizontal" HorizontalAlignment="Center" ItemWidth="180" ItemHeight="70">
@@ -1105,7 +1129,7 @@ $xaml = @"
                 <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#4EC9B0" Margin="0,0,0,5">
 					 System Unit
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\system.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\system.png" Width="20" Height="20" Margin="0,3,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
                 <WrapPanel>
@@ -1120,9 +1144,10 @@ $xaml = @"
 					<Button x:Name="btnTask_add" Content="🏁 Auto Start" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnTask_del" Content="🗑️ Stop Auto Start" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnTask_show" Content="📑 Status" Style="{StaticResource ModernButton}" />
-					<Button x:Name="btnMedia" Content="🗂️ Media" Style="{StaticResource ModernButton}"/>
+					<Button x:Name="btnMedia" Content="🗂️ Archive" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnCamera" Content="🎥 Camera" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnData" Content="📂 Data Folder" Style="{StaticResource ModernButton}"/>
+					<Button x:Name="btnSystem_Data" Content="🛢 System Data" Style="{StaticResource ModernButton}" />
 					<Button x:Name="btnScripts_Editor" Content="✏️ Scripts Edit" Style="{StaticResource ModernButton}" />
 					<Button x:Name="btnCommands_Editor" Content="✏️ Commands Edit" Style="{StaticResource ModernButton}" />
 					<Button x:Name="btnSettings" Content="⚙️ AutoPilot Settings" Style="{StaticResource ModernButton}"/>
@@ -1142,7 +1167,7 @@ $xaml = @"
                 <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#FFD700" Margin="0,0,0,5">
 			         Graph Load Unit
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\graph.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\graph.png" Width="20" Height="20" Margin="0,1,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
                 <WrapPanel>
@@ -1162,7 +1187,7 @@ $xaml = @"
                 <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#FF6F61" Margin="0,0,0,5">
 					 Graph Temperature Unit
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\graph.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\graph.png" Width="20" Height="20" Margin="0,1,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
                 <WrapPanel>
@@ -1182,7 +1207,7 @@ $xaml = @"
                 <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#4FC1FF" Margin="0,0,0,5">
 					 Graph Disk Unit
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\graph.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\graph.png" Width="20" Height="20" Margin="0,1,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
                 <WrapPanel>
@@ -1202,7 +1227,7 @@ $xaml = @"
                <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#6A5ACD" Margin="0,0,0,5">
 					 Net Traffic Unit
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\net.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\net.png" Width="20" Height="20" Margin="0,3,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
                 <WrapPanel>
@@ -1222,12 +1247,12 @@ $xaml = @"
                <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#3DFFB2" Margin="0,0,0,5">
 					 Log File Unit
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\log.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\log.png" Width="20" Height="20" Margin="0,3,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
                 <WrapPanel>
                     <Button x:Name="btnAutoPilot_Log" Content="🗃️ AutoPilot Log" Style="{StaticResource ModernButton}"/>
-                    <Button x:Name="btnMonitoring_Log" Content="🗃️ System Monitorin Log" Style="{StaticResource ModernButton}"/>
+                    <Button x:Name="btnMonitoring_Log" Content="🗃️ System Monitoring Log" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnTraffic_Log" Content="🗃️ Traffic Monitoring Log" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnData_Log" Content="🗃️ Data Log" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnNetwork_Log" Content="🗃️ Net Log" Style="{StaticResource ModernButton}"/>
@@ -1242,7 +1267,7 @@ $xaml = @"
                <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#E8511A" Margin="0,0,0,5">
 					 Monitoring Unit
 					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\monitoring.png" Width="25" Height="25" Margin="6,0,0,0"/>
+						<Image Source="$AppRoot\media\monitoring.png" Width="20" Height="20" Margin="0,3,0,0"/>
 					</InlineUIContainer>
 				</TextBlock>
                 <WrapPanel>
@@ -1325,15 +1350,15 @@ $btnOpenFolder.Add_Click({
 $btnRefresh = $window.FindName("btnRefresh")
 $btnRefresh.Add_Click({
     $msg = @"
-Warning: With a *REFRESH* of AutoPilot, all processes will be STOPPED and Restarted!
-Are you SURE you want to REFRESH the System?
+⚠️ Warning: With a REFRESH of AutoPilot, all processes will be STOPPED and Restarted!
+Are you SURE you want to 🔄 REFRESH the System?
 "@
-    $title = "Refresh AutoPilot and Monitoring!"
+    $title = "🔄 Refresh AutoPilot and Monitoring"
     $userChoice = Show-DarkConfirm -Message $msg -Title $title
     if ($userChoice) {
         Invoke-ManualCommand "/refresh"
     } else {
-        Show-DarkWarning -Title "Refresh AutoPilot" -Message "AutoPilot refresh has been canceled by the user."
+        Show-DarkWarning -Title "🔄 Refresh AutoPilot" -Message "AutoPilot refresh has been stopped by the user."
     }
 })
 
@@ -1555,16 +1580,117 @@ $btnSound.Add_Click({
     Show-SoundStatusPopup -SoundOn $Global:SoundEnabled
 })
 
+# ===================== Theme Color Button =====================
+$btnThemeColor = $window.FindName("btnThemeColor")
+$Global:ThemeColors = @("#0F0F0F","#22304A","#2B3D34","#44355B","#552B2B","#5A4632","#244B52","#3D3D3D","#23272F","#1F2937","#283149","#4C566A","#4B3621","#22313F","#919191","#006100","#15777A","#151D7A","#9E9913","#821175","#4B1182","#A30F0F","#0F47BF","#3D6E3D")
+$Global:CurrentThemeColor = 0
+function Set-WindowBackgroundColor {
+    param([string]$HexColor)
+    $grid = New-Object System.Windows.Controls.Grid
+    $grid.Width = 1700
+    $grid.Height = 900
+    $bgRect = New-Object System.Windows.Shapes.Rectangle
+    $bgRect.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString($HexColor)
+    $overlayRect = New-Object System.Windows.Shapes.Rectangle
+    $overlayRect.Opacity = 0.38
+    $drawingBrush = New-Object System.Windows.Media.DrawingBrush
+    $drawingBrush.Stretch = "None"
+    $drawingBrush.TileMode = "None"
+    $drawingBrush.AlignmentX = "Center"
+    $drawingBrush.AlignmentY = "Center"
+    $imageDrawing = New-Object System.Windows.Media.ImageDrawing
+    $imageDrawing.Rect = [System.Windows.Rect]::new(0,0,555,555)
+    $img = New-Object System.Windows.Media.Imaging.BitmapImage
+    $img.BeginInit()
+    $img.UriSource = [Uri]"$AppRoot\media\autopilot.ico"
+    $img.EndInit()
+    $imageDrawing.ImageSource = $img
+    $drawingBrush.Drawing = $imageDrawing
+    $overlayRect.Fill = $drawingBrush
+    $grid.Children.Add($bgRect)
+    $grid.Children.Add($overlayRect)
+    $visualBrush = New-Object System.Windows.Media.VisualBrush
+    $visualBrush.Visual = $grid
+    $window.Background = $visualBrush
+}
+# popup helper
+function Show-ThemePopup {
+    param([string]$ColorHex)
+    $parentGrid = $btnThemeColor.Parent
+    if (-not $parentGrid) { return }
+    $oldPopups = $parentGrid.Children | Where-Object {
+        $_ -is [System.Windows.Controls.TextBlock] -and $_.Tag -eq "ThemePopup"
+    }
+    foreach ($popup in $oldPopups) {
+        $parentGrid.Children.Remove($popup)
+    }
+    $txtPopup = New-Object System.Windows.Controls.TextBlock
+    $txtPopup.Tag = "ThemePopup"
+    $txtPopup.Text = "Theme Changed"
+    $txtPopup.Foreground = [System.Windows.Media.Brushes]::LightSkyBlue
+    $txtPopup.FontWeight = "SemiBold"
+    $txtPopup.FontSize = 28
+    $txtPopup.Opacity = 1
+    $txtPopup.VerticalAlignment = "Top"
+    $txtPopup.HorizontalAlignment = "Center"
+    $txtPopup.Margin = [System.Windows.Thickness]::new(0,10,0,0)
+    $scale = New-Object System.Windows.Media.ScaleTransform(0.5,0.5)
+    $txtPopup.RenderTransform = $scale
+    $txtPopup.RenderTransformOrigin = [System.Windows.Point]::new(0.5,0.5)
+    $parentGrid.Children.Add($txtPopup)
+    $moveUp = New-Object System.Windows.Media.Animation.ThicknessAnimation
+    $moveUp.From = $txtPopup.Margin
+    $moveUp.To   = [System.Windows.Thickness]::new(0,-55,0,0)
+    $moveUp.Duration = [System.Windows.Duration]::new(
+        [TimeSpan]::FromMilliseconds(1500)
+    )
+    $txtPopup.BeginAnimation(
+        [System.Windows.FrameworkElement]::MarginProperty,
+        $moveUp
+    )
+    $fade = New-Object System.Windows.Media.Animation.DoubleAnimation
+    $fade.From = 1
+    $fade.To = 0
+    $fade.Duration = [System.Windows.Duration]::new(
+        [TimeSpan]::FromMilliseconds(600)
+    )
+    $fade.BeginTime = [TimeSpan]::FromMilliseconds(600)
+    $txtPopup.BeginAnimation(
+        [System.Windows.UIElement]::OpacityProperty,
+        $fade
+    )
+    $zoom = New-Object System.Windows.Media.Animation.DoubleAnimation
+    $zoom.From = 0.5
+    $zoom.To   = 1
+    $zoom.Duration = [System.Windows.Duration]::new(
+        [TimeSpan]::FromMilliseconds(600)
+    )
+    $txtPopup.RenderTransform.BeginAnimation(
+        [System.Windows.Media.ScaleTransform]::ScaleXProperty,
+        $zoom
+    )
+    $txtPopup.RenderTransform.BeginAnimation(
+        [System.Windows.Media.ScaleTransform]::ScaleYProperty,
+        $zoom
+    )
+}
+# button click
+$btnThemeColor.Add_Click({
+    $randomColor = Get-Random -InputObject $Global:ThemeColors
+    Set-WindowBackgroundColor -HexColor $randomColor
+    Show-ThemePopup -ColorHex $randomColor
+})
+
 # ===================== Function Update UI - AutoPilot =====================
 function Update-AutoPilotStatusUI {
     $autoPilotRunning = Get-CimInstance Win32_Process | Where-Object {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape("$AppRoot\AutoPilot.ps1")
     }
     if ($autoPilotRunning) {
-        $txtAutoPilotStatus.Text = "ACTIVE"
+        $txtAutoPilotStatus.Text = "▶️ ACTIVE"
         $borderAutoPilotStatus.Background = [System.Windows.Media.Brushes]::Green
     } else {
-        $txtAutoPilotStatus.Text = "STOPPED"
+        $txtAutoPilotStatus.Text = "⏹️ STOPPED"
         $borderAutoPilotStatus.Background = [System.Windows.Media.Brushes]::Red
     }
 }
@@ -1573,7 +1699,7 @@ function Update-AutoPilotStatusUI {
 $btnStartAutoPilot.Add_Click({
     $editorRunning = Get-Process -Name "ScriptsEditor","CommandsEditor" -ErrorAction SilentlyContinue
     if ($editorRunning) {
-        Show-DarkWarning -Title "Editor Active!" -Message "To start AutoPilot, the EDIT block must be Closed first (Commands, Scripts)!"
+        Show-DarkWarning -Title "⚠️ Editor Active" -Message "To start AutoPilot, the ✏️ EDIT block must be Closed first (Commands, Scripts)!"
         return
     }
     Invoke-ManualCommand "/start-autopilot"
@@ -1582,14 +1708,14 @@ $btnStartAutoPilot.Add_Click({
 
 # ===================== Button Stop =====================
 $btnStopAutoPilot.Add_Click({
-    $msg = "Warning: *AutoPilot* At the moment it may be RUNNING! Are you SURE you want to STOP the AutoPilot process?"
-    $title = "Stopping AutoPilot!"
+    $msg = "⚠️ Warning: AutoPilot in the moment it may be RUNNING! Are you SURE you want to ⏹️ STOP the AutoPilot process?"
+    $title = "⏹️ Stopping AutoPilot"
     $userChoice = Show-DarkConfirm -Message $msg -Title $title
     if ($userChoice) {
         Invoke-ManualCommand "/stop-autopilot"
         Update-AutoPilotStatusUI
     } else {
-        Show-DarkWarning -Title "AutoPilot STOP" -Message "Stopping AutoPilot has been canceled by the user."
+        Show-DarkWarning -Title "⏹️ AutoPilot STOP" -Message "Stopping AutoPilot has been stopped by the user."
     }
 })
 
@@ -1615,10 +1741,10 @@ function Update-SystemStatusUI {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape("$AppRoot\SystemMonitorWorker.ps1")
     }
     if ($systemRunning) {
-        $txtSystemStatus.Text = "ACTIVE"
+        $txtSystemStatus.Text = "▶️ ACTIVE"
         $borderSystemStatus.Background = [System.Windows.Media.Brushes]::Green
     } else {
-        $txtSystemStatus.Text = "STOPPED"
+        $txtSystemStatus.Text = "⏹️ STOPPED"
         $borderSystemStatus.Background = [System.Windows.Media.Brushes]::Red
     }
 }
@@ -1629,10 +1755,10 @@ function Update-TrafficStatusUI {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape("$AppRoot\TrafficMonitorWorker.ps1")
     }
     if ($trafficRunning) {
-        $txtTrafficStatus.Text = "ACTIVE"
+        $txtTrafficStatus.Text = "▶️ ACTIVE"
         $borderTrafficStatus.Background = [System.Windows.Media.Brushes]::Green
     } else {
-        $txtTrafficStatus.Text = "STOPPED"
+        $txtTrafficStatus.Text = "⏹️ STOPPED"
         $borderTrafficStatus.Background = [System.Windows.Media.Brushes]::Red
     }
 }
@@ -1709,7 +1835,7 @@ $btnScripts_Editor.Add_Click({
     $autoPilotRunning = Get-CimInstance Win32_Process |
         Where-Object { $_.CommandLine -like "*AutoPilot.ps1*" }
     if ($autoPilotRunning) {
-        Show-DarkWarning -Title "AutoPilot is Active!" -Message "AutoPilot is currently Running! The Scripts Editor works only when AutoPilot is STOPPED."
+        Show-DarkWarning -Title "⚠️ AutoPilot is Active" -Message "AutoPilot is currently Running! The Scripts Editor works only when AutoPilot is ⏹️ STOPPED."
         return
     }
     $editorPath = if ($AppRoot) {
@@ -1730,7 +1856,7 @@ $btnCommands_Editor.Add_Click({
     $autoPilotRunning = Get-CimInstance Win32_Process |
         Where-Object { $_.CommandLine -like "*AutoPilot.ps1*" }
     if ($autoPilotRunning) {
-        Show-DarkWarning -Title "AutoPilot is Active!" -Message "AutoPilot is currently Running! The Commands Editor works only when AutoPilot is STOPPED."
+        Show-DarkWarning -Title "⚠️ AutoPilot is Active" -Message "AutoPilot is currently Running! The Commands Editor works only when AutoPilot is ⏹️ STOPPED."
         return
     }
     $editorPath = if ($AppRoot) {
@@ -1752,18 +1878,18 @@ function Update-BotStatusUI {
         $settings = Get-Content $jsonPath | ConvertFrom-Json
         # --- AutoPilot Bot ---
         if ($settings.AUTOPILOT_TELEGRAM_ENABLED) {
-            $txtAutoPilotBot.Text = "ENABLED"
+            $txtAutoPilotBot.Text = "✔️ ENABLED"
             $borderAutoPilotBot.Background = [System.Windows.Media.Brushes]::Green
         } else {
-            $txtAutoPilotBot.Text = "DISABLED"
+            $txtAutoPilotBot.Text = "❌ DISABLED"
             $borderAutoPilotBot.Background = [System.Windows.Media.Brushes]::Red
         }
         # --- Media Bot ---
         if ($settings.MEDIA_TELEGRAM_ENABLED) {
-            $txtMediaBot.Text = "ENABLED"
+            $txtMediaBot.Text = "✔️ ENABLED"
             $borderMediaBot.Background = [System.Windows.Media.Brushes]::Green
         } else {
-            $txtMediaBot.Text = "DISABLED"
+            $txtMediaBot.Text = "❌ DISABLED"
             $borderMediaBot.Background = [System.Windows.Media.Brushes]::Red
         }
     } catch {
@@ -1781,18 +1907,18 @@ function Update-ModeUI {
         $enableShutdown = [bool]$settings.ENABLE_SHUTDOWN
         if (-not $enableRestart -and -not $enableShutdown) {
             # ===== TEST MODE =====
-            $txtMode.Text = "TEST MODE"
+            $txtMode.Text = "🛡️ TEST MODE"
             $borderMode.Background = [System.Windows.Media.SolidColorBrush]::new(
 				[System.Windows.Media.Color]::FromRgb(1, 107, 83)
 			)
         } else {
             # ===== PRO MODE =====
-            $txtMode.Text = "PRO MODE"
+            $txtMode.Text = "⚡ PRO MODE"
             $borderMode.Background = [System.Windows.Media.Brushes]::Blue
         }
     }
     catch {
-        $txtMode.Text = "ERROR"
+        $txtMode.Text = "⚠️ ERROR"
         $borderMode.Background = [System.Windows.Media.Brushes]::Red
     }
 }
@@ -1843,7 +1969,7 @@ $btnAbout.Add_Click({
 		$lblVersion.Foreground = [System.Windows.Media.Brushes]::White
 		$lblVersion.Margin = [System.Windows.Thickness]::new(0,0,0,5)
 		# Bold Label
-		$runLabel = New-Object System.Windows.Documents.Run("Version: ")
+		$runLabel = New-Object System.Windows.Documents.Run("🏷️ Version: ")
 		$runLabel.FontWeight = "Bold"
 		$lblVersion.Inlines.Add($runLabel)
 		# Value
@@ -1856,7 +1982,7 @@ $btnAbout.Add_Click({
 		$lblDate.FontSize = 17
 		$lblDate.Foreground = [System.Windows.Media.Brushes]::White
 		$lblDate.Margin = [System.Windows.Thickness]::new(0,0,0,5)
-		$runLabel = New-Object System.Windows.Documents.Run("Realized: ")
+		$runLabel = New-Object System.Windows.Documents.Run("✔️ Realized: ")
 		$runLabel.FontWeight = "Bold"
 		$lblDate.Inlines.Add($runLabel)
 		$runValue = New-Object System.Windows.Documents.Run($installDate)
@@ -1868,7 +1994,7 @@ $btnAbout.Add_Click({
 		$lblAuthor.FontSize = 17
 		$lblAuthor.Foreground = [System.Windows.Media.Brushes]::White
 		$lblAuthor.Margin = [System.Windows.Thickness]::new(0,0,0,15)
-		$runLabel = New-Object System.Windows.Documents.Run("Author: ")
+		$runLabel = New-Object System.Windows.Documents.Run("📝 Author: ")
 		$runLabel.FontWeight = "Bold"
 		$lblAuthor.Inlines.Add($runLabel)
 		$runValue = New-Object System.Windows.Documents.Run("Ivan Gjorcev")
@@ -1882,7 +2008,7 @@ $btnAbout.Add_Click({
 		$lblGitHub.Foreground = [System.Windows.Media.Brushes]::White
 
 		# Bold Label
-		$runLabel = New-Object System.Windows.Documents.Run("GitHub Profile: ")
+		$runLabel = New-Object System.Windows.Documents.Run("🌐 GitHub Profile: ")
 		$runLabel.FontWeight = "Bold"
 		$lblGitHub.Inlines.Add($runLabel)
 
@@ -2146,7 +2272,7 @@ $btnLock.Add_Click({
 		$lblDescription1.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(144,238,144)) # светло зелена
 		$lblDescription1.HorizontalAlignment = "Left"
 		$lblDescription1.Margin = [System.Windows.Thickness]::new(0,20,0,5)  # горе и долу маргина
-		$lblDescription1.Text = "*ON Lock: When AutoPilot Dashboard starts, a password is required!"
+		$lblDescription1.Text = "🔑 ON Lock: When AutoPilot Dashboard starts, a password is required!"
 		$stackBottom.Children.Add($lblDescription1) | Out-Null
 
 		$lblDescription2 = New-Object System.Windows.Controls.TextBlock
@@ -2154,7 +2280,7 @@ $btnLock.Add_Click({
 		$lblDescription2.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(144,238,144)) # светло зелена
 		$lblDescription2.HorizontalAlignment = "Left"
 		$lblDescription2.Margin = [System.Windows.Thickness]::new(0,5,0,5)  # горе и долу маргина
-		$lblDescription2.Text = "*OFF Lock: AutoPilot Dashboard starts without a password!"
+		$lblDescription2.Text = "❌ OFF Lock: AutoPilot Dashboard starts without a password!"
 		$stackBottom.Children.Add($lblDescription2) | Out-Null
 
         $stack.Children.Add($stackBottom)
@@ -2301,10 +2427,117 @@ Update-ClockPosition
 $btnAction.Add_Click({
     Toggle-DashboardSize
 })
-
+# ===================== GLOBAL PATCH (ADDED) =====================
+$Global:TimelineListWindow = $null
+$Global:TimelineListBox = $null
+$Global:TimelineRun_Total = $null
+$Global:TimelineRun_Complete = $null
+$Global:TimelineRun_Remaining = $null
+$Global:RefreshSpinAngle = 0
+# ===================== TimelineList =====================
+function Update-TimelineList {
+    param([System.Windows.Controls.ListBox]$listBox)
+    $listBox.Items.Clear()
+    $now = Get-Date
+    $nowTime = Get-Date -Hour $now.Hour -Minute $now.Minute -Second $now.Second
+    $index = if($global:timeline) { ($global:timeline | Where-Object { $_.Time -le $nowTime }).Count - 1 } else { -1 }
+    if($index -lt 0){ $index = 0 }
+	# ===== AUTOPILOT STATUS =====
+	$autoPilotRunning = Get-CimInstance Win32_Process | Where-Object {
+		$_.Name -eq "powershell.exe" -and
+		$_.CommandLine -match [regex]::Escape("$AppRoot\AutoPilot.ps1")
+	}
+	$isPaused = Test-Path $Global:pauseFlagPath
+    if(-not $global:timeline -or $global:timeline.Count -eq 0) {
+        $lbItem = New-Object System.Windows.Controls.ListBoxItem
+        $lbItem.Content = "🚫 Timeline List is Empty. Nothing to 🔄 Refresh."
+        $lbItem.Foreground = [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(51, 153, 255))
+        $lbItem.FontWeight = 'Bold'
+        $listBox.Items.Add($lbItem)
+        return
+    }
+    foreach($i in 0..($global:timeline.Count-1)){
+        $itemText = "{0:D3}. {1}" -f ($i+1), $global:timeline[$i].Text
+        $lbItem = New-Object System.Windows.Controls.ListBoxItem
+        $lbItem.Content = $itemText
+        $lbItem.Padding = [System.Windows.Thickness]::new(5)
+        $isTypeBlue = $global:timeline[$i].Type -match "weekly|monthly|yearly"
+        $isModeMagenta = $global:timeline[$i].Mode -eq "fixed"
+        # ===== AUTOPILOT STOPPED =====
+		if (-not $autoPilotRunning) {
+			if($i -lt $index){
+				$lbItem.Foreground = [System.Windows.Media.Brushes]::Gray
+			} 
+			elseif($i -eq $index){
+				$lbItem.Foreground = [System.Windows.Media.Brushes]::LightGray
+				$lbItem.FontWeight = 'Bold'
+				$lbItem.Content += " - ⏹️ Stopped"
+			}
+			else{
+				# Следните линии
+				if($isTypeBlue){ $lbItem.Foreground = [System.Windows.Media.Brushes]::LightGreen }
+				elseif($isModeMagenta){ $lbItem.Foreground = [System.Windows.Media.Brushes]::Magenta }
+				else{ $lbItem.Foreground = [System.Windows.Media.Brushes]::Cyan }
+			}
+		}
+		# ===== PAUSED =====
+		elseif ($isPaused) {
+			if($i -eq $index){
+				$lbItem.Foreground = [System.Windows.Media.Brushes]::Yellow
+				$lbItem.FontWeight = 'Bold'
+				$lbItem.Content += " - ⏸️ Paused"
+			}
+			elseif($i -lt $index){
+				$lbItem.Foreground = [System.Windows.Media.Brushes]::Gray
+			}
+			else{
+				if($isTypeBlue){ $lbItem.Foreground = [System.Windows.Media.Brushes]::LightGreen }
+				elseif($isModeMagenta){ $lbItem.Foreground = [System.Windows.Media.Brushes]::Magenta }
+				else{ $lbItem.Foreground = [System.Windows.Media.Brushes]::Cyan }
+			}
+		}
+		# ===== NORMAL RUN =====
+		else{
+			if($i -lt $index){
+				$lbItem.Foreground = [System.Windows.Media.Brushes]::Gray
+			}
+			elseif($i -eq $index){
+				$lbItem.Foreground = [System.Windows.Media.Brushes]::Lime
+				$lbItem.FontWeight = 'Bold'
+				$lbItem.Content += " - 🔁 Active"
+			}
+			else{
+				if($isTypeBlue){ $lbItem.Foreground = [System.Windows.Media.Brushes]::LightGreen }
+				elseif($isModeMagenta){ $lbItem.Foreground = [System.Windows.Media.Brushes]::Magenta }
+				else{ $lbItem.Foreground = [System.Windows.Media.Brushes]::Cyan }
+			}
+		}
+        $listBox.Items.Add($lbItem)
+    }
+}
+# ===================== TimelineHeader =====================
+function Update-TimelineHeader {
+    if (-not $Global:TimelineRun_Total) { return }
+    $totalCommands = @($global:timeline).Count
+    $executedCommands = @($global:timeline | Where-Object { $_.Time -le (Get-Date) }).Count
+    $leaveCommands = @($global:timeline | Where-Object {
+        $_.Time -gt (Get-Date) -and $_.Time.Date -eq (Get-Date).Date
+    }).Count
+    $Global:TimelineRun_Total.Text = "$totalCommands"
+    $Global:TimelineRun_Complete.Text = "$executedCommands"
+    $Global:TimelineRun_Remaining.Text = "$leaveCommands"
+}
 # ===================== BUTTON TO SHOW FULL TIMELINE =====================
 $btnTimelineList = $window.FindName("btnTimelineList") 
 $btnTimelineList.Add_Click({
+	# Ако листата е веќе отворена
+    if ($Global:TimelineListWindow -and $Global:TimelineListWindow.IsVisible) {
+        if ($Global:TimelineListWindow.WindowState -eq [System.Windows.WindowState]::Minimized) {
+            $Global:TimelineListWindow.WindowState = [System.Windows.WindowState]::Normal
+        }
+        $Global:TimelineListWindow.Activate()
+        return
+    }
     # ===================== Проверка дали AutoPilot работи =====================
     $autoPilotRunning = Get-CimInstance Win32_Process | Where-Object {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape("$AppRoot\AutoPilot.ps1")
@@ -2313,11 +2546,16 @@ $btnTimelineList.Add_Click({
     $isPaused = Test-Path $Global:pauseFlagPath
     # ================= Window =================
     $listWindow = New-Object System.Windows.Window
+	$Global:TimelineListWindow = $listWindow
+	$listWindow.Add_Closed({
+		$Global:TimelineListWindow = $null
+        $Global:TimelineListBox = $null
+	})
     $listWindow.Title = "Automation Commands List All"
     $listWindow.Width = 1555
     $listWindow.Height = 900
     $listWindow.WindowStartupLocation = "CenterScreen"
-    $listWindow.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(15, 15, 15)))
+    $listWindow.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(20, 20, 20)))
     # ================= Grid =================
     $grid = New-Object System.Windows.Controls.Grid
     $grid.Margin = [System.Windows.Thickness]::new(10)
@@ -2358,6 +2596,7 @@ $btnTimelineList.Add_Click({
 	$run2a.Foreground = [System.Windows.Media.Brushes]::White
 	$run2b = New-Object System.Windows.Documents.Run
 	$run2b.Text = "$totalCommands"
+	$Global:TimelineRun_Total = $run2b
 	$run2b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
     [System.Windows.Media.Color]::FromRgb(51, 153, 255)
     )
@@ -2369,18 +2608,14 @@ $btnTimelineList.Add_Click({
 	$run4a.Foreground = [System.Windows.Media.Brushes]::White
 	$run4b = New-Object System.Windows.Documents.Run
 	$run4b.Text = "$executedCommands"
-	$run4b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
-    [System.Windows.Media.Color]::FromRgb(214, 168, 237)
-    )
-	# динамичка боја (подобро UX)
+	$Global:TimelineRun_Complete = $run4b
 	if ($executedCommands -eq 0) {
+    $run4b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.Color]::FromRgb(240, 84, 84))
+	}
+	else {
 		$run4b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
-		[System.Windows.Media.Color]::FromRgb(240, 84, 84)
-		)
-	} else {
-		$run4b.Foreground = [System.Windows.Media.SolidColorBrush]::new(
-			[System.Windows.Media.Color]::FromRgb(214, 168, 237)
-		)
+			[System.Windows.Media.Color]::FromRgb(214, 168, 237))
 	}
 	$run5 = New-Object System.Windows.Documents.Run
 	$run5.Text = "  🡸  "
@@ -2390,15 +2625,14 @@ $btnTimelineList.Add_Click({
 	$run6.Foreground = [System.Windows.Media.Brushes]::White
 	$run7 = New-Object System.Windows.Documents.Run
 	$run7.Text = "$leaveCommands"
-	# color logic
+	$Global:TimelineRun_Remaining = $run7
 	if ($leaveCommands -eq 0) {
+    $run7.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.Color]::FromRgb(240, 84, 84))
+	}
+	else {
 		$run7.Foreground = [System.Windows.Media.SolidColorBrush]::new(
-			[System.Windows.Media.Color]::FromRgb(240, 84, 84)
-			)
-	} else {
-		$run7.Foreground = [System.Windows.Media.SolidColorBrush]::new(
-			[System.Windows.Media.Color]::FromRgb(240, 170, 84)
-		)
+			[System.Windows.Media.Color]::FromRgb(240, 170, 84))
 	}
 	$titleText.Inlines.Add($run1)
 	$titleText.Inlines.Add($run2a)
@@ -2410,9 +2644,83 @@ $btnTimelineList.Add_Click({
 	$titleText.Inlines.Add($run6)
 	$titleText.Inlines.Add($run7)
 	# ===== ADD TO CONTAINER =====
+	$btnRefresh = New-Object System.Windows.Controls.Button
+	$btnRefresh.Content = "⭮"
+	$btnRefresh.FontWeight = 'Bold'
+	$btnRefresh.Margin = [System.Windows.Thickness]::new(15,0,0,0)
+	$btnRefresh.Style = $window.FindResource("ModernButton")
+	$btnRefresh.Width = 40
+	$btnRefresh.Height = 40
+	$btnRefresh.Padding = 0
+	$btnRefresh.HorizontalContentAlignment = "Center"
+	$btnRefresh.VerticalContentAlignment = "Center"
+	# ===== ROTATION TRANSFORM =====
+	$Global:RefreshRotateTransform = New-Object System.Windows.Media.RotateTransform 0
+	$btnRefresh.RenderTransform = $Global:RefreshRotateTransform
+	$btnRefresh.RenderTransformOrigin = "0.5,0.5"
+	# ===================== FIXED REFRESH (NO REOPEN) =====================
+	$btnRefresh.Add_Click({
+	if ($Global:TimelineListBox) {
+		Update-TimelineList -listBox $Global:TimelineListBox
+	}
+	# ===================== RE-CALCULATE STATE (IMPORTANT FIX) =====================
+    $executedCommands = @($global:timeline | Where-Object { $_.Time -le (Get-Date) }).Count
+    $leaveCommands = @($global:timeline | Where-Object {
+        $_.Time -gt (Get-Date) -and $_.Time.Date -eq (Get-Date).Date
+    }).Count
+    Update-TimelineHeader
+    # ===================== COMPLETE COLOR =====================
+    if ($executedCommands -eq 0) {
+        $Global:TimelineRun_Complete.Foreground =
+            [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(240, 84, 84)
+            )
+    }
+    else {
+        $Global:TimelineRun_Complete.Foreground =
+            [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(214, 168, 237)
+            )
+    }
+    # ===================== REMAINING COLOR =====================
+    if ($leaveCommands -eq 0) {
+        $Global:TimelineRun_Remaining.Foreground =
+            [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(240, 84, 84)
+            )
+    }
+    else {
+        $Global:TimelineRun_Remaining.Foreground =
+            [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(240, 170, 84)
+            )
+    }
+	$Global:RefreshSpinAngle += 360
+	$anim = New-Object System.Windows.Media.Animation.DoubleAnimation
+	$anim.From = $Global:RefreshRotateTransform.Angle
+	$anim.To = $Global:RefreshSpinAngle
+	$anim.Duration = [System.Windows.Duration]::new([TimeSpan]::FromMilliseconds(500))
+	$Global:RefreshRotateTransform.BeginAnimation(
+		[System.Windows.Media.RotateTransform]::AngleProperty,
+		$anim
+		)
+	})
 	$titleContainer.Children.Add($logo)
 	$titleContainer.Children.Add($titleText)
-	# ===== ADD TO GRID =====
+	$refreshPanel = New-Object System.Windows.Controls.StackPanel
+	$refreshPanel.Orientation = "Horizontal"
+	$refreshPanel.VerticalAlignment = "Center"
+	# TEXT BEFORE BUTTON
+	$refreshText = New-Object System.Windows.Controls.TextBlock
+	$refreshText.Text = "🡺  🔄 Refresh"
+	$refreshText.FontWeight = 'Bold'
+	$refreshText.Foreground = [System.Windows.Media.Brushes]::White
+	$refreshText.FontSize = 25
+	$refreshText.Margin = [System.Windows.Thickness]::new(15,0,0,0)
+	$refreshText.VerticalAlignment = "Center"
+	$refreshPanel.Children.Add($refreshText)
+	$refreshPanel.Children.Add($btnRefresh)
+	$titleContainer.Children.Add($refreshPanel)
 	[System.Windows.Controls.Grid]::SetRow($titleContainer,0)
 	$grid.Children.Add($titleContainer)
     # ================= Legend =================
@@ -2448,12 +2756,13 @@ $btnTimelineList.Add_Click({
     Add-LegendItem ([System.Windows.Media.Brushes]::Magenta)     "Next Command (Fixed)"
     # ================= ListBox =================
     $listBox = New-Object System.Windows.Controls.ListBox
-    $listBox.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(23, 23, 23)))
-    $listBox.BorderThickness = 0
-    $listBox.FontSize = 19
-    $listBox.FontFamily = "Segoe UI"
-    $listBox.Foreground = [System.Windows.Media.Brushes]::White
-    $scrollViewer = New-Object System.Windows.Controls.ScrollViewer
+	$listBox.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(30, 30, 30)))
+	$listBox.BorderThickness = 0
+	$listBox.FontSize = 19
+	$listBox.FontFamily = "Segoe UI"
+	$listBox.Foreground = [System.Windows.Media.Brushes]::White
+    $Global:TimelineListBox = $listBox
+	$scrollViewer = New-Object System.Windows.Controls.ScrollViewer
 	$scrollViewer.Content = $listBox
 	$scrollViewer.VerticalScrollBarVisibility = "Auto"
 	$scrollViewer.HorizontalScrollBarVisibility = "Disabled"
@@ -2475,8 +2784,8 @@ $btnTimelineList.Add_Click({
     # ================= Populate List =================
     if(-not $global:timeline -or $global:timeline.Count -eq 0) {
         $lbItem = New-Object System.Windows.Controls.ListBoxItem
-        $lbItem.Content = "No Auto Commands Create"
-        $lbItem.Foreground = [System.Windows.Media.Brushes]::Red
+        $lbItem.Content = "🚫 No Commands in the Timeline List."
+        $lbItem.Foreground = [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(240, 84, 84))
         $lbItem.FontWeight = 'Bold'
         $listBox.Items.Add($lbItem)
     } else {
@@ -2496,7 +2805,7 @@ $btnTimelineList.Add_Click({
         elseif($i -eq $index){
             $lbItem.Foreground = [System.Windows.Media.Brushes]::LightGray
             $lbItem.FontWeight = 'Bold'
-            $lbItem.Content += "  (Current)"
+            $lbItem.Content += " - ⏹️ Stopped"
         }
         else{
             # Следните линии
@@ -2510,7 +2819,7 @@ $btnTimelineList.Add_Click({
         if($i -eq $index){
             $lbItem.Foreground = [System.Windows.Media.Brushes]::Yellow
             $lbItem.FontWeight = 'Bold'
-            $lbItem.Content += "  (Pause)"
+            $lbItem.Content += " - ⏸️ Paused"
         }
         elseif($i -lt $index){
             $lbItem.Foreground = [System.Windows.Media.Brushes]::Gray
@@ -2529,6 +2838,7 @@ $btnTimelineList.Add_Click({
         elseif($i -eq $index){
             $lbItem.Foreground = [System.Windows.Media.Brushes]::Lime
             $lbItem.FontWeight = 'Bold'
+			$lbItem.Content += " - 🔁 Active"
         }
         else{
             if($isTypeBlue){ $lbItem.Foreground = [System.Windows.Media.Brushes]::LightGreen }
@@ -2540,7 +2850,7 @@ $btnTimelineList.Add_Click({
   }
 }
     $listWindow.Content = $grid
-    $listWindow.ShowDialog() | Out-Null
+    $listWindow.Show()
 })
 
 # ===================== LOAD TIMELINE =====================
@@ -2565,8 +2875,8 @@ function Load-Timeline {
             }
             # ================= STATUS TEXT =================
             switch ($mode.ToLower()){
-                "fixed" { $status = "Interval: FIKS" }
-                "loop"  { $status = "Interval: LOOP" }
+                "fixed" { $status = "𝐅𝐈𝐗𝐄𝐃" }
+                "loop"  { $status = "𝐋𝐎𝐎𝐏" }
                 default { $status = "" }
             }
             # за scripts секогаш Daily, така што ништо дополнително не се додава
@@ -2574,7 +2884,7 @@ function Load-Timeline {
                 Time = $dt
                 Mode = $mode
                 Type = $type
-                Text = "$status | SCRIPT ({0}) Command: {1} | Time: {2} | Delay: {3} sec | Repeat: {4} min | Mode: {5} | Day: {6}" -f `
+                Text = "$status  📑 SCRIPT ({0}) Command: {1}  🕓 Time: {2}  🌀 Delay: {3} sec  🔂 Repeat: {4} min  🔃 Mode: {5}  📆 Day: {6}" -f `
                         ([System.IO.Path]::GetFileName($scr.Path)),
                         $scr.Commands[$i],
                         $scr.Times[$i],
@@ -2615,8 +2925,8 @@ function Load-Timeline {
             }
             # ================= STATUS TEXT =================
             switch ($mode.ToLower()){
-                "fixed" { $status = "Interval: FIKS" }
-                "loop"  { $status = "Interval: LOOP" }
+                "fixed" { $status = "𝐅𝐈𝐗𝐄𝐃" }
+                "loop"  { $status = "𝐋𝐎𝐎𝐏" }
                 default { $status = "" }
             }
             # ================= TYPE TEXT =================
@@ -2631,7 +2941,7 @@ function Load-Timeline {
                 Time = $dt
                 Mode = $mode
                 Type = $type
-                Text = "$status $typeText | AUTO COMMAND ({0}) | Time: {1} | Repeat: {2} min | Type: {3} | Mode: {4} | Day: {5}" -f `
+                Text = "$status $typeText  🅰️ AUTO COMMAND ({0})  🕓 Time: {1}  🔂 Repeat: {2} min  🔀 Type: {3}  🔃 Mode: {4}  📆 Day: {5}" -f `
                         $cmd.Cmd,
                         $cmd.Times[$i],
                         $cmd.RepeatIntervalMinutes[$i],
@@ -2824,9 +3134,6 @@ function Update-TimelineDisplay {
                 default   { return $true }
             }
         }
-        #elseif ($_.Mode -eq "fixed" -and $_.Time.Date -eq $today) {
-        #    return $true
-        #}
 		elseif ($_.Mode -eq "fixed" -and $_.Time.Date -eq $today -and $_.Time -ge $today) {
 			return $true
 		}
@@ -2843,9 +3150,9 @@ function Update-TimelineDisplay {
         return "{0}. {1}" -f ($i + 1), $displayTimeline[$i].Text
     }
     # get the new text values
-	$newPrev    = GetText($index - 1)  # $txtPrev.Text    = GetText($index - 1)
-	$newCurrent = GetText($index)      # $txtCurrent.Text = GetText($index)
-	$newNext    = GetText($index + 1)  # $txtNext.Text    = GetText($index + 1)
+	$newPrev    = GetText($index - 1) 
+	$newCurrent = GetText($index)     
+	$newNext    = GetText($index + 1) 
 	# ===================== TOTAL / EXECUTED DISPLAY =====================
 	if ($txtStats) {
 		$txtStats.Inlines.Clear()
@@ -3092,9 +3399,6 @@ function Update-TimelineDisplay {
 		# store last value
 		$Global:lastNextText = $newNext
 	}
-    # ===================== LINE COLORS =====================
-    #$txtCurrent.Foreground = [System.Windows.Media.Brushes]::Lime
-    #$txtPrev.Foreground    = [System.Windows.Media.Brushes]::Gray
     # ===================== NEXT COMMAND =====================
     $upcomingLines = $global:timeline | ForEach-Object {
     $lineTime = $_.Time
@@ -3172,7 +3476,8 @@ function Update-TimelineDisplay {
 			$loopDaily = $global:timeline | Where-Object {
 				$_.Mode -eq "loop" -and $_.Type -eq "daily"
 			}
-			$loopIndex = ($loopDaily | ForEach-Object { $_.Text }).IndexOf($nextCmd.Line.Text)
+			$loopTexts = @($loopDaily | ForEach-Object { $_.Text })
+            $loopIndex = $loopTexts.IndexOf($nextCmd.Line.Text)
 			if ($loopIndex -ge 0) {
 				$txtNext.Text = "{0}. {1}" -f ($loopIndex + 1), $nextCmd.Line.Text
 			}
@@ -3288,25 +3593,25 @@ $window.FindName("btnMedia").Add_Click({ Invoke-ManualCommand "/media" })
 $window.FindName("btnCamera").Add_Click({ Invoke-ManualCommand "/camera" })
 $window.FindName("btnData").Add_Click({
     Show-DarkWarning `
-        -Title "Warning!" `
-        -Message "Inside the *DATA* folder are System Files!"
+        -Title "⚠️ Warning" `
+        -Message "Inside the DATA folder are System Files!"
     Invoke-ManualCommand "/data"
 })
 $window.FindName("btnTask_add").Add_Click({ 
 Show-DarkWarning `
-        -Title "Auto-Start AutoPilot" `
-        -Message "When *Auto-Start* is Enabled, AutoPilot will launch automatically every time the PC Starts!"
+        -Title "🚩 Auto-Start AutoPilot" `
+        -Message "When Auto-Start is Enabled, AutoPilot will launch automatically every time the PC Starts!"
     Invoke-ManualCommand "/task-add"
 })
 $window.FindName("btnTask_del").Add_Click({ 
 Show-DarkWarning `
-        -Title "Stop Auto-Start" `
-        -Message "When *Auto-Start* is Disabled, AutoPilot will launch only Manually!"
+        -Title "⏹️ Stop Auto-Start" `
+        -Message "When Auto-Start is Disabled, AutoPilot will launch only Manually!"
     Invoke-ManualCommand "/task-del"
 })
 $window.FindName("btnTask_show").Add_Click({ Invoke-ManualCommand "/task-show" })
 $window.FindName("btnSettings").Add_Click({
-    Show-DarkWarning -Title "AutoPilot Settings!" -Message "Changes in this *SETTINGS Block* will become active after Refreshing AutoPilot!"
+    Show-DarkWarning -Title "⚙️ AutoPilot Settings" -Message "Changes in this SETTINGS Block will become active after 🔄 Refreshing AutoPilot!"
     $exePath = "$AppRoot\Settings.exe"
     if (Test-Path $exePath) {
         Start-Process $exePath
@@ -3314,14 +3619,21 @@ $window.FindName("btnSettings").Add_Click({
         [Windows.Forms.MessageBox]::Show("Settings.exe not found!","Error")
     }
 })
-
 $window.FindName("btnSettingsScripts").Add_Click({
-    Show-DarkWarning -Title "Scripts Settings!" -Message "Changes in this *SCRIPTS SETTINGS Block* will take effect after Refreshing AutoPilot!"
+    Show-DarkWarning -Title "📝 Scripts Settings" -Message "Changes in this SCRIPTS SETTINGS Block will take effect after 🔄 Refreshing AutoPilot!"
     $exePath = "$AppRoot\SettingsScripts.exe"
     if (Test-Path $exePath) {
         Start-Process $exePath
     } else {
         [Windows.Forms.MessageBox]::Show("ScriptsSettings.exe not found!","Error")
+    }
+})
+$window.FindName("btnSystem_Data").Add_Click({
+    $exePath = "$AppRoot\Data.exe"
+    if (Test-Path $exePath) {
+        Start-Process $exePath
+    } else {
+        [Windows.Forms.MessageBox]::Show("Data.exe not found!","Error")
     }
 })
 $window.FindName("btnShowCmd").Add_Click({ Invoke-ManualCommand "/show_cmd" })
@@ -3375,13 +3687,13 @@ $window.FindName("btnTrafficMonitoring").Add_Click({ Start-Process "$AppRoot\Sho
 # Stop Workers
 $btnStopWorkers = $window.FindName("btnStopWorkers")
 $btnStopWorkers.Add_Click({
-    $msg = "Warning: System and Network Monitoring may currently be Running. Are you sure you want to STOP the Monitoring?"
-    $title = "Stopping the Monitoring!"
+    $msg = "⚠️ Warning: System and Network Monitoring may currently be Running. Are you sure you want to ⏹️ STOP the Monitoring?"
+    $title = "⏹️ Stopping the Monitoring"
     $userChoice = Show-DarkConfirm -Message $msg -Title $title
     if ($userChoice) {
         Invoke-ManualCommand "/stop_worker"
     } else {
-        Show-DarkWarning -Title "Monitoring STOP" -Message "Monitoring stop has been canceled by the user."
+        Show-DarkWarning -Title "⏹️ Monitoring STOP" -Message "Monitoring has been stopped by the user."
     }
 })
 

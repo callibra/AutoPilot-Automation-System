@@ -90,13 +90,26 @@ def save_all_config():
     
 # --- List Table ---
 def open_json_table():
+    if hasattr(root, "table_win") and root.table_win is not None:
+        try:
+            if root.table_win.winfo_exists():
+                root.table_win.lift()
+                root.table_win.focus_force()
+                return
+        except:
+            pass
+
     table_win = tk.Toplevel(root)
+    root.table_win = table_win
     table_win.title("Scripts Overview (Read Only)")
     table_win.geometry("1500x800")
     table_win.configure(bg="#1E1E1E")
 
-    columns = ["Script", "Row", "Command", "Time", "Delay", "Repeat", "Mode", "Day"]
-
+    def on_close():
+        root.table_win = None
+        table_win.destroy()
+    table_win.protocol("WM_DELETE_WINDOW", on_close)
+    columns = ["⚛️ Script", "🆔 Row", "⚙️ Command", "🕓 Time", "🌀 Delay", "🔂 Repeat", "🔃 Mode", "📆 Day"]
     tree = ttk.Treeview(table_win, columns=columns, show="headings")
     tree.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -123,8 +136,13 @@ def open_json_table():
     for col in columns:
         tree.heading(col, text=col)
         tree.column(col, anchor="center", width=150)
-
     from datetime import datetime
+    
+    # Scroll only inside table
+    def tree_mousewheel(event):
+        tree.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        return "break"
+    tree.bind("<MouseWheel>", tree_mousewheel)
 
     # Боја за секоја скрипта (loop)
     script_colors = [
@@ -142,7 +160,7 @@ def open_json_table():
             tree.insert(
                 "",
                 "end",
-                values=(script_name, "-", "No Data", "-", "-", "-", "-", "-"),
+                values=(script_name, "-", "📂 No Data", "-", "-", "-", "-", "-"),
                 tags=(f"no_data_{script_index}",)
             )
             tree.tag_configure(f"no_data_{script_index}", background="#2D2D30", foreground="#CFCFCF")
@@ -444,9 +462,9 @@ def select_script(event):
         wrap="word"
     )
     text_widget.pack(expand=True, fill="both")
-    text_widget.tag_configure("selected", foreground="#FFFFFF", font=("Segoe UI", 13, "bold"), justify="center")
-    text_widget.tag_configure("description", foreground="#FFD700", font=("Segoe UI", 12, "italic"), justify="center")
-    text_widget.insert("end", f"Selected: {script_name}\n", "selected")
+    text_widget.tag_configure("selected", foreground="#FFFFFF", font=("Segoe UI Emoji", 13, "bold"), justify="center")
+    text_widget.tag_configure("description", foreground="#FFD700", font=("Segoe UI Emoji", 12, "italic"), justify="center")
+    text_widget.insert("end", f"☑️ Selected: {script_name}\n", "selected")
     text_widget.insert("end", description, "description")
     text_widget.configure(state="disabled")
 
@@ -462,7 +480,7 @@ def add_row(script=None, idx=None):
         return
 
     row_index = len(row_widgets)
-    spin_font = ("Segoe UI", 14, "bold")
+    spin_font = ("Segoe UI Emoji", 14, "bold")
     spin_bg = "#1E1E1E"
     spin_fg = "#FFFFFF"
 
@@ -488,7 +506,7 @@ def add_row(script=None, idx=None):
     m_var = tk.StringVar(value=f"{m:02d}")
     s_var = tk.StringVar(value=f"{s:02d}")
     time_frame = tk.Frame(frame, bg="#1E1E1E")
-    time_frame.pack(side="left", padx=(0, 20))
+    time_frame.pack(side="left", padx=(12, 20))
     tk.Spinbox(time_frame, from_=0, to=23, width=3, textvariable=h_var, font=spin_font,
                state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left")
     tk.Label(time_frame, text=":", bg="#1E1E1E", fg=spin_fg, font=spin_font).pack(side="left")
@@ -501,12 +519,12 @@ def add_row(script=None, idx=None):
     # Delay
     d_var = tk.StringVar(value=str(script["DelaySeconds"][idx]) if script else "0")
     tk.Spinbox(frame, from_=0, to=1000, width=6, textvariable=d_var, font=spin_font,
-               state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left", padx=(0,35))
+               state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left", padx=(35,35))
 
     # Repeat
     r_var = tk.StringVar(value=str(script["RepeatIntervalMinutes"][idx]) if script else "0")
     tk.Spinbox(frame, from_=0, to=10000, width=6, textvariable=r_var, font=spin_font,
-               state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left", padx=(0,50))
+               state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left", padx=(25,50))
 
     # --- Date Spinners ---
     today = date.today()
@@ -523,7 +541,7 @@ def add_row(script=None, idx=None):
     day_var = tk.StringVar(value=f"{d:02d}")
 
     date_frame = tk.Frame(frame, bg="#1E1E1E")
-    date_frame.pack(side="left", padx=(0,10))
+    date_frame.pack(side="left", padx=(30,10))
 
     # Year/Month/Day and OLD Date spinboxes
     min_year = y if script else today.year
@@ -581,12 +599,12 @@ def add_row(script=None, idx=None):
 
     def toggle_mode_visual(*args):
         if mode_var.get() == "loop":
-            mode_btn.config(text="Loop", background="#FFD700", foreground="#000000")
+            mode_btn.config(text="🔄 Loop", background="#FFD700", foreground="#0031FF")
             year_spin.config(state="disabled")
             month_spin.config(state="disabled")
             day_spin.config(state="disabled")
         else:
-            mode_btn.config(text="Fiks", background="#32CD32", foreground="#000000")
+            mode_btn.config(text="✔️ Fixed", background="#32CD32", foreground="#FFFFFF")
             year_spin.config(state="readonly")
             month_spin.config(state="readonly")
             day_spin.config(state="readonly")
@@ -597,20 +615,19 @@ def add_row(script=None, idx=None):
     mode_btn = tk.Button(
         frame,
         text="Loop",
-        font=("Segoe UI", 11, "bold"),
+        font=("Segoe UI Emoji", 13, "bold"),
         width=8,
         height=1,
         relief="raised",
         bd=2,
         command=lambda: mode_var.set("fixed" if mode_var.get() == "loop" else "loop")
     )
-    mode_btn.pack(side="left", padx=(20,20))
+    mode_btn.pack(side="left", padx=(53,20))
     toggle_mode_visual()  # стартно поставување на бојата и текстот
 
-
     # Delete button
-    del_btn = ttk.Button(frame, text="Delete", bootstyle="danger", command=lambda f=frame: delete_row(f))
-    del_btn.pack(side="left", padx=(20,0))
+    del_btn = ttk.Button(frame, text="🗑️ Delete", bootstyle="danger", command=lambda f=frame: delete_row(f))
+    del_btn.pack(side="left", padx=(30,0))
 
     # Trace dirty
     cmd_var.trace_add("write", mark_dirty)
@@ -655,8 +672,9 @@ row_widgets = []
 # --- Main Window ---
 style = Style(theme="darkly")
 root = style.master
+root.table_win = None
 root.title("Automation Scripts Editor")
-root.geometry("1570x588")
+root.geometry("1780x588")
 root.configure(bg="#1E1E1E")
 root.iconbitmap(str(ICON_PATH))
 
@@ -764,15 +782,15 @@ canvas.update_idletasks()
 # --- Headers ---
 headers_frame = tk.Frame(scrollable_frame, bg="#1E1E1E")
 headers_frame.pack(fill="x", pady=(0,5))
-header_font = ("Segoe UI", 14, "bold")
-tk.Label(headers_frame, text="#", width=4, bg="#1E1E1E", fg="#FFD700", font=header_font).pack(side="left", padx=0)
-tk.Label(headers_frame, text="Command", width=10, bg="#1E1E1E", fg="#FFD700", font=header_font).pack(side="left", padx=(0,0))
-tk.Label(headers_frame, text="Time (HH:MM:SS)", width=20, bg="#1E1E1E", fg="#00FF00", font=header_font).pack(side="left", padx=(5,0))
-tk.Label(headers_frame, text="Delay Sec", width=10, bg="#1E1E1E", fg="#FF69B4", font=header_font).pack(side="left", padx=(0,10))
-tk.Label(headers_frame, text="Repeat Min", width=10, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,10))
-tk.Label(headers_frame, text="Select Date (YY:MM:DD)", width=20, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(5,0))
-tk.Label(headers_frame, text="Interval", width=10, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(0,0))
-tk.Label(headers_frame, text="Delete", width=10, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(0,0))
+header_font = ("Segoe UI Emoji", 14, "bold")
+tk.Label(headers_frame, text="🆔", width=4, bg="#1E1E1E", fg="#FFD700", font=header_font).pack(side="left", padx=0)
+tk.Label(headers_frame, text="⚙️ Command", width=10, bg="#1E1E1E", fg="#FFD700", font=header_font).pack(side="left", padx=(5,0))
+tk.Label(headers_frame, text="🕓 Time (HH:MM:SS)", width=20, bg="#1E1E1E", fg="#00FF00", font=header_font).pack(side="left", padx=(5,0))
+tk.Label(headers_frame, text="🌀 Delay Sec", width=12, bg="#1E1E1E", fg="#FF69B4", font=header_font).pack(side="left", padx=(0,10))
+tk.Label(headers_frame, text="🔂 Repeat Min", width=12, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,10))
+tk.Label(headers_frame, text="📆 Select Date (YY:MM:DD)", width=22, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(5,0))
+tk.Label(headers_frame, text="⏱️ Interval", width=10, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(0,0))
+tk.Label(headers_frame, text="🗑️ Delete", width=10, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(15,0))
 
 # Rows frame
 rows_frame = tk.Frame(scrollable_frame, bg="#1E1E1E")
@@ -805,11 +823,8 @@ def _on_mousewheel(event):
     if rows_frame.winfo_children():
         content_height = canvas.bbox("all")[3] if canvas.bbox("all") else 0
         canvas_height = canvas.winfo_height()
-
         if content_height > canvas_height:
             canvas.yview_scroll(int(-1 * (event.delta // 120)), "units")
-
-canvas.bind("<Enter>", lambda e: canvas.focus_set())
 canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
 # --- Buttons frame ---
@@ -821,7 +836,7 @@ status_label = ttk.Label(buttons_frame, text="", bootstyle="info", justify="cent
 status_label.pack_forget()
 
 # --- Status Label (Toast / Permanent Warning) ---
-scripts_status_label = ttk.Label(buttons_frame, text="", bootstyle="info", justify="center")
+scripts_status_label = ttk.Label(buttons_frame, text="", bootstyle="info", justify="center", font=("Segoe UI Emoji", 11, "bold"))
 scripts_status_label.pack_forget()  # start hidden
 
 # --- Show temporary or permanent status messages ---
@@ -870,21 +885,20 @@ buttons_row = tk.Frame(buttons_frame, bg="#1E1E1E")
 buttons_row.pack(anchor="center")  # center horizontally
 
 # --- Buttons ---
-add_btn = ttk.Button(buttons_row, text="Add Row", bootstyle="info", command=add_row_with_status, state="disabled")
+style.configure(
+    "TButton",
+    font=("Segoe UI Emoji", 11, "bold")
+)
+add_btn = ttk.Button(buttons_row, text="✔️ Add Row", bootstyle="info", command=add_row_with_status, state="disabled")
 add_btn.pack(side="left", padx=20)
-
-save_btn = ttk.Button(buttons_row, text="Save Config", bootstyle="success", command=save_config_with_status, state="disabled")
+save_btn = ttk.Button(buttons_row, text="💾 Save Config", bootstyle="success", command=save_config_with_status, state="disabled")
 save_btn.pack(side="left", padx=20)
-
-default_btn = ttk.Button(buttons_row, text="Default", bootstyle="warning", command=reset_to_default, state="disabled")
+default_btn = ttk.Button(buttons_row, text="☑️ Default", bootstyle="warning", command=reset_to_default, state="disabled")
 default_btn.pack(side="left", padx=20)
-
-list_btn = ttk.Button(buttons_row, text="List All", bootstyle="info", command=open_json_table) 
+list_btn = ttk.Button(buttons_row, text="📋 List All", bootstyle="info", command=open_json_table) 
 list_btn.pack(side="left", padx=20)
-
-reset_all_btn = ttk.Button(buttons_row, text="Reset All", bootstyle="danger", command=reset_all_scripts)
+reset_all_btn = ttk.Button(buttons_row, text="❌ Reset All", bootstyle="danger", command=reset_all_scripts)
 reset_all_btn.pack(side="left", padx=20)
-
 update_status_no_selection()
 
 # --- Долна линија текст, секогаш видлива ---

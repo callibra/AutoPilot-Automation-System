@@ -32,11 +32,11 @@ $ACCENTS = @{
     days     = [Drawing.Color]::FromArgb(191,90,242)
 }
 
-$FONT_SECTION = New-Object Drawing.Font("Segoe UI",14,[Drawing.FontStyle]::Bold)
-$FONT_LABEL   = New-Object Drawing.Font("Segoe UI",12)
-$FONT_ENTRY   = New-Object Drawing.Font("Segoe UI",12,[Drawing.FontStyle]::Bold)
-$FONT_SPIN    = New-Object Drawing.Font("Segoe UI",12,[Drawing.FontStyle]::Bold)
-$FONT_BUTTON  = New-Object Drawing.Font("Segoe UI",12,[Drawing.FontStyle]::Bold)
+$FONT_SECTION = New-Object Drawing.Font("Segoe UI Emoji",14,[Drawing.FontStyle]::Bold)
+$FONT_LABEL   = New-Object Drawing.Font("Segoe UI Emoji",12)
+$FONT_ENTRY   = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Bold)
+$FONT_SPIN    = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Bold)
+$FONT_BUTTON  = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Bold)
 
 # ================= ROOT FORM =================
 $form = New-Object System.Windows.Forms.Form
@@ -137,6 +137,17 @@ function SpinRow($parent,$label,$value,$min,$max,$top){
     return $n
 }
 
+function AddEmoji($parent, $emoji, $control) {
+    $lbl = New-Object Windows.Forms.Label
+    $lbl.Text = $emoji
+    $lbl.AutoSize = $true
+    $lbl.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 14, [System.Drawing.FontStyle]::Regular)
+    $lbl.ForeColor = [System.Drawing.Color]::White
+    $lbl.Left = $control.Right + 8
+    $lbl.Top = $control.Top - 1
+    $parent.Controls.Add($lbl)
+}
+
 function Set-ToggleState($btn, $state){
     if ($state) {
         $btn.Text = "ON"
@@ -209,12 +220,12 @@ $grid.Top  = 10
 $scrollPanel.Controls.Add($grid)
 
 # ================= CREATE SECTIONS =================
-$telegram = Section "Telegram & Bot" $ACCENTS.telegram
-$limits   = Section "System Alarms Limits" $ACCENTS.limits
-$critical = Section "System Critical Limits" $ACCENTS.critical
-$hw       = Section "System Monitoring / Alarms Limits Mode" $ACCENTS.hw
-$screen   = Section "Record Screen / Camera" $ACCENTS.screen
-$days     = Section "AutoPilot Allowed Days / Runs / Enable Bot" $ACCENTS.days
+$telegram = Section "💎 Telegram & Bot" $ACCENTS.telegram
+$limits   = Section "📢 System Alarms Limits" $ACCENTS.limits
+$critical = Section "⚠️ System Critical Limits" $ACCENTS.critical
+$hw       = Section "📊 System Monitoring / Alarms Limits Mode" $ACCENTS.hw
+$screen   = Section "🎬 Record Screen / Camera" $ACCENTS.screen
+$days     = Section "📆 AutoPilot Allowed Days / Runs / Enable Bot" $ACCENTS.days
 
 $grid.Controls.Add($telegram,0,0)
 $grid.Controls.Add($limits,1,0)
@@ -225,65 +236,112 @@ $grid.Controls.Add($critical,2,0)
 
 # ================= TELEGRAM =================
 $y=50; $spacing=40
-$sub1 = New-Object Windows.Forms.Label; $sub1.Text="*AutoPilot Bot"; $sub1.Font=$FONT_LABEL; $sub1.ForeColor=[Drawing.Color]::FromArgb(10,132,255)
+$sub1 = New-Object Windows.Forms.Label; $sub1.Text="● AutoPilot Bot"; $sub1.Font=$FONT_LABEL; $sub1.ForeColor=[Drawing.Color]::FromArgb(10,132,255)
 $sub1.AutoSize=$true; $sub1.Left=10; $sub1.Top=$y; $telegram.Controls.Add($sub1); $y+=25
-$t1 = TextBoxRow $telegram "Telegram Bot Token:" $config.TELEGRAM_BOT_TOKEN $y; $y+=$spacing
-$t2 = TextBoxRow $telegram "Telegram Chat ID:" $config.TELEGRAM_CHAT_ID $y; $y+=$spacing
-$t3 = TextBoxRow $telegram "Allowed Owner ID:" $config.OWNER_ID $y; $y+=$spacing
-$t8 = TextBoxRow $telegram "Autopilot URL:" $config.AUTOPILOT_URL $y; $y+=$spacing
-
-$sub2 = New-Object Windows.Forms.Label; $sub2.Text="*Media Bot"; $sub2.Font=$FONT_LABEL; $sub2.ForeColor=[Drawing.Color]::FromArgb(10,132,255)
+$t1 = TextBoxRow $telegram "🔑 Telegram Bot Token:" $config.TELEGRAM_BOT_TOKEN $y
+AddEmoji $telegram "📝" $t1
+$y += $spacing
+$t2 = TextBoxRow $telegram "🆔 Telegram Chat ID:" $config.TELEGRAM_CHAT_ID $y
+AddEmoji $telegram "🔢" $t2
+$y += $spacing
+$t3 = TextBoxRow $telegram "✅ Allowed Owner ID:" $config.OWNER_ID $y
+AddEmoji $telegram "👤" $t3
+$y += $spacing
+$t8 = TextBoxRow $telegram "🌐 Autopilot URL:" $config.AUTOPILOT_URL $y
+AddEmoji $telegram "🔗" $t8
+$y += $spacing
+$sub2 = New-Object Windows.Forms.Label; $sub2.Text="● Media Bot"; $sub2.Font=$FONT_LABEL; $sub2.ForeColor=[Drawing.Color]::FromArgb(10,132,255)
 $sub2.AutoSize=$true; $sub2.Left=10; $sub2.Top=$y; $telegram.Controls.Add($sub2); $y+=25
-$t5 = TextBoxRow $telegram "Media Bot Token:" $config.BOT_TOKEN $y; $y+=$spacing
-$t6 = TextBoxRow $telegram "Media Chat ID:" $config.CHAT_ID $y; $y+=$spacing
-$t4 = TextBoxRow $telegram "Allowed Owner IDs (1+):" ($config.OWNER_IDS -join ",") $y; $y+=$spacing
-$t7 = TextBoxRow $telegram "Media Folder URL:" $config.MEDIA_FOLDER_URL $y; $y+=$spacing
-AddFooterLine $telegram "* Enter your Telegram Token and ID for two BOT Telegram Accounts.
-* First Bot Account for AutoPilot and Second Bot Account for Media Folder Editor.
-* Enter your Allowed ID. In IDs, you can enter multiple IDs, example: 12345,67890."
+$t5 = TextBoxRow $telegram "🔑 Media Bot Token:" $config.BOT_TOKEN $y
+AddEmoji $telegram "📝" $t5
+$y += $spacing
+$t6 = TextBoxRow $telegram "🆔 Media Chat ID:" $config.CHAT_ID $y
+AddEmoji $telegram "🔢" $t6
+$y += $spacing
+$t4 = TextBoxRow $telegram "✅ Allowed Owner IDs (1+):" ($config.OWNER_IDS -join ",") $y
+AddEmoji $telegram "👥" $t4
+$y += $spacing
+$t7 = TextBoxRow $telegram "🌐 Media Folder URL:" $config.MEDIA_FOLDER_URL $y
+AddEmoji $telegram "🔗" $t7
+$y += $spacing
+AddFooterLine $telegram "● Enter your Telegram Token and ID for two BOT Telegram Accounts.
+● First Bot Account for AutoPilot and Second Bot Account for Media Folder Editor.
+● Enter your Allowed ID. In IDs, you can enter multiple IDs, example: 12345,67890."
 
 # ================= SYSTEM ALARMS =================
 $y=50; $spacing=35
-$subLimits = New-Object Windows.Forms.Label; $subLimits.Text="*Load and Temperatures Alarms"; $subLimits.Font=$FONT_LABEL; $subLimits.ForeColor=[Drawing.Color]::FromArgb(54,189,138)
+$subLimits = New-Object Windows.Forms.Label; $subLimits.Text="● Load and Temperatures Alarms"; $subLimits.Font=$FONT_LABEL; $subLimits.ForeColor=[Drawing.Color]::FromArgb(54,189,138)
 $subLimits.AutoSize=$true; $subLimits.Left=10; $subLimits.Top=$y; $limits.Controls.Add($subLimits); $y+=25
-$cpuLA = SpinRow $limits "CPU Load (percent):" $config.CPU_LOAD_ALARM_LIMIT 1 150 $y; $y+=$spacing
-$ramA = SpinRow $limits "RAM Load (percent):" $config.RAM_USAGE_ALARM_LIMIT 1 100 $y; $y+=$spacing
-$mbL = SpinRow $limits "MB Temperature (metric):" $config.MB_LIMIT 1 100 $y; $y+=$spacing
-$cpuL = SpinRow $limits "CPU Temperature (metric):" $config.CPU_LIMIT 1 100 $y; $y+=$spacing
-$gpuL = SpinRow $limits "GPU Temperature (metric):" $config.GPU_LIMIT 1 100 $y; $y+=$spacing
-$diskL = SpinRow $limits "Disk Temperature (metric):" $config.DISK_LIMIT 1 100 $y; $y+=$spacing
-AddFooterLine $limits "* Set your Alarms for CPU, RAM and load expressed in percentages.
-* Set your Alarms for CPU, GPU, MotherBoard (MB), and Disk temperatures in metric units.
-* When any of these parameters are exceeded, you will receive an Alarm notification in Your Telegram Chat."
+$cpuLA = SpinRow $limits "🔳 CPU Load (percent):" $config.CPU_LOAD_ALARM_LIMIT 1 150 $y
+AddEmoji $limits "%" $cpuLA
+$y += $spacing
+$ramA = SpinRow $limits "🎟 RAM Load (percent):" $config.RAM_USAGE_ALARM_LIMIT 1 100 $y
+AddEmoji $limits "%" $ramA
+$y += $spacing
+$mbL = SpinRow $limits "🏿 MB Temperature (metric):" $config.MB_LIMIT 1 100 $y
+AddEmoji $limits "🌡️" $mbL
+$y += $spacing
+$cpuL = SpinRow $limits "🔳 CPU Temperature (metric):" $config.CPU_LIMIT 1 100 $y
+AddEmoji $limits "🌡️" $cpuL
+$y += $spacing
+$gpuL = SpinRow $limits "🏼 GPU Temperature (metric):" $config.GPU_LIMIT 1 100 $y
+AddEmoji $limits "🌡️" $gpuL
+$y += $spacing
+$diskL = SpinRow $limits "💾 Disk Temperature (metric):" $config.DISK_LIMIT 1 100 $y
+AddEmoji $limits "🌡️" $diskL
+$y += $spacing
+AddFooterLine $limits "● Set your Alarms for CPU, RAM and load expressed in percentages.
+● Set your Alarms for CPU, GPU, MotherBoard (MB), and Disk temperatures in metric units.
+● When any of these parameters are exceeded, you will receive an Alarm notification in Your Telegram Chat."
 
 # ================= SYSTEM LIMITS =================
 $y=50; $spacing=35
-$subCritical = New-Object Windows.Forms.Label; $subCritical.Text="*Load and Temperatures Limits"; $subCritical.Font=$FONT_LABEL; $subCritical.ForeColor=[Drawing.Color]::FromArgb(255,159,10)
+$subCritical = New-Object Windows.Forms.Label; $subCritical.Text="● Load and Temperatures Limits"; $subCritical.Font=$FONT_LABEL; $subCritical.ForeColor=[Drawing.Color]::FromArgb(255,159,10)
 $subCritical.AutoSize=$true; $subCritical.Left=10; $subCritical.Top=$y; $critical.Controls.Add($subCritical); $y+=25
-$cpuLC = SpinRow $critical "CPU Load Limit (percent):" $config.CPU_LOAD_CRITICAL_LIMIT 1 200 $y; $y+=$spacing
-$ramC = SpinRow $critical "RAM Load Limit (percent):" $config.RAM_USAGE_CRITICAL_LIMIT 1 100 $y; $y+=$spacing
-$mbT = SpinRow $critical "MB Temperature Limit (metric):" $config.MB_TEMP_CRITICAL_LIMIT 40 120 $y; $y+=$spacing
-$cpuT = SpinRow $critical "CPU Temperature Limit (metric):" $config.CPU_TEMP_CRITICAL_LIMIT 40 120 $y; $y+=$spacing
-$gpuT = SpinRow $critical "GPU Temperature Limit (metric):" $config.GPU_TEMP_CRITICAL_LIMIT 40 120 $y; $y+=$spacing
-$diskT = SpinRow $critical "Disk Temperature Limit (metric):" $config.DISK_TEMP_CRITICAL_LIMIT 40 120 $y; $y+=$spacing
-AddFooterLine $critical "* Set your Limits Alarms for CPU, RAM and load expressed in percentages.
-* Set your Limits Alarms for CPU, GPU, MotherBoard (MB), and Disk temperatures in metric units.
-* When any of these parameters are exceeded, a safe action will be performed on your PC (restart, shutdown, or restart of the AutoPilot) depending on the duration for which the Alarm has been exceeded."
+$cpuLC = SpinRow $critical "🔳 CPU Load Limit (percent):" $config.CPU_LOAD_CRITICAL_LIMIT 1 200 $y
+AddEmoji $critical "%" $cpuLC
+$y += $spacing
+$ramC = SpinRow $critical "🎟 RAM Load Limit (percent):" $config.RAM_USAGE_CRITICAL_LIMIT 1 100 $y
+AddEmoji $critical "%" $ramC
+$y += $spacing
+$mbT = SpinRow $critical "🏿 MB Temperature Limit (metric):" $config.MB_TEMP_CRITICAL_LIMIT 40 120 $y
+AddEmoji $critical "🌡️" $mbT
+$y += $spacing
+$cpuT = SpinRow $critical "🔳 CPU Temperature Limit (metric):" $config.CPU_TEMP_CRITICAL_LIMIT 40 120 $y
+AddEmoji $critical "🌡️" $cpuT
+$y += $spacing
+$gpuT = SpinRow $critical "🏼 GPU Temperature Limit (metric):" $config.GPU_TEMP_CRITICAL_LIMIT 40 120 $y
+AddEmoji $critical "🌡️" $gpuT
+$y += $spacing
+$diskT = SpinRow $critical "💾 Disk Temperature Limit (metric):" $config.DISK_TEMP_CRITICAL_LIMIT 40 120 $y
+AddEmoji $critical "🌡️" $diskT
+$y += $spacing
+AddFooterLine $critical "● Set your Limits Alarms for CPU, RAM and load expressed in percentages.
+● Set your Limits Alarms for CPU, GPU, MotherBoard (MB), and Disk temperatures in metric units.
+● When any of these parameters are exceeded, a safe action will be performed on your PC (restart, shutdown, or restart of the AutoPilot) depending on the duration for which the Alarm has been exceeded."
 
 # ================= SYSTEM MONITORING =================
 $y=50; $spacing=40
-$sub1 = New-Object Windows.Forms.Label; $sub1.Text="*System Interval"; $sub1.Font=$FONT_LABEL; $sub1.ForeColor=[Drawing.Color]::FromArgb(230,230,71)
+$sub1 = New-Object Windows.Forms.Label; $sub1.Text="● System Interval"; $sub1.Font=$FONT_LABEL; $sub1.ForeColor=[Drawing.Color]::FromArgb(230,230,71)
 $sub1.AutoSize=$true; $sub1.Left=10; $sub1.Top=$y; $hw.Controls.Add($sub1); $y+=25
-$sample = SpinRow $hw "System Hardware Monitoring Interval (sec):" $config.HardwareMonitor.SampleIntervalSeconds 60 500 $y; $y+=$spacing
-$tempI  = SpinRow $hw "System Alarm Limit Interval (sec):" $config.TEMP_CHECK_INTERVAL 60 500 $y; $y+=$spacing
-$sub2 = New-Object Windows.Forms.Label; $sub2.Text="*Monitoring ON / OFF"; $sub2.Font=$FONT_LABEL; $sub2.ForeColor=[Drawing.Color]::FromArgb(230,230,71)
+$sample = SpinRow $hw "📈 System Hardware Monitoring Interval (sec):" $config.HardwareMonitor.SampleIntervalSeconds 60 500 $y
+AddEmoji $hw "🕒" $sample
+$y += $spacing
+$tempI = SpinRow $hw "📢 System Alarm Limit Interval (sec):" $config.TEMP_CHECK_INTERVAL 60 500 $y
+AddEmoji $hw "🕒" $tempI
+$y += $spacing
+$sub2 = New-Object Windows.Forms.Label; $sub2.Text="● Monitoring ON / OFF"; $sub2.Font=$FONT_LABEL; $sub2.ForeColor=[Drawing.Color]::FromArgb(230,230,71)
 $sub2.AutoSize=$true; $sub2.Left=10; $sub2.Top=$y; $hw.Controls.Add($sub2); $y+=25
-$autoM  = ToggleRow $hw "Auto Start System Monitoring:" $config.AUTO_START_MONITORING $y; $y+=$spacing
-$traffic = ToggleRow $hw "Auto Start Traffic Monitoring:" $config.TRAFFIC_MONITOR_AUTO_START $y; $y+=$spacing
+$autoM = ToggleRow $hw "📈 Auto Start System Monitoring:" $config.AUTO_START_MONITORING $y
+AddEmoji $hw "🔵" $autoM
+$y += $spacing
+$traffic = ToggleRow $hw "📶 Auto Start Traffic Monitoring:" $config.TRAFFIC_MONITOR_AUTO_START $y
+AddEmoji $hw "🔵" $traffic
+$y += $spacing
 # ================= Pro / Test Mode =================
 # Label for the button
 $lblProTest = New-Object Windows.Forms.Label
-$lblProTest.Text = "*Alarms Limits Mode (Pro / Test):"
+$lblProTest.Text = "⚡ Alarms Limits Mode (Pro / Test):"
 $lblProTest.Font = $FONT_LABEL
 $lblProTest.ForeColor = [Drawing.Color]::FromArgb(30,243,250)
 $lblProTest.AutoSize = $true
@@ -300,6 +358,22 @@ $proTestBtn.Font   = $FONT_BUTTON
 $proTestBtn.ForeColor = [Drawing.Color]::White
 $proTestBtn.FlatStyle = 'Flat'
 $proTestBtn.FlatAppearance.BorderSize = 0
+# Emoji
+$proEmoji = New-Object Windows.Forms.Label
+$proEmoji.AutoSize = $true
+$proEmoji.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 14)
+$proEmoji.ForeColor = [Drawing.Color]::White
+$proEmoji.Left = $proTestBtn.Left + $proTestBtn.Width + 8
+$proEmoji.Top  = $proTestBtn.Top + 5
+$hw.Controls.Add($proEmoji)
+# function with proper closure handling
+$updateProEmoji = {
+    if ($proTestBtn.Text -eq "PRO") {
+        $proEmoji.Text = "✔️"
+    } else {
+        $proEmoji.Text = "❌"
+    }
+}
 # ✅ Set initial state based on JSON (true = Pro, false = Test)
 if ($config.ENABLE_RESTART -and $config.ENABLE_SHUTDOWN) {
     $proTestBtn.Text = "PRO"
@@ -308,6 +382,7 @@ if ($config.ENABLE_RESTART -and $config.ENABLE_SHUTDOWN) {
     $proTestBtn.Text = "TEST"
     $proTestBtn.BackColor = [Drawing.Color]::FromArgb(255,69,58)  # red
 }
+& $updateProEmoji
 # ✅ Click event: toggle Pro/Test + update JSON
 $proTestBtn.Add_Click({
     if ($this.Text -eq "PRO") {
@@ -323,39 +398,48 @@ $proTestBtn.Add_Click({
         $config.ENABLE_RESTART  = $true
         $config.ENABLE_SHUTDOWN = $true
     }
+	& $updateProEmoji
     Mark-Dirty
 })
 $hw.Controls.Add($proTestBtn)
 $y += 30
-AddFooterLine $hw "* In System Interval, set how often (in seconds) data should be collected for alarm measurements and for recording data in system monitoring.
-* The value must be between 60 and 500 seconds.
-* In the Auto Start section, choose whether you want the System and Network Traffic Monitoring to Start Automatically when AutoPilot starts, using the ON/OFF buttons.
-* If you select PRO Mode then your PC while RESTART or SHUTDOW when the alarms from the setting will be exceeded.
-* If you select TEST Mode then your PC while NOT RESTART or SHUTDOW it while only show it is a SIMULATION."
+AddFooterLine $hw "● In System Interval, set how often (in seconds) data should be collected for alarm measurements and for recording data in system monitoring.
+● The value must be between 60 and 500 seconds.
+● In the Auto Start section, choose whether you want the System and Network Traffic Monitoring to Start Automatically when AutoPilot starts, using the ON/OFF buttons.
+● If you select PRO Mode then your PC while RESTART or SHUTDOW when the alarms from the setting will be exceeded.
+● If you select TEST Mode then your PC while NOT RESTART or SHUTDOW it while only show it is a SIMULATION."
 
 # ================= RECORD SCREEN & CAMERA =================
 $y=50; $spacing=40
-$sub1 = New-Object Windows.Forms.Label; $sub1.Text="*Screen Record"; $sub1.Font=$FONT_LABEL; $sub1.ForeColor=[Drawing.Color]::FromArgb(100,210,255)
+$sub1 = New-Object Windows.Forms.Label; $sub1.Text="● Screen Record"; $sub1.Font=$FONT_LABEL; $sub1.ForeColor=[Drawing.Color]::FromArgb(100,210,255)
 $sub1.AutoSize=$true; $sub1.Left=10; $sub1.Top=$y; $screen.Controls.Add($sub1); $y+=25
-$sAudio = TextBoxRow $screen "Screen Audio Device:" $config.ScreenCapture.AudioDevice $y; $y+=$spacing
-$incl   = ToggleRow $screen "Include Audio (Turn ON/OFF):" $config.ScreenCapture.IncludeAudio $y; $y+=$spacing
-$sub2 = New-Object Windows.Forms.Label; $sub2.Text="*Camera Capture"; $sub2.Font=$FONT_LABEL; $sub2.ForeColor=[Drawing.Color]::FromArgb(100,210,255)
+$sAudio = TextBoxRow $screen "🎵 Screen Audio Device:" $config.ScreenCapture.AudioDevice $y
+AddEmoji $screen "📝" $sAudio
+$y += $spacing
+$incl = ToggleRow $screen "🔉 Include Audio (Turn ON/OFF):" $config.ScreenCapture.IncludeAudio $y
+AddEmoji $screen " 🔵" $incl
+$y += $spacing
+$sub2 = New-Object Windows.Forms.Label; $sub2.Text="● Camera Capture"; $sub2.Font=$FONT_LABEL; $sub2.ForeColor=[Drawing.Color]::FromArgb(100,210,255)
 $sub2.AutoSize=$true; $sub2.Left=10; $sub2.Top=$y; $screen.Controls.Add($sub2); $y+=25
-$cVideo = TextBoxRow $screen "Camera Video Device:" $config.CameraCapture.VideoDevice $y; $y+=$spacing 
-$cAudio = TextBoxRow $screen "Camera Audio Device:" $config.CameraCapture.AudioDevice $y; $y+=$spacing
-AddFooterLine $screen "* In the Screen Audio field, enter your Audio Device.
-* In the Camera fields, enter your Camera Device and your Camera Audio Device.
-* In order to be able to record system sound from the device, you must have *Stereo Mix* enabled in the Sound Settings.
-* Use the Include Video button while you want both the Screen Recording and System Audio to be Captured.
-* To find your Screen and Camera Audio/Video Devices, enter the following in PowerShell and press Enter:
-* C:\AutoPilot\ffmpeg\bin\ffmpeg.exe -list_devices true -f dshow -i dummy"
+$cVideo = TextBoxRow $screen "📸 Camera Video Device:" $config.CameraCapture.VideoDevice $y
+AddEmoji $screen "📝" $cVideo
+$y += $spacing
+$cAudio = TextBoxRow $screen "📸 Camera Audio Device:" $config.CameraCapture.AudioDevice $y
+AddEmoji $screen "📝" $cAudio
+$y += $spacing
+AddFooterLine $screen "● In the Screen Audio field, enter your Audio Device.
+● In the Camera fields, enter your Camera Device and your Camera Audio Device.
+● In order to be able to record system sound from the device, you must have *Stereo Mix* enabled in the Sound Settings.
+● Use the Include Video button while you want both the Screen Recording and System Audio to be Captured.
+● To find your Screen and Camera Audio/Video Devices, enter the following in PowerShell and press Enter:
+● C:\AutoPilot\ffmpeg\bin\ffmpeg.exe -list_devices true -f dshow -i dummy"
 
 # ================= DAYS =================
 $y = 50
 $spacing = 40
 # ---- Subsection 1: Allowed Days ----
 $sub1 = New-Object Windows.Forms.Label
-$sub1.Text = "*Allowed Days"
+$sub1.Text = "● Allowed Days"
 $sub1.Font = $FONT_LABEL
 $sub1.ForeColor = [Drawing.Color]::FromArgb(191,90,242)
 $sub1.AutoSize = $true
@@ -390,10 +474,19 @@ foreach($d in "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sun
     $dayButtons[$d] = $b
     $x += 67
 }
+# -------- ONE emoji at end of whole row --------
+$daysEmoji = New-Object Windows.Forms.Label
+$daysEmoji.Text = "📆"
+$daysEmoji.AutoSize = $true
+$daysEmoji.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 14)
+$daysEmoji.ForeColor = [Drawing.Color]::White
+$daysEmoji.Left = $x + 1
+$daysEmoji.Top = $y + 1
+$days.Controls.Add($daysEmoji)
 $y += 60
 # ---- Subsection 2: Interval Runs ----
 $sub2 = New-Object Windows.Forms.Label
-$sub2.Text = "*Interval Runs"
+$sub2.Text = "● Interval Runs"
 $sub2.Font = $FONT_LABEL
 $sub2.ForeColor = [Drawing.Color]::FromArgb(191,90,242)
 $sub2.AutoSize = $true
@@ -401,11 +494,13 @@ $sub2.Left = 10
 $sub2.Top = $y
 $days.Controls.Add($sub2)
 $y += 30
-$maxRuns = SpinRow $days "Max Runs / Session:" $config.MAX_RUNS 0 10 $y
+$maxRuns = SpinRow $days "⏳ Max Runs / Session:" $config.MAX_RUNS 0 10 $y
+AddEmoji $days "🔄" $maxRuns
+$y += $spacing
 # ---- Subsection 3: Telegram Bot Toggles ----
 $y += 40  
 $sub3 = New-Object Windows.Forms.Label
-$sub3.Text = "*Telegram Bots"
+$sub3.Text = "● Telegram Bots"
 $sub3.Font = $FONT_LABEL
 $sub3.ForeColor = [Drawing.Color]::FromArgb(191,90,242)
 $sub3.AutoSize = $true
@@ -414,19 +509,21 @@ $sub3.Top = $y
 $days.Controls.Add($sub3)
 $y += 30
 # AutoPilot Telegram Toggle
-$autoPilotToggle = ToggleRow $days "AutoPilot Telegram Bot (Enable/Disable):" $config.AUTOPILOT_TELEGRAM_ENABLED $y
+$autoPilotToggle = ToggleRow $days "💎 AutoPilot Telegram Bot (Enable/Disable):" $config.AUTOPILOT_TELEGRAM_ENABLED $y
+AddEmoji $days "🔵" $autoPilotToggle
 $y += $spacing
 # Media Telegram Toggle
-$mediaToggle = ToggleRow $days "Media Telegram Bot (Enable/Disable):" $config.MEDIA_TELEGRAM_ENABLED $y
+$mediaToggle = ToggleRow $days "💎 Media Telegram Bot (Enable/Disable):" $config.MEDIA_TELEGRAM_ENABLED $y
+AddEmoji $days "🔵" $mediaToggle
 $y += $spacing
-AddFooterLine $days "* Specify the days you want AutoPilot to run.
-* In the Interview Run section, set the number of repetitions.
-* Choose a number from 0 to 10, where 0 means an unlimited number of repetitions.
-* Use the AutoPilot without the *AutoPilot Bot* and *Media Bot* using the On/Off buttons."
+AddFooterLine $days "● Specify the days you want AutoPilot to run.
+● In the Interview Run section, set the number of repetitions.
+● Choose a number from 0 to 10, where 0 means an unlimited number of repetitions.
+● Use the AutoPilot without the *AutoPilot Bot* and *Media Bot* using the On/Off buttons."
 
 # ================= GLOBAL SAVE BUTTON =================
 $save = New-Object Windows.Forms.Button
-$save.Text = "Save Configuration"
+$save.Text = "💾 Save Configuration"
 $save.Font = $FONT_BUTTON
 $save.Width = 200
 $save.Height = 45
@@ -446,14 +543,18 @@ $form.Add_Shown({
 # ================= SAVE =================
 $save.Add_Click({
     # Telegram / Bot
-    $config.TELEGRAM_BOT_TOKEN=$t1.Text
-    $config.TELEGRAM_CHAT_ID=$t2.Text
-    $config.OWNER_ID=$t3.Text
-    $config.OWNER_IDS = @($t4.Text.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
-    $config.BOT_TOKEN=$t5.Text
-    $config.CHAT_ID=$t6.Text
-    $config.MEDIA_FOLDER_URL=$t7.Text
-    $config.AUTOPILOT_URL=$t8.Text
+	$config.TELEGRAM_BOT_TOKEN = ($t1.Text -replace '\r|\n','').Trim()
+	$config.TELEGRAM_CHAT_ID   = ($t2.Text -replace '\r|\n','').Trim()
+	$config.OWNER_ID           = ($t3.Text -replace '\r|\n','').Trim()
+	$config.OWNER_IDS = @(
+		($t4.Text -replace '\r|\n','').Split(",") |
+		ForEach-Object { $_.Trim() } |
+		Where-Object { $_ -ne "" }
+	)
+	$config.BOT_TOKEN       = ($t5.Text -replace '\r|\n','').Trim()
+	$config.CHAT_ID         = ($t6.Text -replace '\r|\n','').Trim()
+	$config.MEDIA_FOLDER_URL= ($t7.Text -replace '\r|\n','').Trim()
+	$config.AUTOPILOT_URL   = ($t8.Text -replace '\r|\n','').Trim()
 	# Telegram Toggles
     $config.AUTOPILOT_TELEGRAM_ENABLED = ($autoPilotToggle.Text -eq "ON")
     $config.MEDIA_TELEGRAM_ENABLED     = ($mediaToggle.Text -eq "ON")
@@ -480,9 +581,9 @@ $save.Add_Click({
     $config.AUTO_START_MONITORING=($autoM.Text -eq "ON")
     $config.TRAFFIC_MONITOR_AUTO_START=($traffic.Text -eq "ON")
     # Screen & Camera
-    $config.ScreenCapture.AudioDevice = $sAudio.Text
-    $config.CameraCapture.VideoDevice  = $cVideo.Text
-    $config.CameraCapture.AudioDevice  = $cAudio.Text
+    $config.ScreenCapture.AudioDevice = ($sAudio.Text -replace '\r|\n','').Trim()
+	$config.CameraCapture.VideoDevice = ($cVideo.Text -replace '\r|\n','').Trim()
+	$config.CameraCapture.AudioDevice = ($cAudio.Text -replace '\r|\n','').Trim()
     $config.ScreenCapture.IncludeAudio = ($incl.Text -eq "ON")
     # Days
     $config.ALLOWED_DAYS=@()
@@ -494,12 +595,12 @@ $save.Add_Click({
     $config.MAX_RUNS=$maxRuns.Value
     # Save to JSON
     $config | ConvertTo-Json -Depth 5 | Set-Content $jsonPath -Encoding UTF8
-    [Windows.Forms.MessageBox]::Show("Configuration saved successfully!")
+    [Windows.Forms.MessageBox]::Show("✔️ Configuration saved successfully!")
     $script:HasUnsavedChanges = $false
 })
 
 # ================= DEFAULT BUTTON =================
-$defaultBtn = New-Object Windows.Forms.Button;$defaultBtn.Text="Default";$defaultBtn.Font=New-Object Drawing.Font("Segoe UI",11,[Drawing.FontStyle]::Bold);$defaultBtn.Width=200;$defaultBtn.Height=40;$defaultBtn.BackColor=[Drawing.Color]::FromArgb(48,209,88);$defaultBtn.ForeColor=[Drawing.Color]::White;
+$defaultBtn = New-Object Windows.Forms.Button;$defaultBtn.Text="☑️ Default";$defaultBtn.Font=New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Bold);$defaultBtn.Width=200;$defaultBtn.Height=40;$defaultBtn.BackColor=[Drawing.Color]::FromArgb(48,209,88);$defaultBtn.ForeColor=[Drawing.Color]::White;
 $scrollPanel.Controls.Add($defaultBtn)
 $form.Add_Shown({
     $gapFromGrid   = 5    # растојание од grid-от
@@ -521,11 +622,11 @@ $defaultBtn.Add_Click({
     try {
         $def = Get-Content $defaultPath -Raw | ConvertFrom-Json
     } catch {
-        [Windows.Forms.MessageBox]::Show("settings_default is invalid or corrupted.","Fatal Error")
+        [Windows.Forms.MessageBox]::Show("settings_default is invalid or corrupted.","⚠️ Fatal Error")
         return
     }
     if (-not $def) {
-        [Windows.Forms.MessageBox]::Show("settings_default is empty or invalid.","Fatal Error")
+        [Windows.Forms.MessageBox]::Show("settings_default is empty or invalid.","⚠️ Fatal Error")
         return
     }
     # ---------- Telegram / Bot ----------
@@ -589,8 +690,8 @@ $defaultBtn.Add_Click({
 
 # ================= RESET + AUTOSAVE BUTTON =================
 $resetBtn = New-Object Windows.Forms.Button
-$resetBtn.Text = "Reset"
-$resetBtn.Font = New-Object Drawing.Font("Segoe UI",11,[Drawing.FontStyle]::Bold)
+$resetBtn.Text = "⚠️ Reset"
+$resetBtn.Font = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Bold)
 $resetBtn.Width = 200
 $resetBtn.Height = 40
 $resetBtn.BackColor = [Drawing.Color]::FromArgb(255,69,58)   # црвена (danger)

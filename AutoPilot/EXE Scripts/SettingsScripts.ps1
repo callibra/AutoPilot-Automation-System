@@ -32,10 +32,10 @@ $ACCENTS = @{
     demo3     = [Drawing.Color]::FromArgb(191,90,242)
 }
 
-$FONT_SECTION = New-Object Drawing.Font("Segoe UI",14,[Drawing.FontStyle]::Bold)
-$FONT_LABEL   = New-Object Drawing.Font("Segoe UI",12)
-$FONT_ENTRY   = New-Object Drawing.Font("Segoe UI",12,[Drawing.FontStyle]::Bold)
-$FONT_BUTTON  = New-Object Drawing.Font("Segoe UI",12,[Drawing.FontStyle]::Bold)
+$FONT_SECTION = New-Object Drawing.Font("Segoe UI Emoji",14,[Drawing.FontStyle]::Bold)
+$FONT_LABEL   = New-Object Drawing.Font("Segoe UI Emoji",12)
+$FONT_ENTRY   = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Bold)
+$FONT_BUTTON  = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Bold)
 
 # ================= ROOT FORM =================
 $form = New-Object System.Windows.Forms.Form
@@ -126,10 +126,21 @@ function LabelText($parent,$text,$top) {
     $parent.Controls.Add($l)
 }
 
+function AddEmoji($parent, $emoji, $control) {
+    $lbl = New-Object Windows.Forms.Label
+    $lbl.Text = $emoji
+    $lbl.AutoSize = $true
+    $lbl.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 14, [System.Drawing.FontStyle]::Regular)
+    $lbl.ForeColor = [System.Drawing.Color]::White
+    $lbl.Left = $control.Right + 8
+    $lbl.Top = $control.Top - 1
+    $parent.Controls.Add($lbl)
+}
+
 function TextBoxRow($parent,$label,$value,$top) {
     LabelText $parent $label $top
     $t = New-Object Windows.Forms.TextBox
-    $t.Text = $value; $t.Left = 180; $t.Top = $top-3; $t.Width = 300
+    $t.Text = $value; $t.Left = 200; $t.Top = $top-3; $t.Width = 300
     $t.Font = $FONT_ENTRY; $t.BackColor = $SECTION; $t.ForeColor = $COLOR_TEXT
     $t.Add_TextChanged({Mark-Dirty})
     $parent.Controls.Add($t)
@@ -178,12 +189,12 @@ for ($i=0; $i -lt $grid.RowCount; $i++) {
 $scrollPanel.Controls.Add($grid)
 
 # ================= CREATE SECTIONS =================
-$dockerCore   = Section "Docker Script"      $ACCENTS.docker $ACCENTS.docker
-$swap         = Section "SetDocker Script"   $ACCENTS.swap   $ACCENTS.swap
-$network      = Section "Network Script"     $ACCENTS.network  $ACCENTS.network
-$demo1        = Section "Net Traffic Script" $ACCENTS.demo1  $ACCENTS.demo1
-$demo2        = Section "Cleaner Script"     $ACCENTS.demo2  $ACCENTS.demo2
-$demo3        = Section "Power Plan Script"  $ACCENTS.demo3  $ACCENTS.demo3
+$dockerCore   = Section "⚙️ Docker Script"      $ACCENTS.docker $ACCENTS.docker
+$swap         = Section "⚛️ SetDocker Script"   $ACCENTS.swap   $ACCENTS.swap
+$network      = Section "🌐 Network Script"     $ACCENTS.network  $ACCENTS.network
+$demo1        = Section "🌍 Net Traffic Script" $ACCENTS.demo1  $ACCENTS.demo1
+$demo2        = Section "🧹 Cleaner Script"     $ACCENTS.demo2  $ACCENTS.demo2
+$demo3        = Section "⚡ Power Plan Script"  $ACCENTS.demo3  $ACCENTS.demo3
 
 $grid.Controls.Add($dockerCore, 0,0)
 $grid.Controls.Add($swap, 1,0)
@@ -197,35 +208,47 @@ $docker = $dockerCore
 
 # ================= DOCKER SECTION =================
 $y=50; $spacing=40
-$tDockerPath = TextBoxRow $docker "Docker Path:" $config.DockerPath $y; $y+=$spacing
-$tDockerCli  = TextBoxRow $docker "Docker CLI Path:" $config.DockerCliPath $y; $y+=$spacing
-$tContainers = TextBoxRow $docker "Containers:" ($config.Containers -join ",") $y; $y+=$spacing
-AddFooterLine $docker "* Set Docker executable paths and container names for Docker Script.
-* If you install Docker using its default path, then use the *DEFAULT BUTTON*.
-* If you are using a custom path, meaning you installed it on a different drive, then use the *DEFAULT CUSTOM BATTON* and replace it with your drive and folder where Docker is located.
-* This is used either to install Docker on your custom path or to use the default path.
-* If you are using the default Docker path, then don’t change anything in the label. But if you are using your custom path, then just replace the drive *example:(E:, C:, D:) and the folder if you installed Docker in a different folder, *example: E:\Miner or E:\MyDockerFolder.
-* The rest of the label stays the same; dont change it."
+$tDockerPath = TextBoxRow $docker "📁 Docker Path:" $config.DockerPath $y
+AddEmoji $docker "📝" $tDockerPath
+$y += $spacing
+$tDockerCli = TextBoxRow $docker "📁 Docker CLI Path:" $config.DockerCliPath $y
+AddEmoji $docker "📝" $tDockerCli
+$y += $spacing
+$tContainers = TextBoxRow $docker "⚙️ Containers:" ($config.Containers -join ",") $y
+AddEmoji $docker "📝" $tContainers
+$y += $spacing
+AddFooterLine $docker "● Set Docker executable paths and container names for Docker Script.
+● If you install Docker using its default path, then use the *DEFAULT BUTTON*.
+● If you are using a custom path, meaning you installed it on a different drive, then use the *DEFAULT CUSTOM BATTON* and replace it with your drive and folder where Docker is located.
+● This is used either to install Docker on your custom path or to use the default path.
+● If you are using the default Docker path, then don’t change anything in the label. But if you are using your custom path, then just replace the drive *example:(E:, C:, D:) and the folder if you installed Docker in a different folder, *example: E:\Miner or E:\MyDockerFolder.
+● The rest of the label stays the same; dont change it."
 
 # ================= SET DOCKER SECTION =================
 $y=50
-$tDockerDesktop = TextBoxRow $swap "Docker Desktop Path:" $config.DockerDesktopPath $y; $y+=$spacing
-$tSwapFolder    = TextBoxRow $swap "Swap Folder Path:" $config.SwapFolderPath $y; $y+=$spacing
-AddFooterLine $swap "* Set Docker Desktop and Swap folder paths.
-* If you install Docker using its default path, then use the *DEFAULT BUTTON*.
-* If you are using a custom path, meaning you installed it on a different drive, then use the *DEFAULT CUSTOM BATTON* and replace it with your drive and folder where Docker is located.
-* This is used to set Docker to use your custom hardware resources and either use your custom path for it or keep its default path.
-* If you are using the default Docker path, then don’t change anything in the label. But if you are using your custom path, then just replace the drive *example:(E:, C:, D:) and the folder if you installed Docker in a different folder, *example: E:\Miner or E:\MyDockerFolder.
-* The rest of the label stays the same; dont change it.
-* In the line *Swap Folder Path* change the %USERNAME% with your custom pc name example C:\Users\ASUS\AppData\Local\Docker\wsl\data or Your custom path example like this E:\Miner\WSLSwap."
+$tDockerDesktop = TextBoxRow $swap "📁 Docker Desktop Path:" $config.DockerDesktopPath $y
+AddEmoji $swap "📝" $tDockerDesktop
+$y += $spacing
+$tSwapFolder = TextBoxRow $swap "📁 Swap Folder Path:" $config.SwapFolderPath $y
+AddEmoji $swap "📝" $tSwapFolder
+$y += $spacing
+AddFooterLine $swap "● Set Docker Desktop and Swap folder paths.
+● If you install Docker using its default path, then use the *DEFAULT BUTTON*.
+● If you are using a custom path, meaning you installed it on a different drive, then use the *DEFAULT CUSTOM BATTON* and replace it with your drive and folder where Docker is located.
+● This is used to set Docker to use your custom hardware resources and either use your custom path for it or keep its default path.
+● If you are using the default Docker path, then don’t change anything in the label. But if you are using your custom path, then just replace the drive *example:(E:, C:, D:) and the folder if you installed Docker in a different folder, *example: E:\Miner or E:\MyDockerFolder.
+● The rest of the label stays the same; dont change it.
+● In the line *Swap Folder Path* change the %USERNAME% with your custom pc name example C:\Users\ASUS\AppData\Local\Docker\wsl\data or Your custom path example like this E:\Miner\WSLSwap."
 
 # ================= NETWORK SECTION =================
 $y = 50
 $spacing = 60  # larger spacing for visual clarity
 # --- Wi-Fi Names ---
-$txtWifi1 = TextBoxRow $network "WiFi 1 SSID:" $config.wifi1 $y
+$txtWifi1 = TextBoxRow $network "📶 WiFi 1 SSID:" $config.wifi1 $y
+AddEmoji $network "📝" $txtWifi1
 $y += $spacing
-$txtWifi2 = TextBoxRow $network "WiFi 2 SSID:" $config.wifi2 $y
+$txtWifi2 = TextBoxRow $network "📶 WiFi 2 SSID:" $config.wifi2 $y
+AddEmoji $network "📝" $txtWifi2
 $y += $spacing
 # Function to create a modern spinner (NumericUpDown)
 function New-TimeSpinner($parent, $left, $top, $value, $max) {
@@ -247,7 +270,7 @@ function New-TimeSpinner($parent, $left, $top, $value, $max) {
 
 # ================= Tenda → Beni Time =================
 $lblTendaToBeni = New-Object Windows.Forms.Label
-$lblTendaToBeni.Text = "WiFi 1 switch to WiFi 2 (Hours:Min):"
+$lblTendaToBeni.Text = "🔄 WiFi 1 switch to WiFi 2 (Hours:Min):"
 $lblTendaToBeni.Font = $FONT_LABEL
 $lblTendaToBeni.ForeColor = [Drawing.Color]::FromArgb(255,255,255)
 $lblTendaToBeni.AutoSize = $true
@@ -268,8 +291,18 @@ $tMinValue  = if ($tMin  -ne $null) { $tMin  } else { 0 }
 $originalTendaHour = $tHourValue
 $originalTendaMin  = $tMinValue
 
-$nudTendaHour = New-TimeSpinner $network 330 $y $tHourValue 23
-$nudTendaMin  = New-TimeSpinner $network 410 $y $tMinValue 59
+$nudTendaHour = New-TimeSpinner $network 350 $y $tHourValue 23
+$nudTendaMin  = New-TimeSpinner $network 430 $y $tMinValue 59
+
+# ➜ emoji next to MIN spinner (WiFi 1 row)
+$lblTendaEmoji = New-Object Windows.Forms.Label
+$lblTendaEmoji.Text = "🕒"
+$lblTendaEmoji.AutoSize = $true
+$lblTendaEmoji.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 12)
+$lblTendaEmoji.ForeColor = [Drawing.Color]::White
+$lblTendaEmoji.Left = $nudTendaMin.Left + 78
+$lblTendaEmoji.Top  = $y + 8
+$network.Controls.Add($lblTendaEmoji)
 
 # ⚡ Mark as dirty only if changed
 $nudTendaHour.Add_ValueChanged({
@@ -293,7 +326,7 @@ $y += $spacing
 
 # ================= Beni → Tenda Time =================
 $lblBeniToTenda = New-Object Windows.Forms.Label
-$lblBeniToTenda.Text = "WiFi 2 switch to WiFi 1 (Hours:Min):"
+$lblBeniToTenda.Text = "🔄 WiFi 2 switch to WiFi 1 (Hours:Min):"
 $lblBeniToTenda.Font = $FONT_LABEL
 $lblBeniToTenda.ForeColor = [Drawing.Color]::FromArgb(255,255,255)
 $lblBeniToTenda.AutoSize = $true
@@ -313,8 +346,18 @@ $bMinValue  = if ($bMin  -ne $null) { $bMin  } else { 0 }
 $originalBeniHour = $bHourValue
 $originalBeniMin  = $bMinValue
 
-$nudBeniHour = New-TimeSpinner $network 330 $y $bHourValue 23
-$nudBeniMin  = New-TimeSpinner $network 410 $y $bMinValue 59
+$nudBeniHour = New-TimeSpinner $network 350 $y $bHourValue 23
+$nudBeniMin  = New-TimeSpinner $network 430 $y $bMinValue 59
+
+# ➜ emoji next to MIN spinner (WiFi 2 row)
+$lblBeniEmoji = New-Object Windows.Forms.Label
+$lblBeniEmoji.Text = "🕒"
+$lblBeniEmoji.AutoSize = $true
+$lblBeniEmoji.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 12)
+$lblBeniEmoji.ForeColor = [Drawing.Color]::White
+$lblBeniEmoji.Left = $nudBeniMin.Left + 78
+$lblBeniEmoji.Top  = $y + 8
+$network.Controls.Add($lblBeniEmoji)
 
 # ⚡ Mark as dirty only if changed
 $nudBeniHour.Add_ValueChanged({
@@ -336,12 +379,12 @@ $nudBeniHour.Text = if ($bHour -ne $null) { "{0:D2}" -f $bHour } else { "" }
 $nudBeniMin.Text  = if ($bMin  -ne $null) { "{0:D2}" -f $bMin  } else { "" }
 $y += $spacing
 # --- Footer line ---
-AddFooterLine $network "* Edit Wi-Fi SSID and Times using the arrow spinners.
-* Use this SETTINGS to switch from one Wi-Fi network to another at a specific time by creating a task FOR automatically switch or manually from a Telegram Bot Chat message.
-* Use the DEFAULT CUSTOM Batton as an example of how this should be configured.
-* If the correct Wi-Fi SSID and the configured time for the switch are not entered, this will not work without these values.
-* You can create an unlimited number of tasks that can be deleted from Network Script or from Telegram Bot Chat messages.
-* This TASK are valid and executed every day at the same time.."
+AddFooterLine $network "● Edit Wi-Fi SSID and Times using the arrow spinners.
+● Use this SETTINGS to switch from one Wi-Fi network to another at a specific time by creating a task FOR automatically switch or manually from a Telegram Bot Chat message.
+● Use the DEFAULT CUSTOM Batton as an example of how this should be configured.
+● If the correct Wi-Fi SSID and the configured time for the switch are not entered, this will not work without these values.
+● You can create an unlimited number of tasks that can be deleted from Network Script or from Telegram Bot Chat messages.
+● This TASK are valid and executed every day at the same time.."
 
 # ================= Demo 1 =================
 $lblDemo1 = New-Object Windows.Forms.Label
@@ -361,7 +404,7 @@ $picDemo1.Height = 200   # custom height
 $picDemo1.Left = ($demo1.Width - $picDemo1.Width) / 2
 $picDemo1.Top = 120
 $demo1.Controls.Add($picDemo1)
-AddFooterLine $demo1 "* No SETTINGS for Editing for Net Traffic Script."
+AddFooterLine $demo1 "● No SETTINGS for Editing for Net Traffic Script."
 
 # ================= Demo 2 =================
 $lblDemo2 = New-Object Windows.Forms.Label
@@ -381,7 +424,7 @@ $picDemo2.Height = 200
 $picDemo2.Left = ($demo2.Width - $picDemo2.Width) / 2
 $picDemo2.Top = 120
 $demo2.Controls.Add($picDemo2)
-AddFooterLine $demo2 "* No SETTINGS for Editing for Cleaner Script."
+AddFooterLine $demo2 "● No SETTINGS for Editing for Cleaner Script."
 
 # ================= Demo 3 =================
 $lblDemo3 = New-Object Windows.Forms.Label
@@ -402,11 +445,11 @@ $picDemo3.Height = 200
 $picDemo3.Left = ($demo3.Width - $picDemo3.Width) / 2
 $picDemo3.Top = 120
 $demo3.Controls.Add($picDemo3)
-AddFooterLine $demo3 "* No SETTINGS for Editing for Power Plan Script."
+AddFooterLine $demo3 "● No SETTINGS for Editing for Power Plan Script."
 
 # ================= SAVE BUTTON =================
 $save = New-Object Windows.Forms.Button
-$save.Text = "Save Configuration"
+$save.Text = "💾 Save Configuration"
 $save.Font = $FONT_BUTTON
 $save.Width = 200
 $save.Height = 45
@@ -424,14 +467,18 @@ $form.Add_Shown({
 })
 
 $save.Add_Click({
-    $config.DockerPath = $tDockerPath.Text
-    $config.DockerCliPath = $tDockerCli.Text
-    $config.Containers = @($tContainers.Text.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
-    $config.DockerDesktopPath = $tDockerDesktop.Text
-    $config.SwapFolderPath = $tSwapFolder.Text
+    $config.DockerPath = ($tDockerPath.Text -replace '\r|\n','').Trim()
+	$config.DockerCliPath = ($tDockerCli.Text -replace '\r|\n','').Trim()
+	$config.Containers = @(
+		(($tContainers.Text -replace '\r|\n','').Trim()).Split(",") |
+		ForEach-Object { $_.Trim() } |
+		Where-Object { $_ -ne "" }
+	)
+	$config.DockerDesktopPath = ($tDockerDesktop.Text -replace '\r|\n','').Trim()
+	$config.SwapFolderPath = ($tSwapFolder.Text -replace '\r|\n','').Trim()
 	# --- Wi-Fi / Task Settings ---
-	$config.wifi1 = $txtWifi1.Text
-	$config.wifi2 = $txtWifi2.Text
+	$config.wifi1 = ($txtWifi1.Text -replace '\r|\n','').Trim()
+    $config.wifi2 = ($txtWifi2.Text -replace '\r|\n','').Trim()
 	# --- Tenda → Beni time ---
 	if ($nudTendaHour.Text -eq "" -and $nudTendaMin.Text -eq "") {
 		$config.TendaToBeniTime = $null
@@ -447,13 +494,13 @@ $save.Add_Click({
 			([int]$nudBeniHour.Value), ([int]$nudBeniMin.Value)
 	}
     $config | ConvertTo-Json -Depth 5 | Set-Content $jsonPath -Encoding UTF8
-    [Windows.Forms.MessageBox]::Show("Configuration saved successfully!")
+    [Windows.Forms.MessageBox]::Show("✔️ Configuration saved successfully!")
     $script:HasUnsavedChanges = $false
 })
 
 # ================= DEFAULT BUTTON =================
 $defaultBtn = New-Object Windows.Forms.Button
-$defaultBtn.Text="Default"
+$defaultBtn.Text="☑️ Default"
 $defaultBtn.Font=$FONT_BUTTON
 $defaultBtn.Width=200
 $defaultBtn.Height=40
@@ -473,7 +520,7 @@ $form.Add_Shown({
 
 $defaultBtn.Add_Click({
     if ($defaultProfiles.Count -lt 1) {
-        [Windows.Forms.MessageBox]::Show("Factory default not found!","Error")
+        [Windows.Forms.MessageBox]::Show("Factory default not found!","⚠️ Error")
         return
     }
     $def = $defaultProfiles[0]
@@ -515,7 +562,7 @@ $defaultBtn.Add_Click({
 
 # ================= DEFAULT CUSTOM BUTTON =================
 $customBtn = New-Object Windows.Forms.Button
-$customBtn.Text="Default Custom"
+$customBtn.Text="✔️ Default Custom"
 $customBtn.Font=$FONT_BUTTON
 $customBtn.Width=200
 $customBtn.Height=40
@@ -535,7 +582,7 @@ $form.Add_Shown({
 
 $customBtn.Add_Click({
     if ($defaultProfiles.Count -lt 2) {
-        [Windows.Forms.MessageBox]::Show("Custom default not found!","Error")
+        [Windows.Forms.MessageBox]::Show("Custom default not found!","⚠️ Error")
         return
     }
     $def = $defaultProfiles[1]
@@ -562,7 +609,7 @@ $customBtn.Add_Click({
 
 # ================= RESET BUTTON =================
 $resetBtn = New-Object Windows.Forms.Button
-$resetBtn.Text = "Reset"
+$resetBtn.Text = "⚠️ Reset"
 $resetBtn.Font=$FONT_BUTTON
 $resetBtn.Width=200
 $resetBtn.Height=40

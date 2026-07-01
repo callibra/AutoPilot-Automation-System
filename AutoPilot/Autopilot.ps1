@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # 🔐 AutoPilot SECURITY DESIGN Script
 # ============================================================
 # • Commands accepted ONLY from OwnerId
@@ -77,23 +77,25 @@ $settingsPath = Join-Path -Path $PSScriptRoot -ChildPath "JSON\settings.json"
 $settingsScriptPath = Join-Path -Path $PSScriptRoot -ChildPath "JSON\settings_scripts.json"
 # Проверка за settings.json
 if (-not (Test-Path $settingsPath)) {
-    Write-Host "Config file does not exist in $settingsPath" -ForegroundColor Red
-    Pause
-    return
+    Write-Host "Config file does not exist in $settingsPath - AutoPilot STOP Running!" -ForegroundColor Red
+	Start-Sleep -Seconds 35
+    exit
 }
 # Проверка за settings_script.json
 if (-not (Test-Path $settingsScriptPath)) {
-    Write-Host "Config file does not exist in $settingsScriptPath" -ForegroundColor Red
-    Pause
-    return
+    Write-Host "Config file does not exist in $settingsScriptPath - AutoPilot STOP Running!" -ForegroundColor Red
+	Start-Sleep -Seconds 35
+    exit
 }
 try {
     $config = Get-Content $settingsPath -Raw | ConvertFrom-Json
     $configScript = Get-Content $settingsScriptPath -Raw | ConvertFrom-Json
 } catch {
     Write-Warning "Error Loading settings.json or settings_scripts.json: $_"
-    Pause
-    return
+	Write-Host ""
+	Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+	Start-Sleep -Seconds 35
+    exit
 }
 
 # ================= HELPER FUNCTIONS =================
@@ -196,8 +198,10 @@ if ($AutoPilotTelegramEnabled) {
         Write-Host "ERROR: AutoPilot Telegram Bot is *ENABLED, but the configuration is invalid!" -ForegroundColor Red
         $errors | ForEach-Object { Write-Host " - $_" -ForegroundColor Red }
         Write-Host "Check the AutoPilot Bot settings in AutoPilot Settings." -ForegroundColor DarkCyan
-        Pause
-        return
+        Write-Host ""
+	    Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+		Start-Sleep -Seconds 35
+        exit
     }
     $OwnerId = [long]$OwnerId
     Write-Host "AutoPilot Telegram Bot is *ENABLED and properly configured." -ForegroundColor Green
@@ -226,7 +230,7 @@ if ($MediaTelegramEnabled) {
         $errors | ForEach-Object { Write-Host " - $_" -ForegroundColor Yellow }
         Write-Host "Check the Media Bot settings in AutoPilot Settings." -ForegroundColor DarkCyan
 		$MediaTelegramConfigValid = $false
-        Start-Sleep -Seconds 3
+        Start-Sleep -Seconds 5
     } else {
         Write-Host "Media Telegram Bot is *ENABLED and properly configured." -ForegroundColor Green
 		$MediaTelegramConfigValid = $true
@@ -317,20 +321,24 @@ function Load-AutoCommandsFromJson {
     )
     if (-not (Test-Path $JsonPath)) {
         Write-Host " JSON file for AutoCommands not found: $JsonPath" -ForegroundColor Yellow
-        Start-Sleep -Seconds 5
-		exit
+        Write-Host ""
+	    Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+		Start-Sleep -Seconds 35
+        exit
     } else {
         try {
             $jsonContent = Get-Content -Path $JsonPath -Raw | ConvertFrom-Json
             if (-not $jsonContent.AutoCommands -or $jsonContent.AutoCommands.PSObject.Properties.Count -eq 0) {
                 Write-Host " JSON file is empty or contains no AutoCommands: $JsonPath" -ForegroundColor Cyan
-                Start-Sleep -Seconds 8
-				exit
+                Write-Host ""
+				Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+				Start-Sleep -Seconds 35
             }
         } catch {
             Write-Host " Error reading JSON file: $JsonPath" -ForegroundColor Red
-            Start-Sleep -Seconds 8
-			exit
+            Write-Host ""
+			Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+			Start-Sleep -Seconds 35
         }
     }
     $global:AutoCommands = @{ }
@@ -405,19 +413,24 @@ $global:CommandToImagePath = @{
 $configPath = "$PSScriptRoot\JSON\scripts_edit.json"
 if (-not (Test-Path $configPath)) {
     Write-Host " JSON file for Scripts not found: $configPath" -ForegroundColor Yellow
-    Start-Sleep -Seconds 5
+    Write-Host ""
+	Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+	Start-Sleep -Seconds 35
+	exit
 } else {
     try {
         $config = Get-Content $configPath -Raw | ConvertFrom-Json
         if (-not $config.ScheduledScripts -or $config.ScheduledScripts.Count -eq 0) {
             Write-Host " JSON file is empty or contains no Scripts: $configPath" -ForegroundColor Cyan
-            Start-Sleep -Seconds 8
-			exit
+            Write-Host ""
+	        Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+		    Start-Sleep -Seconds 35
         }
     } catch {
         Write-Host " Error reading JSON file: $configPath" -ForegroundColor Red
-        Start-Sleep -Seconds 8
-		exit
+        Write-Host ""
+	    Write-Host " - AutoPilot STOP Running!" -ForegroundColor Red
+		Start-Sleep -Seconds 35
     }
 }
 $ScheduledScripts = @()
@@ -696,7 +709,7 @@ function Send-TelegramMessage {
         return
     }
 	# Header Footer
-    $Footer = "`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
+    $Footer = "`n" + ("-" * 18) + "`n🔰 AutoPilot | Start Menu - /start"
     $Message = $message + $Footer 
     
 	$uri = "https://api.telegram.org/bot$telegramBotToken/sendMessage"
@@ -918,7 +931,7 @@ if ($TrafficMonitorAutoStart) {
         New-Item $DataFolder -ItemType Directory -Force | Out-Null
     }
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\TrafficMonitorWorker.ps1`"" -WindowStyle Hidden
-    Send-TelegramMessage "Network Monitoring is Starting at $timestamp. TrafficMonitorWorker has Started."
+    Send-TelegramMessage "🌍 Network Monitoring is Starting at $timestamp. TrafficMonitorWorker has Started."
 }
 
 # === START MONITORING ===
@@ -931,14 +944,14 @@ function Start-Monitoring {
     $monitoringStartFlag = "$Global:monitoringLogsFolder\monitoring_start.flag"
     # --- Ako worker proces postoi → ne startuvaj ---
     if ($existing) {
-        $msg = "Monitoring is already Running (Active process)."
+        $msg = "📈 Monitoring is already Running ✅ (Active process)."
         Write-MonitoringLog $msg -NoDisplay
         Send-TelegramMessage $msg
         return
     }
     # --- Kreiraj ili osvezi start flag so timestamp ---
     Set-Content -Path $monitoringStartFlag -Value $timestamp -Encoding UTF8
-    Add-Content -Path $Global:LogFile -Value "[$timestamp] Monitoring Startuvan vo $timestamp"
+    Add-Content -Path $Global:LogFile -Value "[$timestamp] Monitoring Start in $timestamp"
     # --- Start Worker proces ---
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = "powershell.exe"
@@ -951,7 +964,7 @@ function Start-Monitoring {
     } else {
         Write-MonitoringLog "ERROR: SystemMonitorWorker process cannot be started!" -NoDisplay
     }
-    $msg = "System Monitoring is Starting at $timestamp. SystemMonitorWorker has Started."
+    $msg = "📈 System Monitoring is Starting at $timestamp. SystemMonitorWorker has Started."
     Write-MonitoringLog $msg -NoDisplay
     Send-TelegramMessage $msg
 }
@@ -980,7 +993,7 @@ function Stop-Monitoring {
             }
         }
         Start-Sleep -Seconds 1
-        $msg = "Monitoring is Stopped. SystemMonitorWorker script closed at $timestamp."
+        $msg = "📈 Monitoring is ⏹️ Stopped. SystemMonitorWorker script closed at $timestamp."
         Write-MonitoringLog $msg -NoDisplay
         Send-TelegramMessage $msg
     }
@@ -993,7 +1006,7 @@ function Stop-Monitoring {
             # ако нема flag → користи тековно време
             $realStopTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
         }
-        $msg = "Monitoring is Not Running. Last Stopped at $realStopTime"
+        $msg = "📈 Monitoring is Not Running. Last ⏹️ Stopped at $realStopTime"
         Write-MonitoringLog $msg -NoDisplay
         Send-TelegramMessage $msg
     }
@@ -1008,18 +1021,18 @@ function Get-MonitoringStatus {
     }
     if ($workerProc -and (Test-Path $monitoringStartFlag)) {
         $startTime = Get-Content $monitoringStartFlag
-        $msg = "Monitoring is ACTIVE. Started at $startTime."
+        $msg = "📈 Monitoring is ✅ ACTIVE. Started at $startTime."
     }
     elseif (-not $workerProc -and (Test-Path $monitoringStopFlag)) {
         $stopTime = Get-Content $monitoringStopFlag
-        $msg = "Monitoring is STOPPED. Stopped at $stopTime."
+        $msg = "📈 Monitoring is ⏹️ STOPPED. Stopped at $stopTime."
     }
     elseif ((Test-Path $monitoringStartFlag) -and -not (Test-Path $monitoringStopFlag)) {
         $startTime = Get-Content $monitoringStartFlag
-        $msg = "Monitoring may be active (process not found, start flag exists) since $startTime."
+        $msg = "📈 Monitoring may be active ℹ️ (process not found, start flag exists) since $startTime."
     }
     else {
-        $msg = "Monitoring status cannot be determined (no flag files found)."
+        $msg = "📈 Monitoring status cannot be determined ℹ️ (no flag files found)."
     }
     Write-MonitoringLog $msg -NoDisplay
     Send-TelegramMessage $msg
@@ -1125,7 +1138,7 @@ function Check-AutoCommands {
         if (-not $shouldRun) { continue }
         # ===== EXECUTION WINDOW (FIXED) =====
         $diff = ($currentTime - $targetTime).TotalSeconds
-        if ($diff -ge 0 -and $diff -le 120) {
+        if ($diff -ge 0 -and $diff -le 120 -and $targetTime -ge $scriptStartTime) {
             if (-not $global:commandsExecuted.ContainsKey($execKey)) {
                 Invoke-CommandAndNotify $commandKey $cmdInfo.Cmd $timeStr
                 $global:commandsExecuted[$execKey] = $currentTime
@@ -1178,26 +1191,95 @@ function Invoke-CommandAndNotify {
 		& $cmdToRun
 
 		$now = Get-Date
-		$captionBase = "Automatic command: $commandKey`nTime: $($now.ToString('dd.MM.yyyy - HH:mm:ss'))`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
+		$captionBase = "🤖 Automatic command: $commandKey`n🕒 Time: $($now.ToString('dd.MM.yyyy - HH:mm:ss'))`n" + ("-" * 18) + "`n🔰 AutoPilot | Start Menu - /start"
 
 		# 📸 Ако има слика → прати ја
 		if ($global:CommandToImagePath -and $global:CommandToImagePath.ContainsKey($cmdToRun)) {
 			$imagePath = $global:CommandToImagePath[$cmdToRun]
+			if ($imagePath -and (Test-Path $imagePath) -and ($imagePath -like "*.png")) { # Charts Del
+				$fileName = [System.IO.Path]::GetFileNameWithoutExtension($imagePath)
+				if ($fileName -notmatch 'screenshot') {
+					$saveFolder = "$PSScriptRoot\Charts"
+					if (!(Test-Path $saveFolder)) {
+						New-Item -ItemType Directory -Path $saveFolder | Out-Null
+					}
+					# 🛡️ Without DATE - Del
+					$noDateFiles = @("disk_Alld", "temperature_Alld", "load_Alld", "table_Alld")
+					if ($noDateFiles -contains $fileName) {
+					# 🔵 ALWAYS OVERWRITE (latest only)
+					$destination = Join-Path $saveFolder "$fileName.png"
+					}
+					else {
+					# 🟡 ARCHIVE BY DATE - Del
+					$timestamp = Get-Date -Format "yyyy-MM-dd"
+					$destination = Join-Path $saveFolder ("{0}_{1}.png" -f $fileName, $timestamp)
+					}# - Del
+					Copy-Item $imagePath $destination -Force
+				}
+			}                                                                              # Charts Del
 			if (-not [string]::IsNullOrEmpty($imagePath) -and (Test-Path $imagePath)) {
 				if ($imagePath -match '\.(png|jpg|jpeg|bmp|gif)$') {
 					Send-TelegramPhoto -photoPath $imagePath -caption $captionBase
 				}
 			}
 		}
-
-		# 🎥 Ако има видео → прати го (без услов за Take-ScreenRecord)
+		<# 🎥 AUTO VIDEO ORGINAL CODE
 		if ($global:CommandToVideoPath -and $global:CommandToVideoPath.ContainsKey($cmdToRun)) {
 			$videoPath = $global:CommandToVideoPath[$cmdToRun]
 			if (-not [string]::IsNullOrEmpty($videoPath) -and (Test-Path $videoPath)) {
 				Send-TelegramVideo -videoPath $videoPath -caption $captionBase
 			}
+		}#>
+		# 🎥 AUTO CUSTOM RECORD
+		if ($cmdToRun -eq "Stop-Recording") {
+			$videoPath = $global:LastDesktopRecordingFile
+			if (![string]::IsNullOrEmpty($videoPath) -and (Test-Path $videoPath)) {
+				$fileName = [System.IO.Path]::GetFileNameWithoutExtension($videoPath)
+				if ($fileName -eq "rec") {   # 1. if ($fileName -in @("rec", "recording")) { - multi files     2. if ($fileName -eq "rec") { - single file
+					$saveFolder = "$PSScriptRoot\Archive\Recordings"
+					if (!(Test-Path $saveFolder)) {
+						New-Item -ItemType Directory -Path $saveFolder | Out-Null
+					}
+					$newHash = (Get-FileHash -Path $videoPath -Algorithm SHA256).Hash
+					$duplicate = $false
+					foreach ($file in Get-ChildItem -Path $saveFolder -File) {
+						$existingHash = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash
+						if ($existingHash -eq $newHash) {
+							$duplicate = $true
+							Write-Host "AUTO REC skipped (already exists): $($file.Name)" -ForegroundColor Yellow
+							break
+						}
+					}
+					if (-not $duplicate) {
+						$timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+						$extension = [System.IO.Path]::GetExtension($videoPath)
+						$destination = Join-Path $saveFolder ("{0}_{1}{2}" -f $fileName, $timestamp, $extension)
+						Copy-Item -Path $videoPath -Destination $destination -Force
+						Write-Host "AUTO REC saved: $destination" -ForegroundColor Green
+					}
+				}
+			}
 		}
-	} catch {
+	    # 🎥 AUTO SHORT RECORD
+        if ($cmdToRun -eq "Take-ScreenRecord") {
+		Start-Job -ScriptBlock {
+			param($PSScriptRoot)
+			Start-Sleep -Seconds 50
+			$videoPath = "$PSScriptRoot\ScreenRecordings\recording.mp4"
+			if (Test-Path $videoPath) {
+				$saveFolder = "$PSScriptRoot\Archive\Recordings"
+				if (!(Test-Path $saveFolder)) {
+					New-Item -ItemType Directory -Path $saveFolder | Out-Null
+				}
+				$fileName = [System.IO.Path]::GetFileNameWithoutExtension($videoPath)
+				$timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+				$extension = [System.IO.Path]::GetExtension($videoPath)
+				$destination = Join-Path $saveFolder ("{0}_{1}{2}" -f $fileName, $timestamp, $extension)
+				Copy-Item $videoPath $destination -Force
+			    }
+		    } -ArgumentList $PSScriptRoot | Out-Null
+		}
+	    } catch {
 		Write-Output ("Error executing {0}: {1}" -f $cmdToRun, $_)
 	}
 }
@@ -1214,7 +1296,7 @@ function System-Status {
     $ramPercent = [math]::Round(($usedRAM / $totalRAM) * 100, 2)
     # Disks
     $diskInfoString = (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
-        ForEach-Object { "$($_.DeviceID): $([math]::Round($_.FreeSpace/1GB,2))GB free of $([math]::Round($_.Size/1GB,2))GB" }
+        ForEach-Object { "$($_.DeviceID) $([math]::Round($_.FreeSpace/1GB,2))GB free of $([math]::Round($_.Size/1GB,2))GB" }
     ) -join "`n"
     # Network adapters
     $networkStatsString = (Get-CimInstance Win32_NetworkAdapter |
@@ -1237,24 +1319,24 @@ function System-Status {
             "$name Load: $([math]::Round(($sum),2))%"
         }) -join "`n"
     } catch {
-        $gpuLoad = "GPU Load: Not Available"
+        $gpuLoad = "ℹ️ GPU Load: Not Available"
     }
     # Compose output
     $status = @"
-System Status:
-CPU Usage: $cpu %
-RAM: $usedRAM GB / $totalRAM GB ($ramPercent%)
+⚙️ System Status:
+🔲 CPU Usage: $cpu %
+💾 RAM: $usedRAM GB / $totalRAM GB ($ramPercent%)
 
-Disk:
+📀 Disk:
 $diskInfoString
 
-Network Statistics:
+📶 Network Statistics:
 $networkStatsString
 
-Uptime: $uptimeHours hours
-Processes: $((Get-Process).Count)
+🕢 Uptime: $uptimeHours hours
+🔁 Processes: $((Get-Process).Count)
 
-$gpuLoad
+🏿 $gpuLoad
 "@
     Send-TelegramMessage -message $status
 }
@@ -1270,13 +1352,13 @@ function Start-Das {
     if ($null -eq $service) {
         Write-Log "RemoteSystemMonitorService is Not Installed."
 		Write-Host "RemoteSystemMonitorService is Not Installed."
-        Send-TelegramMessage -message "RemoteSystemMonitorService is Not Installed."
+        Send-TelegramMessage -message "ℹ️ RemoteSystemMonitorService is Not Installed."
         return
     }
     # Ako i EXE i servis se veќе aktivni
     if ($proc1 -and $service.Status -eq 'Running') {
         Write-Log "Dashboard is already running (exe and service). It will not be Restarted."
-        Send-TelegramMessage -message "Dashboard is already Running (exe i servis)."
+        Send-TelegramMessage -message "📊 Dashboard is already ✅ Running (exe i servis)."
         return
     }
     # Flagovi za status na startuvanje
@@ -1288,12 +1370,12 @@ function Start-Das {
             Start-Process -FilePath $DasPath
             Write-Log "Dashboard exe is Running."
 			Write-Host "Dashboard is Started."
-            Send-TelegramMessage -message "Dashboard exe is Running."
+            Send-TelegramMessage -message "⚙️ Dashboard exe is ✅ Running."
             $startedExe = $true
         }
         else {
             Write-Log "Dashboard exe not found at: $DasPath"
-            Send-TelegramMessage -message "Dashboard exe not found at: $DasPath"
+            Send-TelegramMessage -message "⚙️ Dashboard exe ⛔ not found at: $DasPath"
         }
     }
     else {
@@ -1304,12 +1386,12 @@ function Start-Das {
         try {
             Start-Service -Name RemoteSystemMonitorService -ErrorAction Stop
             Write-Log "Dashboard service is running."
-            Send-TelegramMessage -message "Dashboard service is Running."
+            Send-TelegramMessage -message "⚡ Dashboard service is ✅ Running."
             $startedService = $true
         }
         catch {
             Write-Log "Failed to start the service: $($_.Exception.Message)"
-            Send-TelegramMessage -message " Failed to start the service: $($_.Exception.Message)"
+            Send-TelegramMessage -message "⚠️ Failed to start the service: $($_.Exception.Message)"
         }
     }
     else {
@@ -1318,10 +1400,10 @@ function Start-Das {
     # Ako nisto novo ne se startira, a nesto bese vekje aktivno - isprati info
     if (-not $startedExe -and -not $startedService) {
         if ($proc1) {
-            Send-TelegramMessage -message "Dashboard exe was already Running."
+            Send-TelegramMessage -message "⚙️ Dashboard exe was already ✅ Running."
         }
         if ($service.Status -eq 'Running') {
-            Send-TelegramMessage -message "Dashboard service was already Running."
+            Send-TelegramMessage -message "⚡ Dashboard service was already ✅ Running."
         }
     }
 }
@@ -1345,10 +1427,10 @@ function Stop-Das {
     }
     # 3. Telegram poraka
     if ($stoppedSomething) {
-        Send-TelegramMessage -message "Dashboard is Stopped (process and/or service)."
+        Send-TelegramMessage -message "📊 Dashboard is ⏹️ Stopped (process and/or service)."
     } else {
         Write-Log "Dashboard was not Active (neither process nor service)." 
-        Send-TelegramMessage -message "Dashboard was not Active."
+        Send-TelegramMessage -message "ℹ️ Dashboard was not Active."
     }
 }
 
@@ -1358,18 +1440,18 @@ function Status-Das {
     # Proces status
     $proc = Get-Process -Name RemoteSystemMonitorServerControl -ErrorAction SilentlyContinue
     if ($proc) {
-        $msg += "`Process:  ACTIVE (PID: $($proc.Id))"
+        $msg += "`⚙️ Process:  ✅ ACTIVE (PID: $($proc.Id))"
     } else {
-        $msg += "`Process:  Not Active."
+        $msg += "`⚙️ Process:  ❌ Not Active."
     }
     # Servis status (ISPRAVENO IME)
     $service = Get-Service -Name RemoteSystemMonitorService -ErrorAction SilentlyContinue
     if ($service -and $service.Status -eq 'Running') {
-        $msg += "`Service:  ACTIVE (Status: $($service.Status))"
+        $msg += "`⚡ Service:  ✅ ACTIVE (Status: $($service.Status))"
     } else {
-        $msg += "`Service:  Not Active."
+        $msg += "`⚡ Service:  ❌ Not Active."
     }
-    Send-TelegramMessage -message " Dashboard status:$msg"
+    Send-TelegramMessage -message "📊 Dashboard status: $msg"
 }
 
 # 💻 Status na NETWORK  (PING)
@@ -1438,7 +1520,7 @@ function Get-NetworkStatus {
         $uploadMbps   = [math]::Round(($tx * 8) / 1MB, 2)
         # --- OUTPUT ---
         $output = @"
-[$hostname] Internet: OK
+🖥️ $hostname  Internet: OK
 Local IP        : $localIP
 Gateway         : $gateway
 DNS Servers     : $dnsServers
@@ -1449,7 +1531,7 @@ Active Adapter  : $adapterName
 "@
         # Додавање на сите адаптери
         $allAdapters | ForEach-Object {
-            $output += "`n* Adapter: $($_.Name)
+            $output += "`n📶 Adapter: $($_.Name)
   Status   : $($_.Status)
   Type     : $($_.Type)
   MAC      : $($_.MAC)
@@ -1458,13 +1540,13 @@ Active Adapter  : $adapterName
   Speed    : $($_.SpeedMbps) Mbps
   -------------------------------------"
 }
-        $output += "`n* Download        : $downloadMbps Mbps
-* Upload          : $uploadMbps Mbps`n"
+        $output += "`n🔽 Download        : $downloadMbps Mbps
+🔼 Upload          : $uploadMbps Mbps`n"
 
         return $output
     }
     catch {
-        return "Internet: NOT WORKING!"
+        return "⚠️ Internet: NOT WORKING!"
     }
 }
 
@@ -1472,30 +1554,30 @@ Active Adapter  : $adapterName
 function Play-VLC {
     if (-not (Test-Path $vlcPath)) {
 		Write-Host "VLC is Not Installed."
-        return "VLC is Not Installed."
+        return "ℹ️ VLC is Not Installed."
     }
     # Затвори било кој активен VLC пред да пуштиш нов стрим
     Get-Process vlc -ErrorAction SilentlyContinue | Stop-Process -Force
     $url = $global:RadioStations[$global:CurrentStationIndex]
     Start-Process -FilePath $vlcPath -ArgumentList $url
 	Write-Host "VLC is Started."
-    return "Station started: $url"
+    return "🔊 Station started: $url"
 	
 }
 
 function Stop-VLC {
     if (-not (Test-Path $vlcPath)) {
 		Write-Host "VLC is Not Installed."
-        return "VLC is Not Installed."
+        return "ℹ️ VLC is Not Installed."
     }
     Get-Process vlc -ErrorAction SilentlyContinue | Stop-Process -Force
-    return "VLC is closed."
+    return "VLC is ❌ closed."
 }
 
 function Next-Station {
     if (-not (Test-Path $vlcPath)) {
 		Write-Host "VLC is Not Installed."
-        return "VLC is Not Installed."
+        return "ℹ️ VLC is Not Installed."
     }
     $global:CurrentStationIndex = ($global:CurrentStationIndex + 1) % $global:RadioStations.Count
     return Play-VLC
@@ -1504,7 +1586,7 @@ function Next-Station {
 function Prev-Station {
     if (-not (Test-Path $vlcPath)) {
 		Write-Host "VLC is Not Installed."
-        return "VLC is Not Installed."
+        return "ℹ️ VLC is Not Installed."
     }
     $global:CurrentStationIndex = ($global:CurrentStationIndex - 1)
     if ($global:CurrentStationIndex -lt 0) {
@@ -1516,13 +1598,13 @@ function Prev-Station {
 function VLC-Status {
     if (-not (Test-Path $vlcPath)) {
 		Write-Host "VLC is Not Installed."
-        return "VLC is Not Installed."
+        return "ℹ️ VLC is Not Installed."
     }
     if (Get-Process vlc -ErrorAction SilentlyContinue) {
         $url = $global:RadioStations[$global:CurrentStationIndex]
-        return "VLC is running. Current station: $url"
+        return "VLC is ✅ running. 🔊 Current station: $url"
     } else {
-        return "VLC is not active."
+        return "ℹ️ VLC is not active."
     }
 }
 #################### end VLC Player ########################################
@@ -1594,7 +1676,7 @@ function Get-Temperatures {
         try {
             Add-Type -Path $DllPath
         } catch {
-            return "Error: Cannot load DLL file at the path $DllPath."
+            return "⚠️ Error: Cannot load DLL file at the path $DllPath."
         }
     }
 
@@ -1648,17 +1730,17 @@ function Get-Temperatures {
         $items = $result | Where-Object { $_.HardwareType -eq $type }
         if ($items.Count -gt 0) {
             switch ($type) {
-                "Cpu"         { $output += "`n[CPU Temp]`n" }
-                "GpuAmd"      { $output += "`n[GPU Temp AMD]`n" }
-                "GpuNvidia"   { $output += "`n[GPU Temp NVIDIA]`n" }
-                "Motherboard" { $output += "`n[Motherboard Temp]`n" }
-                "Storage"     { $output += "`n[Disk Temp]`n" }
+                "Cpu"         { $output += "`n🔲 CPU Temp:`n" }
+                "GpuAmd"      { $output += "`n🏼 GPU Temp AMD:`n" }
+                "GpuNvidia"   { $output += "`n🏼 GPU Temp NVIDIA:`n" }
+                "Motherboard" { $output += "`n🏿 Motherboard Temp:`n" }
+                "Storage"     { $output += "`n💾 Disk Temp:`n" }
                 default       { $output += "`n[$type]`n" }
             }
 
             foreach ($item in $items) {
             if ($type -eq "Storage") {
-                $name = "** $($item.HardwareName)"
+                $name = "$($item.HardwareName)"
                 $output += " $name - $($item.Sensor): $([math]::Round($item.TemperatureC, 2)) °C`n"
             } else {
                 $output += " $($item.HardwareName) - $($item.Sensor): $([math]::Round($item.TemperatureC, 2)) °C`n"
@@ -1667,14 +1749,14 @@ function Get-Temperatures {
     }
 }
     if (-not $motherboardTempFound) {
-        $output += "`nStatus: Cannot measure Motherboard temperature.`n"
+        $output += "`nℹ️ Status: Cannot measure Motherboard temperature.`n"
     }
     if (-not $gpuTempFound) {
-        $output += "`nStatus: GPU temperature not found (possibly no graphics card or sensor).`n"
+        $output += "`nℹ️ Status: GPU temperature not found (possibly no graphics card or sensor).`n"
     }
 
     if ($failures.Count -gt 0) {
-        $output += "`nSome sensors could not be measured:`n"
+        $output += "`nℹ Some sensors could not be measured:`n"
         foreach ($fail in $failures) {
             $output += " - $fail`n"
         }
@@ -1715,10 +1797,10 @@ function Check-TemperatureAndNotify {
             $diskFound = $true
             $temp = [double]$matches[2]
             if ($line -match "^(.+?):") { $name = $matches[1].Trim() } else { $name = "Disk" }
-            if ($temp -gt $diskLimit) { $diskExceeded += "${name}: $($temp)°C" }
+            if ($temp -gt $diskLimit) { $diskExceeded += "● ${name}: $($temp)°C" }
             if ($temp -gt $diskTempCriticalLimit) {
                 $criticalTriggered = $true
-                $criticalReasons += "Disk ${name}: $($temp)°C (Limit: $($diskTempCriticalLimit) °C)"
+                $criticalReasons += "Disk ● ${name}: $($temp)°C (Limit: $($diskTempCriticalLimit) °C)"
             }
         }
 		# Maticna
@@ -1737,15 +1819,15 @@ function Check-TemperatureAndNotify {
             $gpuFound = $true
             $temp = [double]$matches[2]
             if ($line -match "^(.+?):") { $name = $matches[1].Trim() } else { $name = "GPU" }
-            if ($temp -gt $gpuLimit) { $gpuExceeded += "${name}: $($temp)°C" }
+            if ($temp -gt $gpuLimit) { $gpuExceeded += "● ${name}: $($temp)°C" }
             if ($temp -gt $gpuTempCriticalLimit) {
                 $criticalTriggered = $true
-                $criticalReasons += "${name}: $($temp)°C (Limit: $($gpuTempCriticalLimit) °C)"
+                $criticalReasons += "● ${name}: $($temp)°C (Limit: $($gpuTempCriticalLimit) °C)"
             }
         }
     }
 
-# ==== RAM & CPU Load ==== 
+    # ==== RAM & CPU Load ==== 
     # Uzimanje trenutnog RAM Usage
     $ramUsage = (Get-WmiObject Win32_OperatingSystem).TotalVisibleMemorySize - (Get-WmiObject Win32_OperatingSystem).FreePhysicalMemory
     $ramUsagePercent = [math]::Round(($ramUsage / (Get-WmiObject Win32_OperatingSystem).TotalVisibleMemorySize) * 100, 2)
@@ -1755,43 +1837,43 @@ function Check-TemperatureAndNotify {
 
     # Alarm vrednosti (bez limiti u običnom alarmu, samo brojke)
     if ($ramUsagePercent -gt $ramUsageAlarmLimit) {
-        $msg += " RAM Load: $($ramUsagePercent)%`n"
+        $msg += "🎟 RAM Load: $($ramUsagePercent)%`n"
     }
     if ($cpuLoad -gt $cpuLoadAlarmLimit) {
-        $msg += " CPU Load: $([math]::Round($cpuLoad,2))%`n"
+        $msg += "🔲 CPU Load: $([math]::Round($cpuLoad,2))%`n"
     }
 
     # Kritični alarmi (sa limitima samo ovde)
     if ($ramUsagePercent -gt $ramUsageCriticalLimit) {
         $criticalTriggered = $true
-        $criticalReasons += "RAM Load: $($ramUsagePercent)% (Limit: $ramUsageCriticalLimit%)"
+        $criticalReasons += "🎟 RAM Load: $($ramUsagePercent)% (Limit: $ramUsageCriticalLimit%)`n"
     }
     if ($cpuLoad -gt $cpuLoadCriticalLimit) {
         $criticalTriggered = $true
-        $criticalReasons += "CPU Load: $([math]::Round($cpuLoad,2))% (Limit: $cpuLoadCriticalLimit%)"
+        $criticalReasons += "🔲 CPU Load: $([math]::Round($cpuLoad,2))% (Limit: $cpuLoadCriticalLimit%)`n"
     }
 	
 	# Vreme na izvrsuvanje na Alarmite
-	 $alarmTime = Get-Date -Format 'HH:mm:ss dd-MM'
+	$alarmTime = Get-Date -Format '🕒 HH:mm:ss  📆 dd-MM-yyyy'
 	 
     # ==== Обична аларм порака (без критични лимити) ====
     if ($cpuExceeded -or $diskExceeded -or $mbExceeded -or $gpuExceeded -or $msg) {
-        $msg = "  **ALARM: Temperature or Load Exceeded!($alarmTime)`n`n" + $msg
+        $msg = "🔵🔵🔵  ALARM: Temperature or Load Exceeded! ($alarmTime)`n`n" + $msg
 
-        if ($cpuExceeded) { $msg += " CPU Temp:`n" + ($cpuExceeded -join "`n") + "`n`n" }
-        if ($diskExceeded) { $msg += " Disk Temp:`n" + ($diskExceeded -join "`n") + "`n`n" }
-        if ($mbExceeded) { $msg += " Motherboard Temp:`n" + ($mbExceeded -join "`n") + "`n`n" }
-        if ($gpuExceeded) { $msg += " GPU Temp:`n" + ($gpuExceeded -join "`n") + "`n`n" }
+        if ($cpuExceeded) { $msg += "🔲 CPU Temp:`n" + ($cpuExceeded -join "`n") + "`n`n" }
+        if ($diskExceeded) { $msg += "💾 Disk Temp:`n" + ($diskExceeded -join "`n") + "`n`n" }
+        if ($mbExceeded) { $msg += "🏿 Motherboard Temp:`n" + ($mbExceeded -join "`n") + "`n`n" }
+        if ($gpuExceeded) { $msg += "🏼 GPU Temp:`n" + ($gpuExceeded -join "`n") + "`n`n" }
 
-        if (-not $cpuFound) { $msg += " CPU temperature is not being measured.`n" }
-        if (-not $diskFound) { $msg += " Disk temperature is not being measured.`n" }
-        if (-not $mbFound) { $msg += " Motherboard temperature is not being measured.`n" }
-        if (-not $gpuFound) { $msg += " GPU temperature is not being measured.`n" }
+        if (-not $cpuFound) { $msg += "🔲 CPU temperature is not being measured.`n" }
+        if (-not $diskFound) { $msg += "💾 Disk temperature is not being measured.`n" }
+        if (-not $mbFound) { $msg += "🏿 Motherboard temperature is not being measured.`n" }
+        if (-not $gpuFound) { $msg += "🏼 GPU temperature is not being measured.`n" }
     }
 
 # ==== Критичен аларм (само тука ги прикажуваме критичните лимити) ====
 if ($criticalTriggered) {
-    $critMsg = "`n--- **SECURITY ALARM** ---($alarmTime)`n"
+    $critMsg = "`n🔴🔴🔴  SECURITY ALARM: System Protection Activate! ($alarmTime)`n"
 
 # Проверка на времето
 $currentHour = (Get-Date).Hour
@@ -1803,22 +1885,22 @@ $shouldShutdown = $false
 
 # Ако е помеѓу 11:00 и 13:00, изврши рестарт
 if ($currentHour -ge 11 -and $currentHour -lt 13) { #(($currentHour -ge 15 -and $currentHour -lt 23) -or ($currentHour -ge 23 -and $currentHour -lt 24) -or ($currentHour -ge 0 -and $currentHour -lt 6)) Full Code 
-    $actionMessage = "System is *RESTART* due to the following Exceedances:`n`n"
+    $actionMessage = "🔄 System is *RESTART* due to the following Exceedances:`n`n"
 	$shouldRestart = $true
 } 
 # Ако е помеѓу 18:00 и 20:00, изврши рестарт
 elseif ($currentHour -ge 18 -and $currentHour -lt 20) {
-    $actionMessage = "System is *RESTART* due to the following Exceedances:`n`n"
+    $actionMessage = "🔄 System is *RESTART* due to the following Exceedances:`n`n"
 	$shouldRestart = $true
 }
 # Ако е помеѓу 22:00 и 23:00, изврши рестарт
 elseif ($currentHour -ge 22 -and $currentHour -lt 23) {
-    $actionMessage = "System is *RESTART* due to the following Exceedances:`n`n"
+    $actionMessage = "🔄 System is *RESTART* due to the following Exceedances:`n`n"
 	$shouldRestart = $true
 } 
 # Ако е помеѓу 00:00 и 24:00, изврши исклучување
 else {
-    $actionMessage = "System is *SHUTDOWN* due to the following Exceedances:`n`n"
+    $actionMessage = "⛔ System is *SHUTDOWN* due to the following Exceedances:`n`n"
 	$shouldShutdown = $true
 }
 # Додавање на соодветното известување за рестарт или исклучување
@@ -1837,19 +1919,19 @@ $critMsg += $actionMessage
 
     foreach ($reason in $criticalReasons) {
         if ($reason -match "^CPU Load\b") {
-            $groups["CPU Load"] += $reason
+            $groups["🔲 CPU Load"] += $reason
         } elseif ($reason -match "^CPU\b") {
-            $groups["CPU"] += $reason
+            $groups["🔲 CPU"] += @($reason)
         } elseif ($reason -match "^Disk") {
-            $groups["Disk"] += $reason
+            $groups["💾 Disk"] += @($reason)
         } elseif ($reason -match "Motherboard") {
-            $groups["Motherboard"] += $reason
+            $groups["🏿 Motherboard"] += @($reason)
         } elseif ($reason -match "GPU") {
-            $groups["GPU"] += $reason
+            $groups["🏼 GPU"] += @($reason)
         } elseif ($reason -match "^RAM") {
-            $groups["RAM"] += $reason
+            $groups["🎟️ RAM"] += @($reason)
         } else {
-            $groups["Others"] += $reason
+            $groups["📈 Load"] += $reason
         }
     }
 
@@ -1857,8 +1939,9 @@ $critMsg += $actionMessage
         if ($groups[$key].Count -gt 0) {
             $critMsg += "${key}:`n"
             foreach ($item in $groups[$key]) {
-                $critMsg += " * $item`n"
+                $critMsg += "$item`n"
             }
+			$critMsg += "`r`n"
         }
     }
 
@@ -1875,8 +1958,11 @@ $critMsg += $actionMessage
         $msg = $critMsg
     }
 
+    Write-Host "`n==================== SECURITY ALARM ============================================" -ForegroundColor Red
+	Write-Host $msg -ForegroundColor DarkYellow
+	Write-Host "================================================================================`n" -ForegroundColor Red
     Send-TelegramMessage -message $msg
-    Start-Sleep -Seconds 5
+    Start-Sleep -Seconds 15
     # === Изврши реална команда ===
     if ($shouldRestart) {
        Invoke-Expression $restartCmd
@@ -1886,6 +1972,9 @@ $critMsg += $actionMessage
 }
     elseif ($msg) {
     # Ако има само аларм порака, испрати ја
+	Write-Host "`n========================= ALARM ===========================================" -ForegroundColor Cyan
+	Write-Host $msg -ForegroundColor Yellow
+	Write-Host "===========================================================================`n" -ForegroundColor Cyan
     Send-TelegramMessage -message $msg
     }
 }  
@@ -1908,10 +1997,10 @@ function Get-LoadOnlyHardwareData {
         $hardware.Update()
         $loadSensors = $hardware.Sensors | Where-Object { $_.SensorType -eq "Load" }
         if ($loadSensors.Count -gt 0) {
-            $text = "*$($hardware.Name)* - $($hardware.HardwareType)`n"
+            $text = "🔹 $($hardware.Name) - $($hardware.HardwareType)`n"
             foreach ($sensor in $loadSensors) {
                 $value = if ($sensor.Value -ne $null) { "{0:N1}%" -f $sensor.Value } else { "N/A" }
-                $text += " - $($sensor.Name): $value`n"
+                $text += " ● $($sensor.Name): $value`n"
             }
             $text += "`n"
             $hardwareList += $text
@@ -1921,7 +2010,7 @@ function Get-LoadOnlyHardwareData {
     # Telegram limit = 4096
     $maxLength = 4000
     $messages = @()
-    $currentMessage = "*LibreHardwareMonitor Load:*`n`n"
+    $currentMessage = "⚙️ LibreHardwareMonitor Load:`n`n"
     foreach ($item in $hardwareList) {
         if (($currentMessage.Length + $item.Length) -gt $maxLength) {
             $messages += $currentMessage
@@ -1953,10 +2042,10 @@ function Get-NonLoadHardwareData {
         $hardware.Update()
         $otherSensors = $hardware.Sensors | Where-Object { $_.SensorType -ne "Load" }
         if ($otherSensors.Count -gt 0) {
-            $text = "*$($hardware.Name)* - $($hardware.HardwareType)`n"
+            $text = "🔸 $($hardware.Name) - $($hardware.HardwareType)`n"
             foreach ($sensor in $otherSensors) {
                 $value = if ($sensor.Value -ne $null) { "{0:N2}" -f $sensor.Value } else { "N/A" }
-                $text += " - $($sensor.SensorType): $($sensor.Name) = $value`n"
+                $text += " ● $($sensor.SensorType): $($sensor.Name) = $value`n"
             }
             $text += "`n"
             $hardwareList += $text
@@ -1966,7 +2055,7 @@ function Get-NonLoadHardwareData {
     # Telegram limit = 4096
     $maxLength = 4000
     $messages = @()
-    $currentMessage = "*LibreHardwareMonitor Data:*`n`n"
+    $currentMessage = "⚙️ LibreHardwareMonitor Data:`n`n"
     foreach ($item in $hardwareList) {
         if (($currentMessage.Length + $item.Length) -gt $maxLength) {
             $messages += $currentMessage
@@ -1992,24 +2081,24 @@ function Manage-PiScheduledTasks {
         $taskPath = "\"
         $task = Get-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue
         if (-not $task) {
-            return " *Auto-Start on AutoPilot does not exist (scheduled task is not created)."
+            return " *Auto-Start on AutoPilot does not exist ⚠️ (scheduled task is not created)."
         }
         switch ($Action) {
             "disable" {
                 Disable-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue | Out-Null
-                return " *Auto-Start for AutoPilot task e Disabled (Turned Off)."
+                return " *Auto-Start for AutoPilot task is Disabled ⛔ (Turned Off)."
             }
             "enable" {
                 Enable-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue | Out-Null
-                return " *Auto-Start for AutoPilot task e Enabled (Turned On)."
+                return " *Auto-Start for AutoPilot task is Enabled ✅ (Turned On)."
             }
             "status" {
-                $state = if ($task.State -eq "Disabled") { "Disabled (Turned Off)" } else { "Enabled (Turned On)" }
+                $state = if ($task.State -eq "Disabled") { "Disabled ⛔ (Turned Off)" } else { "Enabled ✅ (Turned On)" }
                 return " *Auto-Start for AutoPilot task status: $state."
             }
         }
     } catch {
-        return " Error in processing AutoPilot scheduled task: $_"
+        return "⚠️ Error in processing AutoPilot scheduled task: $_"
     }
 }
 
@@ -2021,9 +2110,9 @@ function Autopilot-Log {
     if (Test-Path $logFile) {
         $logLines = Get-Content -Path $logFile -Tail 20
         $logContent = $logLines -join "`n"
-        Send-TelegramMessage -message "Last 20 lines from the AUTOPILOT log:`n$logContent"
+        Send-TelegramMessage -message "📝 Last 20 lines from the AUTOPILOT log:`n$logContent"
     } else {
-        Send-TelegramMessage -message "The AUTOPILOT log file for today does not exist."
+        Send-TelegramMessage -message "📝 The AUTOPILOT log file for today does not exist."
     }
 }
 
@@ -2035,9 +2124,9 @@ function Monitoring-Log {
     if (Test-Path $monitoringLogFile) {
         $logLines = Get-Content -Path $monitoringLogFile -Tail 20
         $logContent = $logLines -join "`n"
-        Send-TelegramMessage -message "Last 20 lines from the MONITORING log:`n$logContent"
+        Send-TelegramMessage -message "📝 Last 20 lines from the MONITORING log:`n$logContent"
     } else {
-        Send-TelegramMessage -message "The MONITORING log file for today does not exist."
+        Send-TelegramMessage -message "📝 The MONITORING log file for today does not exist."
     }
 }
 
@@ -2049,10 +2138,10 @@ function Data-Log {
     if (Test-Path -LiteralPath $dataLogFile) {
         $logLines = Get-Content -Path $dataLogFile -Tail 20
         $logContent = $logLines -join "`n"
-        Send-TelegramMessage -message "Last 20 lines from the DATA log:`n$logContent"
+        Send-TelegramMessage -message "📝 Last 20 lines from the DATA log:`n$logContent"
     } else {
         Write-Host "The file was not found!"
-        Send-TelegramMessage -message "The DATA log file for today does not exist."
+        Send-TelegramMessage -message "📝 The DATA log file for today does not exist."
     }
 }
 
@@ -2063,10 +2152,10 @@ function Update-Log {
     if (Test-Path -LiteralPath $logFile) {
         $logLines = Get-Content -Path $logFile -Tail 35
         $logContent = $logLines -join "`n"
-        Send-TelegramMessage -message "Last 35 lines from the UPDATER log:`n$logContent"
+        Send-TelegramMessage -message "📝 Last 35 lines from the UPDATER log:`n$logContent"
     } else {
         Write-Host "The UPDATER log file was not found!"
-        Send-TelegramMessage -message "The Updater log file does not exist."
+        Send-TelegramMessage -message "📝 The Updater log file does not exist."
     }
 }
 
@@ -2087,7 +2176,7 @@ function Send-Graph {
 
     # Проверка дали постои таа функција
     if (-not (Get-Command $functionName -ErrorAction SilentlyContinue)) {
-        $msg = " Function '$functionName' does not exist."
+        $msg = "⚠️ Function '$functionName' does not exist."
         Write-Host $msg
         Send-TelegramMessage -message $msg
         return
@@ -2097,7 +2186,7 @@ function Send-Graph {
         $result = & $functionName
     }
     catch {
-        $msg = " Error during execution of '$functionName': $($_.Exception.Message)"
+        $msg = "⚠️ Error during execution of '$functionName': $($_.Exception.Message)"
         Write-Host $msg
         Send-TelegramMessage -message $msg
         return
@@ -2105,9 +2194,9 @@ function Send-Graph {
     # Подготовка на caption за Telegram
     $now = Get-Date
     $periodInfo = $now.ToString("dddd, dd MMMM yyyy", [System.Globalization.CultureInfo]::GetCultureInfo("en-EN"))
-    $caption = "Command: /$($GraphType.ToLower())_$($Period.ToLower())`n" +
-               "Period: $periodInfo`nTime: $($now.ToString('HH:mm:ss'))" +
-               "`n" + ("-" * 18) + "`n* Autopilot | Start Menu - /start"
+    $caption = "⚙️ Command: /$($GraphType.ToLower())_$($Period.ToLower())`n" +
+               "📆 Period: $periodInfo`n🕒 Time: $($now.ToString('HH:mm:ss'))" +
+               "`n" + ("-" * 18) + "`n🔰 AutoPilot | Start Menu - /start"
 
     # Определи патека до PNG фајлот (графикон или табела)
     if ($result -is [string]) {
@@ -2127,7 +2216,7 @@ function Send-Graph {
     }
     # Проверка дали PNG фајлот постои
     if (-not $photoPath -or -not (Test-Path $photoPath)) {
-        $msg = " CSV file not found for '$GraphType' for the period '$Period'."
+        $msg = "ℹ️ CSV file not found for '$GraphType' for the period '$Period'."
         Write-Host $msg
         Send-TelegramMessage -message $msg
         return
@@ -2140,166 +2229,166 @@ function Send-Graph {
 # ALL COMMANDS #
 function Show-HelpMenu {
     $msg = @"
-* START MENU  List of commands by category:*
+🔰 START MENU  List of commands by category:
 
- *Defender commands:*
-/def1  Stop Real-Time 
-/def2  Start Real-Time 
-/def3  Status Real-Time  
-/def4  Tamper Protection  
-/def5  Start Tamper Protection  
+ 🛡️ Defender commands:
+🔶/def1  Stop Real-Time 
+🔶/def2  Start Real-Time 
+🔶/def3  Status Real-Time  
+🔶/def4  Tamper Protection  
+🔶/def5  Start Tamper Protection  
 
- *Pi commands:*
-/pi1  Start Pi Node
-/pi2  Status Pi Node 
-/pi3  Stop Pi Node  
-/pi4  Restart Pi Node 
-/pi5  Disable Pi Node 
-/pi6  Clear Pi Node Cache
+ 👷 Pi commands:
+🔷/pi1  Start Pi Node
+🔷/pi2  Status Pi Node 
+🔷/pi3  Stop Pi Node  
+🔷/pi4  Restart Pi Node 
+🔷/pi5  Disable Pi Node 
+🔷/pi6  Clear Pi Node Cache
 
- *Docker commands:*
-/docker1  Star Pi Node  
-/docker2  Stop Pi Node  
-/docker3  Restart Pi Node  
-/docker4  Status Pi Node 
-/docker5  Start Docker 
-/docker6  Restart Docker
-/docker7  Stop Docker
-/docker8  Status Docker
-/docker9  Clear Cache Docker 
-/docker10  Clear Temp Folder
+ 🐳 Docker commands:
+🔷/docker1  Star Pi Node  
+🔷/docker2  Stop Pi Node  
+🔷/docker3  Restart Pi Node  
+🔷/docker4  Status Pi Node 
+🔷/docker5  Start Docker 
+🔷/docker6  Restart Docker
+🔷/docker7  Stop Docker
+🔷/docker8  Status Docker
+🔷/docker9  Clear Cache Docker 
+🔷/docker10  Clear Temp Folder
 
- *Cleaner commands:*
-/cleaner1  Status Hibernation 
-/cleaner2  Stop Hibernation 
-/cleaner3  Clear Windows Temp 
-/cleaner4  Clear AppData Temp
-/cleaner5  Clear SoftwareDistribution 
-/cleaner6  Clear Prefetch
-/cleaner7  Disk Cleanup  
-/cleaner8  Clear Temp for All Users 
-/cleaner9  Clear Temp for User 
-/cleaner10  Total Clean 
-/cleaner11  Status 
-/cleaner12  Clean Registry  
+ 🗑️ Cleaner commands:
+🔶/cleaner1  Status Hibernation 
+🔶/cleaner2  Stop Hibernation 
+🔶/cleaner3  Clear Windows Temp 
+🔶/cleaner4  Clear AppData Temp
+🔶/cleaner5  Clear SoftwareDistribution 
+🔶/cleaner6  Clear Prefetch
+🔶/cleaner7  Disk Cleanup  
+🔶/cleaner8  Clear Temp for All Users 
+🔶/cleaner9  Clear Temp for User 
+🔶/cleaner10  Total Clean 
+🔶/cleaner11  Status 
+🔶/cleaner12  Clean Registry  
 
- *Network commands:*
-/net1  Connect to WiFi 1
-/net2  Connect to WiFi 2
-/net3  TASK (Switch WiFi 1 to WiFi 2)
-/net4  TASK (Switch WiFi 2 to WiFi 1)
-/net5  Show TASK
-/net6  Delete TASK
-/net7  Network Log File
-/net8  Network Status
-/net9  Network Restart
+ 📶 Network commands:
+🔷/net1  Connect to WiFi 1
+🔷/net2  Connect to WiFi 2
+🔷/net3  TASK (Switch WiFi 1 to WiFi 2)
+🔷/net4  TASK (Switch WiFi 2 to WiFi 1)
+🔷/net5  Show TASK
+🔷/net6  Delete TASK
+🔷/net7  Network Log File
+🔷/net8  Network Status
+🔷/net9  Network Restart
 
- *Net Traffic commands:*
-/net_monitoring1  Net Monitoring Start 
-/net_monitoring2  Net Monitoring Stop
-/net_monitoring3  Net Monitoring Status
-/net_monitoring4  Net CSV File
-/net_monitoring5  Net Traffic Statistic
-/net_monitoring6  Net Traffic Log File
-/net_monitoring7  Net Monitor Open
-/net_monitoring8  Net Monitor Exit
+ 🌍 Net Traffic commands:
+🔷/net_monitoring1  Net Monitoring Start 
+🔷/net_monitoring2  Net Monitoring Stop
+🔷/net_monitoring3  Net Monitoring Status
+🔷/net_monitoring4  Net CSV File
+🔷/net_monitoring5  Net Traffic Statistic
+🔷/net_monitoring6  Net Traffic Log File
+🔷/net_monitoring7  Net Monitor Open
+🔷/net_monitoring8  Net Monitor Exit
 
- *System commands:*
-/system_status  System Status  
-/ping  Ping Test
-/autopilot_log  Autopilot Log File
-/update_log Autopilot Update Log File
-/temp  Temperature Cpu Gpu Disk MB
-/hardware_load  LHM Load
-/hardware_data  LHM Data 
-/monitor_open  System Monitor Open
-/monitor_exit  System Monitor Exit
-/dashboard_open  Dashboard Open
-/dashboard_exit  Dashboard Exit
-/commands_list  All Commands List
-/pause  Pause AutoPilot
-/resume  Resume AutoPilot
-/stop  Stop AutoPilot
-/status  Status AutoPilot
-/reset  Restart AutoPilot
-/hide  Hide AutoPilot CMD 
-/show  Show AutoPilot CMD
-/visible_status  AutoPilot CMD Status
-/autostart_enable  Auto-Start Enable
-/autostart_disable  Auto-Start Disable
-/autostart_status  Auto-Start Status
-/restart  Restart PC
-/shutdown  Shutdown PC 
+ ⚙️ System commands:
+🔷/system_status  System Status  
+🔷/ping  Ping Test
+🔷/autopilot_log  Autopilot Log File
+🔷/data_log  Data Log File
+🔷/update_log Autopilot Update Log File
+🔷/temp  Temperature Cpu Gpu Disk MB
+🔷/hardware_load  LHM Load
+🔷/hardware_data  LHM Data 
+🔷/monitor_open  System Monitor Open
+🔷/monitor_exit  System Monitor Exit
+🔷/dashboard_open  Dashboard Open
+🔷/dashboard_exit  Dashboard Exit
+🔷/commands_list  All Commands List
+🔷/pause  Pause AutoPilot
+🔷/resume  Resume AutoPilot
+🔷/stop  Stop AutoPilot
+🔷/status  Status AutoPilot
+🔷/reset  Restart AutoPilot
+🔷/hide  Hide AutoPilot CMD 
+🔷/show  Show AutoPilot CMD
+🔷/visible_status  AutoPilot CMD Status
+🔷/autostart_enable  Auto-Start Enable
+🔷/autostart_disable  Auto-Start Disable
+🔷/autostart_status  Auto-Start Status
+🔷/restart  Restart PC
+🔷/shutdown  Shutdown PC 
 
- *Recording commands:*
-/screen  Desktop Screenshot
-/record  Desktop Recording
-/rec_start  Start Recording
-/rec_stop  Stop Recording 
+ 🖥️ Recording commands:
+🔶/screen  Desktop Screenshot
+🔶/record  Desktop Recording
+🔶/rec_start  Start Recording
+🔶/rec_stop  Stop Recording
+🔶/data  Recordings Video Storage
 
- *Camera commands:*
-/cam_start  Start Camera 
-/cam_stop  Stop Camera 
-/data  Video Storage
-/data_log  Data Log File
+ 📸 Camera commands:
+🔶/cam_start  Start Camera 
+🔶/cam_stop  Stop Camera
+🔶/data  Camera Video Storage
 
- *Monitoring commands:*
-/monitoring_start  Start Monitoring
-/monitoring_stop  Stop Monitoring
-/monitoring_status  Status Monitoring
-/monitoring_log  Monitoring Log File
+ 👨🏻‍💻 Monitoring commands:
+🔷/monitoring_start  Start Monitoring
+🔷/monitoring_stop  Stop Monitoring
+🔷/monitoring_status  Status Monitoring
+🔷/monitoring_log  Monitoring Log File
 
- *Graph Load commands:*
-/load_day  Load Day 
-/load_week  Load Week   
-/load_month  Load Month
-/load_year  Load Year 
-/load_all  Load All 
+ 📊 Graph Load commands:
+🔷/load_day  Load Day 
+🔷/load_week  Load Week   
+🔷/load_month  Load Month
+🔷/load_year  Load Year 
+🔷/load_all  Load All 
 
- *Graph Temperature commands:*
-/temp_day  Temperature Day        
-/temp_week  Temperature Week       
-/temp_month  Temperature Month     
-/temp_year  Temperature Year
-/temp_all  Temperature All 
+ 📊 Graph Temperature commands:
+🔷/temp_day  Temperature Day        
+🔷/temp_week  Temperature Week       
+🔷/temp_month  Temperature Month     
+🔷/temp_year  Temperature Year
+🔷/temp_all  Temperature All 
 
- *Graph Disk Load commands:*
-/disk_day  Disk Load Day
-/disk_week  Disk Load Week
-/disk_month  Disk Load Month
-/disk_year  Disk Load Year
-/disk_all  Disk Load All 
+ 📊 Graph Disk Load commands:
+🔷/disk_day  Disk Load Day
+🔷/disk_week  Disk Load Week
+🔷/disk_month  Disk Load Month
+🔷/disk_year  Disk Load Year
+🔷/disk_all  Disk Load All 
 
- *Table Net Traffic commands:*
-/table_day  Net Traffic Day
-/table_week  Net Traffic Week
-/table_month  Net Traffic Month
-/table_year  Net Traffic Year
-/table_all  Net Traffic All 
+ 📉 Table Net Traffic commands:
+🔷/table_day  Net Traffic Day
+🔷/table_week  Net Traffic Week
+🔷/table_month  Net Traffic Month
+🔷/table_year  Net Traffic Year
+🔷/table_all  Net Traffic All 
 
- *Third-party App commands:*
-/teamviewer_start  Start TW
-/teamviewer_stop  Stop TW 
-/teamviewer_status  Status TW
-/das_start  Start Dashboard
-/das_stop  Stop Dashboard 
-/das_status  Status Dashboard
-/monitor_start  Start
-/monitor_stop  Stop 
-/monitor_status  Status 
-/netusage  Network Usage 
+ 📱 Third-party App commands:
+🔷/teamviewer_start  Start TW
+🔷/teamviewer_stop  Stop TW 
+🔷/teamviewer_status  Status TW
+🔷/das_start  Start Dashboard
+🔷/das_stop  Stop Dashboard 
+🔷/das_status  Status Dashboard
+🔷/monitor_start  Start
+🔷/monitor_stop  Stop 
+🔷/monitor_status  Status 
+🔷/netusage  Network Usage 
 
- *VLC commands:*
-/vlc_play  Play Vlc
-/vlc_stop  Stop Vlc
-/vlc_next  Next 
-/vlc_prev  Prew
-/vlc_status  Status Vlc
+ 📟 VLC commands:
+🔶/vlc_play  Play Vlc
+🔶/vlc_stop  Stop Vlc
+🔶/vlc_next  Next 
+🔶/vlc_prev  Prew
+🔶/vlc_status  Status Vlc
 
 "@
     return $msg
 }
-# *Related bots:* [PC 1] (https://t.me/1_Bot) [PC 2] (https://t.me/2_Bot)  
  
 # Reset/Stop Show/Hide Script - AutoPilot
 $StopFlagFile = Join-Path $PSScriptRoot "Autopilot_Data\Traffic_Logs\TrafficMonitor_Stop.flag"
@@ -2389,18 +2478,18 @@ function Process-ManualCommands {
 			($now - $global:LastAuditAlert[$userId]).TotalMinutes -ge 3
 		) {
 			Send-TelegramMessage -message @"
- *SECURITY ALERT*
-Unauthorized Access Attempt!
+ 🛡️ SECURITY ALERT 🛡️
+ Unauthorized Access Attempt!
 
- UserId: $userId
- ChatId: $chatId
- Message: '$($update.message.text)'
- Time: $now
+ 👨‍💼 UserId: $userId
+ 🆔 ChatId: $chatId
+ 📨 Message: '$($update.message.text)'
+ 🕒 Time: $now
 "@
 		$global:LastAuditAlert[$userId] = $now
 		}
 		# 🚫 Block
-		Send-TelegramMessage -message "Access to Chat is Forbidden."
+		Send-TelegramMessage -message "Access to Chat is ⛔ Forbidden."
 		$lastUpdateId.Value = $update.update_id
 		continue
 		}
@@ -2413,20 +2502,20 @@ Unauthorized Access Attempt!
                     "Y" {
                         switch ($confirmationRequests[$chatId]) {
                             "restart" {
-                                Send-TelegramMessage -message "The System is Restarting..."
+                                Send-TelegramMessage -message "The System is 🔄 Restarting..."
                                 Restart-Computer -Force
                             }
                             "shutdown" {
-                                Send-TelegramMessage -message "The System is Shutting Down..."
+                                Send-TelegramMessage -message "The System is ⛔ Shutting Down..."
                                 Stop-Computer -Force
                             }
                             "stop" {
-                                Send-TelegramMessage -message "The AutoPilot is Stopped."
+                                Send-TelegramMessage -message "The AutoPilot is ⏹️ Stopped."
 								Stop-WorkerScripts
                                 $global:scriptStopped = $true
                             }
 							"reset" {
-								Send-TelegramMessage -message "The AutoPilot is Restarting..."
+								Send-TelegramMessage -message "The AutoPilot is 🔄 Restarting..."
 								Stop-WorkerScripts
 								Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
 								Stop-Process -Id $PID
@@ -2434,16 +2523,16 @@ Unauthorized Access Attempt!
 							"show" {
                                 $isHidden = (Get-Process -Id $PID).MainWindowHandle -eq 0
                                 if (-not $isHidden) {
-                                Send-TelegramMessage -message "The AutoPilot Cmd is already *VISIBLE* (visible on the desktop). No restart is needed."
+                                Send-TelegramMessage -message "The AutoPilot Cmd is already 🟢 VISIBLE (visible on the desktop). No restart is needed."
                                 } else {
-                                Send-TelegramMessage "Restarting AutoPilot Cmd in *visible* mode..."
+                                Send-TelegramMessage "🔄 Restarting AutoPilot Cmd in 🟢 VISIBLE mode..."
 								Stop-WorkerScripts
                                 $autoPilotLnk = Join-Path $PSScriptRoot "Shortcuts\Autopilot.lnk"
 								if (Test-Path $autoPilotLnk) {
 									Start-Process -WindowStyle Normal -FilePath $autoPilotLnk
 								}
 								else {
-									Send-TelegramMessage "Error: Autopilot.lnk was not found!"
+									Send-TelegramMessage "⚠️ Error: Autopilot.lnk was not found!"
 								}
 								Stop-Process -Id $PID
 							}
@@ -2451,9 +2540,9 @@ Unauthorized Access Attempt!
                             "hide" {
                                 $isHidden = (Get-Process -Id $PID).MainWindowHandle -eq 0
                                 if ($isHidden) {
-                                Send-TelegramMessage -message "The AutoPilot Cmd is already in *HIDDEN* mode (invisible). No restart is needed."
+                                Send-TelegramMessage -message "The AutoPilot Cmd is already in 🔴 HIDDEN mode (invisible). No restart is needed."
                                 } else {
-                                Send-TelegramMessage "Restarting AutoPilot Cmd in *hidden* mode..."
+                                Send-TelegramMessage "🔄 Restarting AutoPilot Cmd in 🔴 HIDDEN mode..."
 								Stop-WorkerScripts
                                 Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
                                 Stop-Process -Id $PID
@@ -2462,10 +2551,10 @@ Unauthorized Access Attempt!
                         }
                     }
                     "N" {
-                        Send-TelegramMessage -message "The Action has been Canceled."
+                        Send-TelegramMessage -message "The Action has been ❌ Stopped."
                     }
                     default {
-                        Send-TelegramMessage -message "Incorrectly response. Reply with Y or N."
+                        Send-TelegramMessage -message "⚠️ Incorrectly response. Reply with Y or N."
                     }
                 }
 
@@ -2482,7 +2571,7 @@ Unauthorized Access Attempt!
                 if ($cmdInfo.ContainsKey("Path")) {
 					$scriptName = Split-Path $cmdInfo.Path -Leaf
                     Write-Log "Manual command applied $text - Invocation $($cmdInfo.Path) with argument $($cmdInfo.Cmd)"
-                    Send-TelegramMessage -message "Command applied $text - Executing script ($scriptName):"
+                    Send-TelegramMessage -message "⚙️ Command applied $text - ⚛️ Executing script ($scriptName):"
             # Avtomatski RESTART SHUTDOWN RESTART-SCRIPT ako ne se izvrsi nekoja komanda !!!
             # Start skriptata vo background kako Job
 			$job = Start-Job -ScriptBlock {
@@ -2497,10 +2586,10 @@ Unauthorized Access Attempt!
 				try {
 					$output = Receive-Job -Job $job
 					Write-Log "Result: $output"
-					Send-TelegramMessage -message "Result from $($text) ($scriptName):`n$output"
+					Send-TelegramMessage -message "➡️ Result from $($text) ($scriptName):`n$output"
 				} catch {
 					Write-Log "Error retrieving result from job: $_"
-					Send-TelegramMessage -message "Error executing command $text ($scriptName)."
+					Send-TelegramMessage -message "⚠️ Error executing command $text ($scriptName)."
 				}
 			} 
 			    else {
@@ -2512,14 +2601,14 @@ Unauthorized Access Attempt!
 			# 1. RESTART SCRIPT  Avtomatski restart na skripta vo 17:00 - 00:00
 			if (($hour -ge 07 -and $hour -lt 09) -or ($hour -ge 11 -and $hour -lt 12) -or ($hour -ge 15 -and $hour -lt 19)) {
 				Write-Log "(($hour -ge 07 -and $hour -lt 09) -or ($hour -ge 11 -and $hour -lt 12) -or ($hour -ge 15 -and $hour -lt 19)): RESTART of AutoPilot"
-				Send-TelegramMessage -message "Command $text ($scriptName) is stuck. AutoPilot is Restarting..."
+				Send-TelegramMessage -message "⚙️ Command $text ($scriptName) is 🚧 stuck. AutoPilot is 🔄 Restarting..."
 				Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
 				Stop-WorkerScripts
 				Stop-Process -Id $PID
 			}
 			
 			# 2. Vo site drugi slucai, pobaraj odgovor
-			Send-TelegramMessage -message "Command $text ($scriptName) is stuck. Should an automatic Restart or Shutdown of the PC be executed? Reply with 'Y' or 'N' within the next 5 minutes… Choosing 'N' will cancel the automatic command (Restart or Shutdown) and only the AutoPilot will be Restarted."
+			Send-TelegramMessage -message "⚙️ Command $text ($scriptName) is 🚧 stuck. Should an automatic 🔄 Restart or ⛔ Shutdown of the PC be executed? Reply with 'Y' or 'N' within the next 5 minutes… Choosing 'N' will cancel the automatic command (🔄 Restart or ⛔ Shutdown) and only the AutoPilot will be 🔄 Restarted."
 			
 			# Cekaj odgovor do 5 minuti (300 sekundi)
 			$startTime = Get-Date
@@ -2535,7 +2624,7 @@ Unauthorized Access Attempt!
 							$response = $msgText
 							break
 						} else {
-							Send-TelegramMessage -message "Incorrectly response. Reply with Y or N."
+							Send-TelegramMessage -message "⚠️ Incorrectly response. Reply with Y or N."
 						}
 					}
 				} catch {
@@ -2556,25 +2645,25 @@ Unauthorized Access Attempt!
 				# RESTART PC 09:00 - 10:00, 13:00 - 15:00, 21:00 - 23:00
 				if (($hour -ge 09 -and $hour -lt 10) -or ($hour -ge 13 -and $hour -lt 15) -or ($hour -ge 21 -and $hour -lt 23)) {
 					Write-Log "(($hour -ge 09 -and $hour -lt 10) -or ($hour -ge 13 -and $hour -lt 15) -or ($hour -ge 21 -and $hour -lt 23)): RESTART of PC"
-					Send-TelegramMessage -message "PC RESTART is being Executed..."
+					Send-TelegramMessage -message "PC RESTART 🔄 is being Executed..."
 					Invoke-Expression $restartCmd
 				}
 				# SHUTDOWN PC за сите други опсези
 				elseif (($hour -ge 00 -and $hour -lt 24)) { #(($hour -ge 15 -and $hour -lt 23) -or ($hour -ge 23 -and $hour -lt 24) -or ($hour -ge 0 -and $hour -lt 6)) Full Code 
 					Write-Log "00:00 - 24:00: SHUTDOWN of PC"
-					Send-TelegramMessage -message "PC SHUTDOWN is being Executed..."
+					Send-TelegramMessage -message "PC SHUTDOWN ⛔ is being Executed..."
 					Invoke-Expression $shutdownCmd
 				}
 				else {
 					Write-Log "Unknown time range. No action is taken."
-					Send-TelegramMessage -message "Unknown time range. No action is taken."
+					Send-TelegramMessage -message "⚠️ Unknown time range. No action is taken."
 				}
 			}
 			
 			# DEFAULT RESTART SCRIPT
 			elseif ($response -eq 'N') {
 				Write-Log "The User replied 'N'. Only AutoPilot is Restarting."
-				Send-TelegramMessage -message "The Automatic Command is canceled. Only the AutoPilot is Restarting..."
+				Send-TelegramMessage -message "The Automatic Command is ❌ Stopped. Only the AutoPilot is 🔄 Restarting..."
 				Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
 				Stop-WorkerScripts
 				Stop-Process -Id $PID
@@ -2601,28 +2690,28 @@ Unauthorized Access Attempt!
 							$tvProc = Get-Process -Name TeamViewer -ErrorAction SilentlyContinue
 							if ($tvProc) {
 								Write-Host "TeamViewer is already running."
-								Send-TelegramMessage -message "TeamViewer is already running."
+								Send-TelegramMessage -message "TeamViewer is already ✅ running."
 							}
 							elseif (Test-Path $teamViewerPath) {
 								Start-Process -FilePath $teamViewerPath -ErrorAction SilentlyContinue
 								Write-Host "TeamViewer is Started."
-								Send-TelegramMessage -message "TeamViewer is Started."
+								Send-TelegramMessage -message "TeamViewer is ✅ Started."
 							}
 							else {
 								Write-Host "TeamViewer is NOT Installed."
-								Send-TelegramMessage -message "TeamViewer is NOT Installed."
+								Send-TelegramMessage -message "ℹ️ TeamViewer is NOT Installed."
 							}
 						}
                         "Stop-TeamViewer" {
                             Get-Process -Name TeamViewer -ErrorAction SilentlyContinue | Stop-Process -Force
-                            Send-TelegramMessage -message "TeamViewer is Closed."
+                            Send-TelegramMessage -message "TeamViewer is ❌ Closed."
                         }
                         "Status-TeamViewer" {
                             $tvProc = Get-Process -Name TeamViewer -ErrorAction SilentlyContinue
                             if ($tvProc) {
-                                Send-TelegramMessage -message "TeamViewer is ACTIVE."
+                                Send-TelegramMessage -message "TeamViewer is ✅ ACTIVE."
                             } else {
-                                Send-TelegramMessage -message "TeamViewer is Not Active."
+                                Send-TelegramMessage -message "ℹ️ TeamViewer is Not Active."
                             }
                         }
                         "System-Status" {
@@ -2638,25 +2727,25 @@ Unauthorized Access Attempt!
 							$tmProc = Get-Process -Name TrafficMonitor -ErrorAction SilentlyContinue
 							if ($tmProc) {
 								Write-Host "TrafficMonitor is already running."
-								Send-TelegramMessage -message "TrafficMonitor is already running."
+								Send-TelegramMessage -message "📶 TrafficMonitor is already ✅ running."
 							}
 							elseif (Test-Path $trafficMonitorPath) {
 								Start-Process -FilePath $trafficMonitorPath -ErrorAction SilentlyContinue
 								Write-Host "TrafficMonitor is Started."
-								Send-TelegramMessage -message "TrafficMonitor is Started."
+								Send-TelegramMessage -message "📶 TrafficMonitor is ✅ Started."
 							}
 							else {
 								Write-Host "TrafficMonitor is NOT Installed."
-								Send-TelegramMessage -message "TrafficMonitor is NOT Installed."
+								Send-TelegramMessage -message "ℹ️ TrafficMonitor is NOT Installed."
 							}
 						}
                         "Stop-TrafficMonitor"    { Get-Process -Name TrafficMonitor -ErrorAction SilentlyContinue | Stop-Process -Force
-                            Send-TelegramMessage -message "TrafficMonitor is Closed." }   
+                            Send-TelegramMessage -message "TrafficMonitor is ❌ Closed." }   
                         "Status-TrafficMonitor"  { $tvProc = Get-Process -Name TrafficMonitor -ErrorAction SilentlyContinue
                             if ($tvProc) {
-                                Send-TelegramMessage -message "TrafficMonitor is ACTIVE."
+                                Send-TelegramMessage -message "📶 TrafficMonitor is ✅ ACTIVE."
                             } else {
-                                Send-TelegramMessage -message "TrafficMonitor is Not Active."
+                                Send-TelegramMessage -message "ℹ️ TrafficMonitor is Not Active."
                             } } 
 						"Get-NetworkStatus" {
                                 $status = Get-NetworkStatus
@@ -2665,8 +2754,8 @@ Unauthorized Access Attempt!
 						"Pause" {
                             $global:scriptPaused = $true
                             New-Item -Path $Global:pauseFlagPath -ItemType File -Force | Out-Null
-                            Send-TelegramMessage -message "The AutoPilot is PAUSED. To Resume, send /resume"
-                            Write-Log "The AutoPilot is PAUSED"
+                            Send-TelegramMessage -message "The AutoPilot is ⏸️ PAUSED. To Resume, send /resume"
+                            Write-Log "The AutoPilot is ⏸️ PAUSED"
                         }
                         "Resume" {
 							if ($global:scriptPaused) {
@@ -2674,54 +2763,54 @@ Unauthorized Access Attempt!
 								if (Test-Path $Global:pauseFlagPath) {
 									Remove-Item -Path $Global:pauseFlagPath -Force
 								}
-								Send-TelegramMessage -message "AutoPilot is STARTED again."
+								Send-TelegramMessage -message "AutoPilot is ✅ STARTED again."
 								Write-Log "AutoPilot is STARTED again"
 								Stop-WorkerScripts
 								Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
 								Stop-Process -Id $PID
 							} else {
-								Send-TelegramMessage -message "AutoPilot is not PAUSED."
+								Send-TelegramMessage -message "AutoPilot is not ⏸️ PAUSED."
 							}
 						}
                         "Status" {
                             if ($global:scriptStopped) {
-                                Send-TelegramMessage -message "Status: AutoPilot is STOPPED."
+                                Send-TelegramMessage -message "Status: AutoPilot is ⏹️ STOPPED."
                             } elseif ($global:scriptPaused) {
-                                Send-TelegramMessage -message "Status: AutoPilot is PAUSED."
+                                Send-TelegramMessage -message "Status: AutoPilot is ⏸️ PAUSED."
                             } else {
-                                Send-TelegramMessage -message "Status: AutoPilot is ACTIVE."
+                                Send-TelegramMessage -message "Status: AutoPilot is ✅ ACTIVE."
                             }
                         }
 						"Restart-System" {
                             $confirmationRequests[$chatId] = "restart"
-                            Send-TelegramMessage -message "Are you sure you want to perform a System RESTART? Reply with Y or N."
+                            Send-TelegramMessage -message "Are you sure you want to perform a System 🔄 RESTART? Reply with Y or N."
                         }
                         "Shutdown-System" {
                             $confirmationRequests[$chatId] = "shutdown"
-                            Send-TelegramMessage -message "Are you sure you want to perform a System SHUTDOWN? Reply with Y or N."
+                            Send-TelegramMessage -message "Are you sure you want to perform a System ⛔ SHUTDOWN? Reply with Y or N."
                         }
                         "Stop-Script" {
                             $confirmationRequests[$chatId] = "stop"
-                            Send-TelegramMessage -message "Are you sure you want to STOP the AutoPilot? Reply with Y or N."
+                            Send-TelegramMessage -message "Are you sure you want to ⏹️ STOP the AutoPilot? Reply with Y or N."
                         }
 						"Reset-Script" {
 							$confirmationRequests[$chatId] = "reset"
-							Send-TelegramMessage -message "Are you sure you want to RESTART the AutoPilot? Reply with Y or N."
+							Send-TelegramMessage -message "Are you sure you want to 🔄 RESTART the AutoPilot? Reply with Y or N."
 						}
 						"Hide-Script" {
                             $confirmationRequests[$chatId] = "hide"
-                            Send-TelegramMessage -message "Are you sure you want to Restart the AutoPilot Cmd in *HIDDEN* mode? Reply with Y or N."
+                            Send-TelegramMessage -message "Are you sure you want to 🔄 Restart the AutoPilot Cmd in 🔴 HIDDEN mode? Reply with Y or N."
                         }
                         "Show-Script" {
                             $confirmationRequests[$chatId] = "show"
-                            Send-TelegramMessage -message "Are you sure you want to Restart the AutoPilot Cmd in *VISIBLE* mode? Reply with Y or N."
+                            Send-TelegramMessage -message "Are you sure you want to 🔄 Restart the AutoPilot Cmd in 🟢 VISIBLE mode? Reply with Y or N."
                         }
 						"Visible-Status" {
                             $isHidden = (Get-Process -Id $PID).MainWindowHandle -eq 0
                             if ($isHidden) {
-                            Send-TelegramMessage -message "The AutoPilot Cmd is currently in *HIDDEN* mode (invisible)."
+                            Send-TelegramMessage -message "The AutoPilot Cmd is currently in 🔴 HIDDEN mode (invisible)."
                             } else {
-                            Send-TelegramMessage -message "The AutoPilot Cmd is currently in *VISIBLE* mode (visible on the desktop)."
+                            Send-TelegramMessage -message "The AutoPilot Cmd is currently in 🟢 VISIBLE mode (visible on the desktop)."
                             }
                         }
 						"Play-VLC" {
@@ -2747,7 +2836,7 @@ Unauthorized Access Attempt!
 						"Net-Usage" {
                             $usage = Get-TrafficMonitorStats
                             if (-not $usage) {
-                            Send-TelegramMessage -message " No DATA available from TrafficMonitor."
+                            Send-TelegramMessage -message "ℹ️ No DATA available from TrafficMonitor."
                             break
                         }
                             function Format-Traffic($val) {
@@ -2757,15 +2846,15 @@ Unauthorized Access Attempt!
                             return ("{0:N2} MB" -f $val)
                         }
                         }
-                           $msg = " Internet Consumption (TrafficMonitor)`n`n"
+                           $msg = "📶 Internet Consumption (TrafficMonitor)`n`n"
                            foreach ($key in $usage.Keys) {
                            $dl = Format-Traffic $usage[$key].Download
                            $ul = Format-Traffic $usage[$key].Upload
                            $tot = Format-Traffic $usage[$key].Total
                            $msg += "$key`n"
-                           $msg += " Download: $dl`n"
-                           $msg += " Upload:   $ul`n"
-                           $msg += " Total:    $tot`n`n"
+                           $msg += "🔽 Download: $dl`n"
+                           $msg += "🔼 Upload:   $ul`n"
+                           $msg += "⏺️ Total:    $tot`n`n"
                         }
                            Send-TelegramMessage -message $msg
                         }
@@ -2828,7 +2917,7 @@ Unauthorized Access Attempt!
 							$result = Take-Screenshot
 							$now = Get-Date
 							$periodInfo = $now.ToString("dddd, dd MMMM yyyy")
-							$caption = "Command: /screen`nPeriod: $periodInfo`nTime: $($now.ToString('HH:mm:ss'))" + "`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
+							$caption = "⚙️ Command: /screen`n📆 Period: $periodInfo`n🕒 Time: $($now.ToString('HH:mm:ss'))" + "`n" + ("-" * 18) + "`n🔰 AutoPilot | Start Menu - /start"
 							if ($result -is [string]) {
 								Send-TelegramMessage -message $result
 							}
@@ -2848,7 +2937,7 @@ Unauthorized Access Attempt!
 								$stopTime  = $result.Stop
 								$duration  = $result.Duration
 								$periodInfo = $startTime.ToString("dddd, dd MMMM yyyy")
-								$caption = "Command: /rec_stop`nPeriod: $periodInfo`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* AutoPilot | Start Menu - /start"
+								$caption = "⚙️ Command: /rec_stop`n📆 Period: $periodInfo`n🕒 Start: $($startTime.ToString('HH:mm:ss'))`n🕘 Stop: $($stopTime.ToString('HH:mm:ss'))`n⏳ Duration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n📁 Video Folder: /data`n🔰 AutoPilot | Start Menu - /start"
 								Send-TelegramVideo -videoPath $result.Video -caption $caption
 							} else {
 								Write-Host " No valid video to send." -ForegroundColor Yellow
@@ -2864,7 +2953,7 @@ Unauthorized Access Attempt!
 								$stopTime  = $result.Stop
 								$duration  = $result.Duration
 								$periodInfo = $startTime.ToString("dddd, dd MMMM yyyy")
-								$caption = "Command: /cam_stop`nPeriod: $periodInfo`nStart: $($startTime.ToString('HH:mm:ss'))`nStop: $($stopTime.ToString('HH:mm:ss'))`nDuration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n* Video Folder: /data`n* AutoPilot | Start Menu - /start"
+								$caption = "⚙️ Command: /cam_stop`n📆 Period: $periodInfo`n🕒 Start: $($startTime.ToString('HH:mm:ss'))`n🕘 Stop: $($stopTime.ToString('HH:mm:ss'))`n⏳ Duration: $([math]::Round($duration.TotalSeconds)) seconds`n" + ("-" * 18) + "`n📁 Video Folder: /data`n🔰 AutoPilot | Start Menu - /start"
 								Send-TelegramVideo -videoPath $result.Video -caption $caption
 							} else {
 								Write-Host " No valid video to send." -ForegroundColor Yellow
@@ -2890,12 +2979,12 @@ Unauthorized Access Attempt!
 	                    "Dashboard-Stop" { Dashboard-Stop }
 						"Commands-ListAll" { Commands-ListAll }
                         Default {
-                            Send-TelegramMessage -message "Unknown system command: $($cmdInfo.Cmd)"
+                            Send-TelegramMessage -message "⚠️ Unknown system command: $($cmdInfo.Cmd)"
                         }
                     }
                 }
             } else {
-                Send-TelegramMessage -message "Unknown command: $text"
+                Send-TelegramMessage -message "⚠️ Unknown command: $text"
             }
         $lastUpdateId.Value = $update.update_id
     }
@@ -2949,7 +3038,7 @@ Write-Log "===============================" -Display
 if ($AutoPilotTelegramEnabled) {
     $hostname = $env:COMPUTERNAME
     $startTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $message = "AutoPilot started...`nTime: $startTime`nMaximum repetitions: $maxRuns`nDay: $(Get-Date -Format 'dddd')"
+    $message = "✅ AutoPilot started...`n🕒 Time: $startTime`n🔂 Maximum repetitions: $maxRuns`n📆 Day: $(Get-Date -Format 'dddd')"
     Send-TelegramMessage -message $message
 }
 
@@ -3012,8 +3101,8 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 		Write-Host "Skip: Day not allowed ($($now.DayOfWeek))" -ForegroundColor DarkYellow
 		Write-Host ""
         if ($AutoPilotTelegramEnabled) {
-			Write-Host "The script did not run today ($($now.DayOfWeek))." -ForegroundColor DarkYellow
-            Send-TelegramMessage -message "The script did not run today ($($now.DayOfWeek))."
+			Write-Host "AutoPilot did not run today ($($now.DayOfWeek))." -ForegroundColor DarkYellow
+            Send-TelegramMessage -message "ℹ️ AutoPilot did not run today ($($now.DayOfWeek))."
         }
         break
     }
@@ -3034,7 +3123,7 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
     Write-Host ""
     Write-Host "-List of completed automatic commands:" -ForegroundColor Yellow
     if ($AutoPilotTelegramEnabled) {
-        Send-TelegramMessage -message "Repetition $r started..."
+        Send-TelegramMessage -message "🔂 Repetition $r started..."
     }
 	
     # --- Pravi listu svih narednih izvršenja komandi sa ponavljanjem i Day ---
@@ -3187,10 +3276,10 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 				try {
 					$output = Receive-Job -Job $job
 					Write-Log "Result: $output"
-					Send-TelegramMessage -message "Result from $($cmd.Command) ($scriptName):`n$output"
+					Send-TelegramMessage -message "➡️ Result from $($cmd.Command) ($scriptName):`n$output"
 				} catch {
 					Write-Log "Error retrieving result from job: $_"
-					Send-TelegramMessage -message "Error executing command $text ($scriptName)."
+					Send-TelegramMessage -message "⚠️ Error executing command $text ($scriptName)."
 				}
 			} 
 			    else {
@@ -3202,14 +3291,14 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 			# 1. RESTART SCRIPT  Avtomatski restart na skripta vo 17:00 - 00:00
 			if (($hour -ge 07 -and $hour -lt 09) -or ($hour -ge 11 -and $hour -lt 12) -or ($hour -ge 15 -and $hour -lt 19)) {
 				Write-Log "(($hour -ge 07 -and $hour -lt 09) -or ($hour -ge 11 -and $hour -lt 12) -or ($hour -ge 15 -and $hour -lt 19)): RESTART of AutoPilot"
-				Send-TelegramMessage -message "Command $($cmd.Command) ($scriptName) is stuck. The AutioPilot is Restarting..."
+				Send-TelegramMessage -message "⚙️ Command $($cmd.Command) ($scriptName) is 🚧 stuck. The AutioPilot is 🔄 Restarting..."
 				Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
 				Stop-WorkerScripts
 				Stop-Process -Id $PID
 			}
 			
 			# 2. Vo site drugi slucai, pobaraj odgovor
-			Send-TelegramMessage -message "Command $($cmd.Command) ($scriptName) is stuck. Should an automatic Restart or Shutdown of the PC be executed? Reply with 'Y' or 'N' within the next 5 minutes… Choosing 'N' will cancel the automatic command (Restart or Shutdown) and only the AutoPilot will be Restarted."
+			Send-TelegramMessage -message "⚙️ Command $($cmd.Command) ($scriptName) is 🚧 stuck. Should an automatic 🔄 Restart or ⛔ Shutdown of the PC be executed? Reply with 'Y' or 'N' within the next 5 minutes… Choosing 'N' will cancel the automatic command (🔄 Restart or ⛔ Shutdown) and only the AutoPilot will be 🔄 Restarted."
 			
 			# Cekaj odgovor do 5 minuti (300 sekundi)
 			$startTime = Get-Date
@@ -3240,18 +3329,18 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 							($now - $global:LastAuditAlert[$userId]).TotalMinutes -ge 3
 						) {
 							Send-TelegramMessage -message @"
- *SECURITY ALERT*
-Unauthorized Access Attempt!
+ 🛡️ SECURITY ALERT 🛡️
+ Unauthorized Access Attempt!
 
- UserId: $userId
- ChatId: $chatId
- Message: '$($update.message.text)'
- Time: $now
+ 👨‍💼 UserId: $userId
+ 🆔 ChatId: $chatId
+ 📨 Message: '$($update.message.text)'
+ 🕒 Time: $now
 "@
 						$global:LastAuditAlert[$userId] = $now
 						}
 						# 🚫 Block
-						Send-TelegramMessage -message "Access to Chat is Forbidden."
+						Send-TelegramMessage -message "Access to Chat is ⛔ Forbidden."
 						$lastUpdateId.Value = $update.update_id
 						continue
 						}
@@ -3260,7 +3349,7 @@ Unauthorized Access Attempt!
 							$response = $msgText
 							break
 						} else {
-							Send-TelegramMessage -message "Incorrectly response. Reply with Y or N."
+							Send-TelegramMessage -message "⚠️ Incorrectly response. Reply with Y or N."
 						}
 					}
 				} catch {
@@ -3281,25 +3370,25 @@ Unauthorized Access Attempt!
 				# RESTART PC 09:00 - 10:00, 13:00 - 15:00, 21:00 - 23:00
 				if (($hour -ge 09 -and $hour -lt 10) -or ($hour -ge 13 -and $hour -lt 15) -or ($hour -ge 21 -and $hour -lt 23)) {
 					Write-Log "(($hour -ge 09 -and $hour -lt 10) -or ($hour -ge 13 -and $hour -lt 15) -or ($hour -ge 21 -and $hour -lt 23)): RESTART of PC" 
-					Send-TelegramMessage -message "PC RESTART is being Executed..."
+					Send-TelegramMessage -message "PC RESTART 🔄 is being Executed..."
 					Invoke-Expression $restartCmd
 				}
 				# SHUTDOWN PC за сите други опсези
 				elseif (($hour -ge 00 -and $hour -lt 24)) { #(($hour -ge 15 -and $hour -lt 23) -or ($hour -ge 23 -and $hour -lt 24) -or ($hour -ge 0 -and $hour -lt 6)) Full Code 
 					Write-Log "00:00 - 24:00: SHUTDOWN of PC"
-					Send-TelegramMessage -message "PC SHUTDOWN is being Executed..."
+					Send-TelegramMessage -message "PC SHUTDOWN ⛔ is being Executed..."
 					Invoke-Expression $shutdownCmd
 				}
 				else {
 					Write-Log "Unknown time range. No action is taken."
-					Send-TelegramMessage -message "Unknown time range. No action is taken."
+					Send-TelegramMessage -message "⚠️ Unknown time range. No action is taken."
 				}
 			}
 
 			# DEFAULT RESTART SCRIPT
 			elseif ($response -eq 'N') {
 				Write-Log "The User replied 'N'. Only the AutoPilot is Restarting."
-				Send-TelegramMessage -message "The Automatic Command is canceled. Only the AutoPilot is Restarting..."
+				Send-TelegramMessage -message "The Automatic Command is ❌ Stopped. Only the AutoPilot is 🔄 Restarting..."
 				Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
 				Stop-WorkerScripts
 				Stop-Process -Id $PID
@@ -3327,7 +3416,7 @@ Unauthorized Access Attempt!
 
     Write-Log "Repetition number completed $r"
     if ($AutoPilotTelegramEnabled) {
-        Send-TelegramMessage -message "Repetition $r completed."
+        Send-TelegramMessage -message "🔂 Repetition $r completed."
     }
 
     $r++
@@ -3352,7 +3441,7 @@ Write-Host ""
 if ($AutoPilotTelegramEnabled) {
     $endTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $duration = ((Get-Date) - $scriptStartTime).ToString("hh\:mm\:ss")
-    $message = "AutoPilot has Finished...`nEnd: $endTime`nExecution time: $duration`nRepetitions: $($r - 1)"
+    $message = "🏁 AutoPilot has Finished...`n🕒 End: $endTime`n⏳ Execution time: $duration`n🔂 Repetitions: $($r - 1)"
 	Write-Host "AutoPilot has Finished...`nEnd: $endTime`nExecution time: $duration`nRepetitions: $($r - 1)" -ForegroundColor DarkGreen
 	Write-Host ""
     Send-TelegramMessage -message $message
@@ -3372,6 +3461,8 @@ Start-Sleep -Seconds 35
 #  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Restricted
 
 #  Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Restricted 
+
+#  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 #  Set-ExecutionPolicy Restricted -Scope CurrentUser -Force  (Full Locked)
 

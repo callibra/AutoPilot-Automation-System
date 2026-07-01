@@ -42,26 +42,36 @@ class Tooltip:
         widget.bind("<Enter>", self.show)
         widget.bind("<Leave>", self.hide)
 
-    def set_text(self, text):
-        self.text = text
-
     def show(self, event=None):
-        if self.tipwindow or not self.text:
-            return
+        self.hide()
         x = self.widget.winfo_rootx() + 20
-        y = self.widget.winfo_rooty() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 10
         self.tipwindow = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(True)
         tw.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(tw, text=self.text, justify="left",
-                         background="#FFFFE0", relief="solid", borderwidth=1,
-                         font=("Segoe UI", 13))
-        label.pack(ipadx=5, ipady=2)
+        tw.attributes("-topmost", True)
+        self.label = tk.Label(
+            tw,
+            text=self.text,
+            bg="#1e1e1e",
+            fg="white",
+            font=("Segoe UI", 13),
+            padx=8,
+            pady=4,
+            relief="solid",
+            bd=1
+        )
+        self.label.pack()
+
+    def set_text(self, text):
+        self.text = text 
+        if self.tipwindow:
+            self.label.config(text=text)
 
     def hide(self, event=None):
         if self.tipwindow:
             self.tipwindow.destroy()
-        self.tipwindow = None
+            self.tipwindow = None
          
 # --- Save Config ---
 def save_config():
@@ -123,13 +133,26 @@ def save_all_config():
     
 # --- List Table ---
 def open_autocommands_table():
+    if hasattr(root, "table_win") and root.table_win is not None:
+        try:
+            if root.table_win.winfo_exists():
+                root.table_win.lift()
+                root.table_win.focus_force()
+                return
+        except:
+            pass
+
     table_win = tk.Toplevel(root)
+    root.table_win = table_win
     table_win.title("Auto Commands Overview (Read Only)")
     table_win.geometry("1500x800")
     table_win.configure(bg="#1E1E1E")
-
-    columns = ["Command", "Row", "Time", "Repeat", "Type", "Mode", "Day"]
-
+    
+    def on_close():
+        root.table_win = None
+        table_win.destroy()
+    table_win.protocol("WM_DELETE_WINDOW", on_close)
+    columns = ["⚙️ Command", "🆔 Row", "🕓 Time", "🔂 Repeat", "🔀 Type", "🔃 Mode", "📆 Day"]
     style = ttk.Style(table_win)
 
     # --- Treeview FIRST (no style yet) ---
@@ -138,7 +161,18 @@ def open_autocommands_table():
         columns=columns,
         show="headings"
     )
-    tree.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    # --- Vertical Scrollbar ---
+    vsb = ttk.Scrollbar(table_win, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=vsb.set)
+    vsb.pack(side="right", fill="y")
+    tree.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+    
+    # Scroll only inside table
+    def tree_mousewheel(event):
+        tree.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        return "break"
+    tree.bind("<MouseWheel>", tree_mousewheel)
 
     # --- Apply style AFTER widget is mapped (FIX) ---
     def apply_tree_style():
@@ -156,7 +190,6 @@ def open_autocommands_table():
             foreground="#FFD700",
             background="#1E1E1E"
         )
-
     table_win.after_idle(apply_tree_style)
 
     # --- Columns ---
@@ -181,7 +214,7 @@ def open_autocommands_table():
             tree.insert(
                 "",
                 "end",
-                values=(cmd_name.lstrip("/"), "-", "No Data", "-", "-", "-", "-"),
+                values=(cmd_name.lstrip("/"), "-", "📂 No Data", "-", "-", "-", "-"),
                 tags=(tag_no_data,)
             )
             tree.tag_configure(tag_no_data, background="#2D2D30", foreground="#CFCFCF")
@@ -461,9 +494,9 @@ def select_command(event):
         wrap="word"
     )
     text_widget.pack(expand=True, fill="both")
-    text_widget.tag_configure("selected", foreground="#FFFFFF", font=("Segoe UI", 13, "bold"), justify="center")
-    text_widget.tag_configure("description", foreground="#FFD700", font=("Segoe UI", 12, "italic"), justify="center")
-    text_widget.insert("end", f"Selected: {display_name}\n", "selected")
+    text_widget.tag_configure("selected", foreground="#FFFFFF", font=("Segoe UI Emoji", 13, "bold"), justify="center")
+    text_widget.tag_configure("description", foreground="#FFD700", font=("Segoe UI Emoji", 12, "italic"), justify="center")
+    text_widget.insert("end", f"☑️ Selected: {display_name}\n", "selected")
     text_widget.insert("end", description, "description")
     text_widget.configure(state="disabled")
 
@@ -499,7 +532,7 @@ def add_row(cmd_data=None, idx=None):
     m_var = tk.StringVar(value=f"{m:02d}")
     s_var = tk.StringVar(value=f"{s:02d}")
     time_frame = tk.Frame(frame, bg="#1E1E1E")
-    time_frame.pack(side="left", padx=(0,20))
+    time_frame.pack(side="left", padx=(25,20))
     tk.Spinbox(time_frame, from_=0, to=23, width=3, textvariable=h_var, font=spin_font,
                state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left")
     tk.Label(time_frame, text=":", bg="#1E1E1E", fg=spin_fg, font=spin_font).pack(side="left")
@@ -513,7 +546,7 @@ def add_row(cmd_data=None, idx=None):
     r_var = tk.StringVar(value=str(cmd_data["RepeatIntervalMinutes"][idx]) if cmd_data else "0")
     r_spin = tk.Spinbox(frame, from_=0, to=10000, width=6, textvariable=r_var, font=spin_font,
                         state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center")
-    r_spin.pack(side="left", padx=(20,50))
+    r_spin.pack(side="left", padx=(18,50))
 
     # --- Type ---
     if cmd_data and "Type" in cmd_data:
@@ -521,34 +554,85 @@ def add_row(cmd_data=None, idx=None):
     else:
         type_value = "daily"
     type_var = tk.StringVar(value=type_value)
-    type_combo = ttk.Combobox(
-        frame,
-        textvariable=type_var,
-        values=["daily", "weekly", "monthly", "yearly"],
-        state="readonly",
-        width=10,
-        bootstyle="info"
-    )
-    type_combo.pack(side="left", padx=(10,20))
-    
-    # --- Tooltip for Type combobox ---
-    tooltip = Tooltip(type_combo)
+    color_map = {
+        "daily": "#FFFFFF",
+        "weekly": "#E4E665",
+        "monthly": "#65E683",
+        "yearly": "#E38AD8"
+    }
 
+    # 🔥 TYPE BUTTON
+    type_btn = tk.Menubutton(
+        frame,
+        text=type_var.get(),
+        font=("Segoe UI", 13, "bold"),
+        width=10,
+        bg="#2D2D30",
+        fg=color_map.get(type_var.get(), "#FFFFFF"),
+        activebackground="#3A3A3A",
+        activeforeground="#FFFFFF",
+        relief="raised",
+        bd=1
+    )
+    
+    # 🔥 TYPE MENU
+    menu = tk.Menu(
+        type_btn,
+        tearoff=0,
+        bg="#2D2D30",
+        fg="white",
+        activebackground="#3A3A3A",
+        activeforeground="white",
+        font=("Segoe UI", 13, "bold")
+    )
+
+    # 🔥 SYNC FUNCTION
+    def set_type(val):
+        type_var.set(val)
+        type_btn.config(
+            text=val,
+            fg=color_map.get(val, "#FFFFFF")
+        )
+        update_tooltip()
+
+    # 🔥 TYPE TITLE
+    menu.add_command(
+        label="🔀 Select Type:"
+    )
+    menu.add_separator()    
+    menu.add_command(label="🔄 Daily", command=lambda: set_type("daily"))
+    menu.add_command(label="📆 Weekly", command=lambda: set_type("weekly"))
+    menu.add_command(label="📆 Monthly", command=lambda: set_type("monthly"))
+    menu.add_command(label="📆 Yearly", command=lambda: set_type("yearly"))
+    type_btn.config(menu=menu)
+    type_btn.pack(side="left", padx=(25, 20))
+
+    # 💬 TOOLTIP (FIXED - NOW WORKS WITH BUTTON)
+    tooltip = Tooltip(type_btn)
     def update_tooltip(*args):
         val = type_var.get()
         if val == "daily":
-            tooltip.set_text("Daily → executes every day (FIKS Works only when this is SELECT!)")
+            tooltip.set_text("📆 Daily → executes every day (Fixed Works only when SELECTED!)")
         elif val == "weekly":
-            tooltip.set_text("Weekly → executes on Sunday. (Default is LOOP!)")
+            tooltip.set_text("📆 Weekly → executes on Sunday. (Default LOOP)")
         elif val == "monthly":
-            tooltip.set_text("Monthly → executes on the last day of the month. (Default is LOOP!)")
+            tooltip.set_text("📆 Monthly → executes on last day of month")
         elif val == "yearly":
-            tooltip.set_text("Yearly → executes on the last day of the year. (Default is LOOP!)")
+            tooltip.set_text("📆 Yearly → executes on last day of year")
         else:
             tooltip.set_text("")
-
     type_var.trace_add("write", update_tooltip)
-    update_tooltip()  # initialize tooltip
+    update_tooltip()
+    
+    # 🔥 FORCE APPLY COLOR ON LOAD (IMPORTANT FIX)
+    def apply_initial_type():
+        val = type_var.get()
+        type_btn.config(
+            text=val,
+            fg=color_map.get(val, "#FFFFFF")
+        )
+        update_tooltip()
+    apply_initial_type()
 
     # --- Date Spinners ---
     today = date.today()
@@ -565,7 +649,7 @@ def add_row(cmd_data=None, idx=None):
     day_var = tk.StringVar(value=f"{d:02d}")
 
     date_frame = tk.Frame(frame, bg="#1E1E1E")
-    date_frame.pack(side="left", padx=(0,10))
+    date_frame.pack(side="left", padx=(25,10))
 
     # Year/Month/Day and OLD Date spinboxes
     min_year = y if (cmd_data and "Day" in cmd_data) else today.year
@@ -627,7 +711,7 @@ def add_row(cmd_data=None, idx=None):
         if cmd_type != "daily":
             # If not daily, force loop and disable spinner
             mode_var.set("loop")
-            mode_btn.config(text="Loop", bg="#FFD700", fg="#000000", state="disabled")
+            mode_btn.config(text="📆 Type", bg="#85E6DE", fg="#E05E5E", state="disabled")
             year_spin.config(state="disabled")
             month_spin.config(state="disabled")
             day_spin.config(state="disabled")
@@ -635,12 +719,12 @@ def add_row(cmd_data=None, idx=None):
             # If daily, allow loop/fixed
             mode_btn.config(state="normal")
             if mode_var.get() == "loop":
-                mode_btn.config(text="Loop", bg="#FFD700", fg="#000000")
+                mode_btn.config(text="🔄 Loop", bg="#FFD700", fg="#0031FF")
                 year_spin.config(state="disabled")
                 month_spin.config(state="disabled")
                 day_spin.config(state="disabled")
             else:
-                mode_btn.config(text="Fiks", bg="#32CD32", fg="#000000")
+                mode_btn.config(text="✔️ Fixed", bg="#32CD32", fg="#FFFFFF")
                 year_spin.config(state="readonly")
                 month_spin.config(state="readonly")
                 day_spin.config(state="readonly")
@@ -652,19 +736,19 @@ def add_row(cmd_data=None, idx=None):
     mode_btn = tk.Button(
         frame,
         text="Loop",
-        font=("Segoe UI", 11, "bold"),
+        font=("Segoe UI Emoji", 13, "bold"),
         width=8,
         height=1,
         relief="raised",
         bd=2,
         command=lambda: mode_var.set("fixed" if mode_var.get() == "loop" else "loop")
     )
-    mode_btn.pack(side="left", padx=(10,10))
+    mode_btn.pack(side="left", padx=(15,10))
     toggle_mode_visual()
 
     # --- Delete Button ---
-    del_btn = ttk.Button(frame, text="Delete", bootstyle="danger", command=lambda f=frame: delete_row(f))
-    del_btn.pack(side="left", padx=(10,88))
+    del_btn = ttk.Button(frame, text="🗑️ Delete", bootstyle="danger", command=lambda f=frame: delete_row(f))
+    del_btn.pack(side="left", padx=(30,88))
 
     # --- Trace changes ---
     h_var.trace_add("write", mark_dirty)
@@ -708,8 +792,9 @@ row_widgets = []
 # --- Main Window ---
 style = Style(theme="darkly")
 root = style.master
+root.table_win = None
 root.title("Automation Commands Editor")
-root.geometry("1355x588")
+root.geometry("1535x588")
 root.configure(bg="#1E1E1E")
 root.iconbitmap(str(ICON_PATH))
 
@@ -809,7 +894,6 @@ v_scroll = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
 v_scroll.pack(side="right", fill="y")
 
 canvas.configure(yscrollcommand=v_scroll.set)
-
 scrollable_frame = tk.Frame(canvas, bg="#1E1E1E")
 canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
 canvas.update_idletasks()
@@ -817,14 +901,14 @@ canvas.update_idletasks()
 # Headers
 headers_frame = tk.Frame(scrollable_frame, bg="#1E1E1E")
 headers_frame.pack(fill="x", pady=(0,5))
-header_font = ("Segoe UI", 14, "bold")
-tk.Label(headers_frame, text="#", width=4, bg="#1E1E1E", fg="#FFD700", font=header_font).pack(side="left", padx=0)
-tk.Label(headers_frame, text="Time (HH:MM:SS)", width=20, bg="#1E1E1E", fg="#00FF00", font=header_font).pack(side="left", padx=(0,0))
-tk.Label(headers_frame, text="Repeat Min", width=10, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,0))
-tk.Label(headers_frame, text="Type", width=10, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,0))
-tk.Label(headers_frame, text="Date (YY:MM:DD)", width=20, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,0))
-tk.Label(headers_frame, text="Interval", width=10, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,0))
-tk.Label(headers_frame, text="Delete", width=8, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(0,0))
+header_font = ("Segoe UI Emoji", 14, "bold")
+tk.Label(headers_frame, text="🆔", width=4, bg="#1E1E1E", fg="#FFD700", font=header_font).pack(side="left", padx=0)
+tk.Label(headers_frame, text="🕓 Time (HH:MM:SS)", width=20, bg="#1E1E1E", fg="#00FF00", font=header_font).pack(side="left", padx=(0,0))
+tk.Label(headers_frame, text="🔂 Repeat Min", width=12, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,0))
+tk.Label(headers_frame, text="🔀 Type", width=10, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(0,0))
+tk.Label(headers_frame, text="📆 Date (YY:MM:DD)", width=20, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(22,0))
+tk.Label(headers_frame, text="⏱️ Interval", width=10, bg="#1E1E1E", fg="#1E90FF", font=header_font).pack(side="left", padx=(5,0))
+tk.Label(headers_frame, text="🗑️ Delete", width=8, bg="#1E1E1E", fg="#FF4500", font=header_font).pack(side="left", padx=(15,0))
 
 # Rows frame
 rows_frame = tk.Frame(scrollable_frame, bg="#1E1E1E")
@@ -842,11 +926,13 @@ def on_frame_configure(event=None):
         if v_scroll.winfo_ismapped():
             v_scroll.pack_forget()
         canvas.configure(scrollregion=(0,0,canvas.winfo_width(), canvas_height))
+        canvas.configure(scrollregion=canvas.bbox("all"))
         canvas.yview_moveto(0)
     else:
         if not v_scroll.winfo_ismapped():
             v_scroll.pack(side="right", fill="y")
         canvas.configure(scrollregion=(0,0,canvas.winfo_width(), content_height))
+        canvas.configure(scrollregion=canvas.bbox("all"))
 
 scrollable_frame.bind("<Configure>", on_frame_configure)
 
@@ -857,9 +943,12 @@ def _on_mousewheel(event):
 
     if content_height > canvas_height:
         canvas.yview_scroll(int(-1 * (event.delta // 120)), "units")
-
-canvas.bind("<Enter>", lambda e: canvas.focus_set())
 canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+# --- Shift + MouseWheel Horizontal Scroll ---
+def _on_shift_mousewheel(event):
+    canvas.xview_scroll(int(-1 * (event.delta // 120)), "units")
+canvas.bind_all("<Shift-MouseWheel>", _on_shift_mousewheel)
 
 # Buttons frame
 buttons_frame = tk.Frame(right_frame, bg="#1E1E1E")
@@ -868,7 +957,7 @@ buttons_row = tk.Frame(buttons_frame, bg="#1E1E1E")
 buttons_row.pack(anchor="center")
 
 # --- Status Label ---
-status_label = ttk.Label(buttons_frame, text="", bootstyle="info", justify="center")
+status_label = ttk.Label(buttons_frame, text="", bootstyle="info", justify="center", font=("Segoe UI Emoji", 11, "bold"))
 status_label.pack_forget()  # стартно не се гледа
 
 # --- Status Message ---
@@ -911,32 +1000,46 @@ def update_status_no_command():
 
 
 # --- Buttons ---
-add_btn = ttk.Button(buttons_row, text="Add Row", bootstyle="info", command=add_row_with_status, state="disabled")
+style.configure(
+    "TButton",
+    font=("Segoe UI Emoji", 11, "bold")
+)
+add_btn = ttk.Button(buttons_row, text="✔️ Add Row", bootstyle="info", command=add_row_with_status, state="disabled")
 add_btn.pack(side="left", padx=20)
-
-save_btn = ttk.Button(buttons_row, text="Save Config", bootstyle="success", command=save_config_with_status, state="disabled")
+save_btn = ttk.Button(buttons_row, text="💾 Save Config", bootstyle="success", command=save_config_with_status, state="disabled")
 save_btn.pack(side="left", padx=20)
-
-default_btn = ttk.Button(buttons_row, text="Default", bootstyle="warning", command=reset_to_default, state="disabled")
+default_btn = ttk.Button(buttons_row, text="☑️ Default", bootstyle="warning", command=reset_to_default, state="disabled")
 default_btn.pack(side="left", padx=20)
-
-list_btn = ttk.Button(buttons_row, text="List All", bootstyle="info", command=open_autocommands_table)
+list_btn = ttk.Button(buttons_row, text="📋 List All", bootstyle="info", command=open_autocommands_table)
 list_btn.pack(side="left", padx=20)
-
-reset_all_btn = ttk.Button(buttons_row, text="Reset All", bootstyle="danger", command=reset_all_autocommands)
+reset_all_btn = ttk.Button(buttons_row, text="❌ Reset All", bootstyle="danger", command=reset_all_autocommands)
 reset_all_btn.pack(side="left", padx=20)
-
 update_status_no_command()
 
 # --- Долна линија текст, секогаш видлива ---
 buttons_info_label = ttk.Label(
     buttons_frame,
-    text="You can add up to 35 rows. Save Config and Default USE for every COMMAND separately. FIKS USE only when Type Selection is *daily*.",
+    text="You can add up to 35 rows. Save Config and Default USE for every COMMAND separately. Fixed USE only when Type Selection is *daily*.",
     bootstyle="secondary",
     justify="center",
-    font=("Segoe UI", 11)
+    font=("Segoe UI Emoji", 11)
 )
 buttons_info_label.pack(side="bottom", pady=(15,0))  # најдолу
+
+# --- Horizontal Scrollbar for smaller screens ---
+screen_width = root.winfo_screenwidth()
+if screen_width < 1600:
+    h_scroll = tk.Scrollbar(
+        right_frame,
+        orient="horizontal",
+        command=canvas.xview,
+        bg="#2C2C2C",
+        troughcolor="#1E1E1E",
+        activebackground="#555555",
+        width=13
+    )
+    canvas.configure(xscrollcommand=h_scroll.set)
+    h_scroll.pack(fill="x", side="bottom")
 
 # --- Save on Close ---
 def on_close():
@@ -983,7 +1086,3 @@ root.mainloop()
 # pyinstaller --noconsole --onefile --windowed --add-data "media;media" --add-data "JSON;JSON" ScriptsEditor.py  - ScriptsEditor.exe
 
 # pyinstaller --noconsole --onefile Camera.py  - Camera.exe
-
-
-
-

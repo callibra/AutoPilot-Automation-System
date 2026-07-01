@@ -1,4 +1,4 @@
-# === GLOBAL VARIABLES ===
+﻿# === GLOBAL VARIABLES ===
 $Global:WorkerPath = "$PSScriptRoot\SystemMonitorWorker.ps1"
 
 # 🟩 INICIJALIZACIJA NA LOGOVI ZA MONITORING Function ***
@@ -78,7 +78,7 @@ function System-Status {
     $ramPercent = [math]::Round(($usedRAM / $totalRAM) * 100, 2)
     # Disks
     $diskInfoString = (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
-        ForEach-Object { "$($_.DeviceID): $([math]::Round($_.FreeSpace/1GB,2))GB free of $([math]::Round($_.Size/1GB,2))GB" }
+        ForEach-Object { "$($_.DeviceID) $([math]::Round($_.FreeSpace/1GB,2))GB free of $([math]::Round($_.Size/1GB,2))GB" }
     ) -join "`n"
     # Network adapters
     $networkStatsString = (Get-CimInstance Win32_NetworkAdapter |
@@ -101,24 +101,24 @@ function System-Status {
             "$name Load: $([math]::Round(($sum),2))%"
         }) -join "`n"
     } catch {
-        $gpuLoad = "GPU Load: Not Available"
+        $gpuLoad = "ℹ️ GPU Load: Not Available"
     }
     # Compose output
     $status = @"
-System Status:
-CPU Usage: $cpu %
-RAM: $usedRAM GB / $totalRAM GB ($ramPercent%)
+⚙️ System Status:
+🔲 CPU Usage: $cpu %
+💾 RAM: $usedRAM GB / $totalRAM GB ($ramPercent%)
 
-Disk:
+📀 Disk:
 $diskInfoString
 
-Network Statistics:
+📶 Network Statistics:
 $networkStatsString
 
-Uptime: $uptimeHours hours
-Processes: $((Get-Process).Count)
+🕢 Uptime: $uptimeHours hours
+🔁 Processes: $((Get-Process).Count)
 
-$gpuLoad
+🏿 $gpuLoad
 "@
     # String 
     return $status.Trim()
@@ -190,7 +190,7 @@ function Get-NetworkStatus {
         $uploadMbps   = [math]::Round(($tx * 8) / 1MB, 2)
         # --- OUTPUT ---
         $output = @"
-[$hostname] Internet: OK
+🖥️ $hostname  Internet: OK
 Local IP        : $localIP
 Gateway         : $gateway
 DNS Servers     : $dnsServers
@@ -199,9 +199,9 @@ Wi-Fi SSID      : $wifiSSID
 Active Adapter  : $adapterName
 
 "@
-        # Adapters
+        # Додавање на сите адаптери
         $allAdapters | ForEach-Object {
-            $output += "`n* Adapter: $($_.Name)
+            $output += "`n📶 Adapter: $($_.Name)
   Status   : $($_.Status)
   Type     : $($_.Type)
   MAC      : $($_.MAC)
@@ -210,13 +210,13 @@ Active Adapter  : $adapterName
   Speed    : $($_.SpeedMbps) Mbps
   -------------------------------------"
 }
-        $output += "`n* Download        : $downloadMbps Mbps
-* Upload          : $uploadMbps Mbps`n"
+        $output += "`n🔽 Download        : $downloadMbps Mbps
+🔼 Upload          : $uploadMbps Mbps`n"
 
         return $output
     }
     catch {
-        return "Internet: NOT WORKING!"
+        return "⚠️ Internet: NOT WORKING!"
     }
 }
 
@@ -229,7 +229,7 @@ function Get-Temperatures {
         try {
             Add-Type -Path $DllPath
         } catch {
-            return "Error: Cannot load the DLL file at the specified path $DllPath."
+            return "⚠️ Error: Cannot load the DLL file at the specified path $DllPath."
         }
     }
 	
@@ -280,17 +280,17 @@ function Get-Temperatures {
         $items = $result | Where-Object { $_.HardwareType -eq $type }
         if ($items.Count -gt 0) {
             switch ($type) {
-                "Cpu"         { $output += "`n[CPU Temp]`n" }
-                "GpuAmd"      { $output += "`n[GPU Temp AMD]`n" }
-                "GpuNvidia"   { $output += "`n[GPU Temp NVIDIA]`n" }
-                "Motherboard" { $output += "`n[Motherboard Temp]`n" }
-                "Storage"     { $output += "`n[Disk Temp]`n" }
+                "Cpu"         { $output += "`n🔲 CPU Temp:`n" }
+                "GpuAmd"      { $output += "`n🏼 GPU Temp AMD:`n" }
+                "GpuNvidia"   { $output += "`n🏼 GPU Temp NVIDIA:`n" }
+                "Motherboard" { $output += "`n🏿 Motherboard Temp:`n" }
+                "Storage"     { $output += "`n💾 Disk Temp:`n" }
                 default       { $output += "`n[$type]`n" }
             }
 
             foreach ($item in $items) {
             if ($type -eq "Storage") {
-                $name = "** $($item.HardwareName)"
+                $name = "● $($item.HardwareName)"
                 $output += " $name - $($item.Sensor): $([math]::Round($item.TemperatureC, 2)) °C`n"
             } else {
                 $output += " $($item.HardwareName) - $($item.Sensor): $([math]::Round($item.TemperatureC, 2)) °C`n"
@@ -299,14 +299,14 @@ function Get-Temperatures {
     }
 }
     if (-not $motherboardTempFound) {
-        $output += "`nStatus: Cannot measure motherboard temperature.`n"
+        $output += "`nℹ️ Status: Cannot measure motherboard temperature.`n"
     }
     if (-not $gpuTempFound) {
-        $output += "`nStatus: GPU temperature not found (possibly no graphics card or sensor).`n"
+        $output += "`nℹ️ Status: GPU temperature not found (possibly no graphics card or sensor).`n"
     }
 
     if ($failures.Count -gt 0) {
-        $output += "`nSome sensors could not be measured:`n"
+        $output += "`nℹ️ Some sensors could not be measured:`n"
         foreach ($fail in $failures) {
             $output += " - $fail`n"
         }
@@ -329,15 +329,15 @@ function Get-LoadOnlyHardwareData {
     $computer.IsNetworkEnabled = $true
     $computer.IsStorageEnabled = $true
     $computer.Open()
-    $result = "*Hardverski parametri Part 1:*`n`n"
+    $result = "⚙️ Hardverski parametri Part 1:`n`n"
     foreach ($hardware in $computer.Hardware) {
         $hardware.Update()
         $loadSensors = $hardware.Sensors | Where-Object { $_.SensorType -eq "Load" }
         if ($loadSensors.Count -gt 0) {
-            $result += "*$($hardware.Name)* - $($hardware.HardwareType)`n"
+            $result += "🔹 $($hardware.Name) - $($hardware.HardwareType)`n"
             foreach ($sensor in $loadSensors) {
                 $value = if ($sensor.Value -ne $null) { "{0:N1}%" -f $sensor.Value } else { "N/A" }
-                $result += " - $($sensor.Name): $value`n"
+                $result += " ● $($sensor.Name): $value`n"
             }
             $result += "`n"
         }
@@ -360,15 +360,15 @@ function Get-NonLoadHardwareData {
     $computer.IsNetworkEnabled = $true
     $computer.IsStorageEnabled = $true
     $computer.Open()
-    $result = "*Hardware Parameters Part 2:*`n`n"
+    $result = "⚙️ Hardware Parameters Part 2:`n`n"
     foreach ($hardware in $computer.Hardware) {
         $hardware.Update()
         $otherSensors = $hardware.Sensors | Where-Object { $_.SensorType -ne "Load" }
         if ($otherSensors.Count -gt 0) {
-            $result += "*$($hardware.Name)* - $($hardware.HardwareType)`n"
+            $result += "🔸 $($hardware.Name) - $($hardware.HardwareType)`n"
             foreach ($sensor in $otherSensors) {
                 $value = if ($sensor.Value -ne $null) { "{0:N2}" -f $sensor.Value } else { "N/A" }
-                $result += " - $($sensor.SensorType): $($sensor.Name) = $value`n"
+                $result += " ● $($sensor.SensorType): $($sensor.Name) = $value`n"
             }
             $result += "`n"
         }
@@ -383,7 +383,7 @@ function Open-Folder {
     if (Test-Path $Path) {
         Start-Process explorer.exe $Path
     } else {
-        Show-DarkWarning -Title "Folder Path" -Message "Folder not found:`n$Path"
+        Show-DarkWarning -Title "📁 Folder Path" -Message "Folder not found:`n$Path"
     }
 }
 function AutoPilot-Log           { Open-Folder "$PSScriptRoot\Autopilot_Data\Autopilot_Logs" }
@@ -406,17 +406,17 @@ function Show-LiveTraffic {
     $isRunning = Get-CimInstance Win32_Process |
                  Where-Object { $_.CommandLine -like "*NetMonitor.exe*" }
     if ($isRunning) {
-		Show-DarkWarning -Title "Net Monitor Panel" -Message ("Net Monitor Panel is already started. The process is ACTIVE!")
+		Show-DarkWarning -Title "🌎 Net Monitor Panel" -Message ("Net Monitor Panel is already started. The process is ✅ ACTIVE!")
         return
     }
     if (Test-Path $scriptPath) {
-		Show-DarkWarning -Title "Net Monitor Panel" -Message ("Starting Net Monitor Panel...")
+		Show-DarkWarning -Title "🌎 Net Monitor Panel" -Message ("Starting Net Monitor Panel...")
         Start-Process `
             -FilePath "$scriptPath" `
             -WindowStyle Hidden
     }
     else {
-		Show-DarkWarning -Title "Net Monitor Panel" -Message ("NetMonitor.exe not found!")
+		Show-DarkWarning -Title "🌎 Net Monitor Panel" -Message ("NetMonitor.exe ⛔ not found!")
     }
 }
 
@@ -426,17 +426,17 @@ function Show-SystemMonitor {
     $isRunning = Get-CimInstance Win32_Process |
                  Where-Object { $_.CommandLine -like "*SystemMonitor.exe*" }
     if ($isRunning) {
-		Show-DarkWarning -Title "System Monitor Panel" -Message ("System Monitor Panel is already started. The process is ACTIVE!" )
+		Show-DarkWarning -Title "📉 System Monitor Panel" -Message ("System Monitor Panel is already started. The process is ✅ ACTIVE!" )
         return
     }
     if (Test-Path $scriptPath) {
-		Show-DarkWarning -Title "System Monitor Panel" -Message ("Starting System Monitor Panel...")
+		Show-DarkWarning -Title "📉 System Monitor Panel" -Message ("Starting System Monitor Panel...")
         Start-Process `
             -FilePath "$scriptPath" `
             -WindowStyle Hidden
     }
     else {
-		Show-DarkWarning -Title "System Monitor Panel" -Message ("SystemMonitor.exe not found!")
+		Show-DarkWarning -Title "📉 System Monitor Panel" -Message ("SystemMonitor.exe ⛔ not found!")
     }
 }
 
@@ -446,20 +446,20 @@ function Open-SystemMonitor {
     $isRunning = Get-CimInstance Win32_Process |
                  Where-Object { $_.CommandLine -like "*SystemMonitor.exe*" }
     if ($isRunning) {
-        $msg = "System Monitor Panel is already running. The process is ACTIVE!"
+        $msg = "📉 System Monitor Panel is already running. The process is ✅ ACTIVE!"
 		Write-Host "System Monitor Panel is already running. The process is ACTIVE!" -ForegroundColor Yellow
 		Send-TelegramMessage -message $msg
         return
     }
     if (Test-Path $scriptPath) {
-		$msg = "Starting System Monitor Panel..."
+		$msg = "Starting 📉 System Monitor Panel..."
         Write-Host "Starting System Monitor Panel..." -ForegroundColor Cyan
         Start-Process `
             -FilePath "$scriptPath" `
             -WindowStyle Hidden
     }
     else {
-		$msg = "SystemMonitor.exe not found!"
+		$msg = "SystemMonitor.exe ⛔ not found!"
         Write-Host "SystemMonitor.exe not found!" -ForegroundColor Red
     }
 	Send-TelegramMessage -message $msg
@@ -470,14 +470,14 @@ function Stop-SystemMonitor {
     $running = Get-CimInstance Win32_Process |
                Where-Object { $_.CommandLine -like "*SystemMonitor.exe*" }
     if ($running) {
-		$msg = "Exit System Monitor Panel..."
-        Write-Host "Exit System Monitor Panel..." -ForegroundColor Cyan
+		$msg = "❌ Exit from  📉 System Monitor Panel..."
+        Write-Host "Exit from System Monitor Panel..." -ForegroundColor Cyan
         foreach ($p in $running) {
             Stop-Process -Id $p.ProcessId -Force
         }
     }
     else {
-		$msg = "System Monitor Panel is already EXIT!"
+		$msg = "📉 System Monitor Panel is already ❌ EXIT!"
         Write-Host "System Monitor Panel is already EXIT!" -ForegroundColor Yellow
     }
 	Send-TelegramMessage -message $msg
@@ -491,7 +491,7 @@ function Start-Monitoring {
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $monitoringStartFlag = "$Global:monitoringLogsFolder\monitoring_start.flag"
     if ($existing) {
-        $result = "Monitoring is already Started (Active process)."
+        $result = "📈 Monitoring is already Started ✅ (Active process)."
         return $result
     }
     Set-Content -Path $monitoringStartFlag -Value $timestamp -Encoding UTF8
@@ -503,9 +503,9 @@ function Start-Monitoring {
     $psi.UseShellExecute = $true
     $proc = [System.Diagnostics.Process]::Start($psi)
     if ($proc) {
-        $result = "SystemMonitorWorker process started (PID: $($proc.Id)) in $timestamp"
+        $result = "📈 SystemMonitorWorker process started (PID: $($proc.Id)) in $timestamp"
     } else {
-        $result = "ERROR: SystemMonitorWorker process cannot be started!"
+        $result = "⚠️ ERROR: SystemMonitorWorker process cannot be started!"
     }
     return $result
 }
@@ -523,14 +523,14 @@ function Stop-Monitoring {
             try { Stop-Process -Id $proc.ProcessId -Force } catch {}
         }
         Start-Sleep -Seconds 1
-        $result = "Monitoring is Stopped. SystemMonitorWorker script was closed at $timestamp."
+        $result = "📈 Monitoring is ⏹️ Stopped. SystemMonitorWorker script was ❌ closed at $timestamp."
     } else {
         if (Test-Path $monitoringStopFlag) {
             $realStopTime = Get-Content $monitoringStopFlag
         } else {
             $realStopTime = $timestamp
         }
-        $result = "Monitoring is not Started. Last Stopped at $realStopTime"
+        $result = "📈 Monitoring is not Started. Last ⏹️ Stopped at $realStopTime"
     }
     return $result
 }
@@ -544,18 +544,18 @@ function Get-MonitoringStatus {
     }
     if ($workerProc -and (Test-Path $monitoringStartFlag)) {
         $startTime = Get-Content $monitoringStartFlag
-        $result = "Monitoring is ACTIVE. Started at $startTime."
+        $result = "📈 Monitoring is ✅ ACTIVE. Started at $startTime."
     }
     elseif (-not $workerProc -and (Test-Path $monitoringStopFlag)) {
         $stopTime = Get-Content $monitoringStopFlag
-        $result = "Monitoring is STOPPED. Stopped at $stopTime."
+        $result = "📈 Monitoring is ⏹️ STOPPED. Stopped at $stopTime."
     }
     elseif ((Test-Path $monitoringStartFlag) -and -not (Test-Path $monitoringStopFlag)) {
         $startTime = Get-Content $monitoringStartFlag
-        $result = "Monitoring may be active (process not found, start flag exists) since $startTime."
+        $result = "📈 Monitoring may be active (process not found, start flag exists) since $startTime."
     }
     else {
-        $result = "Monitoring status cannot be determined (no flag files present)."
+        $result = "📈 Monitoring status cannot be determined ℹ️ (no flag files present)."
     }
     return $result
 }
@@ -579,31 +579,31 @@ function Stop-Workers {
                 foreach ($proc in $existing) {
                     try {
                         Stop-Process -Id $proc.ProcessId -Force
-                        $msg = "Process $($proc.ProcessId) ($worker) successfully Closed."
+                        $msg = "⚙️ Process $($proc.ProcessId) ($worker) successfully ✅ Closed."
                         $result += "$msg`n"
                         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                     } catch {
-                        $msg = "Cannot close the process $($proc.ProcessId): $_"
+                        $msg = "ℹ️ Cannot close the process $($proc.ProcessId): $_"
                         $result += "$msg`n"
                         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                     }
                 }
             } else {
-                $msg = "No processes found for $worker"
+                $msg = "ℹ️ No processes found for $worker"
                 $result += "$msg`n"
                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
             }
         }
         if ($foundAnyRunning) {
-            $msg = "Monitoring processes are STOPPED."
+            $msg = "📈 Monitoring processes are ⏹️ STOPPED."
         } else {
-            $msg = "Monitoring processes are already STOPPED. No active monitoring processes."
+            $msg = "📈 Monitoring processes are already ⏹️ STOPPED. No active monitoring processes."
         }
         [System.Windows.MessageBox]::Show($msg)
         $result += "$msg`n"
         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
     } catch {
-        $msg = "Error executing Stop-Workers: $_"
+        $msg = "⚠️ Error executing Stop-Workers: $_"
         $result += "$msg`n"
         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
     }
@@ -630,31 +630,31 @@ function Start-AutoPilot {
     try {
         if (-not (Test-Path $AutopilotFolder)) {
             New-Item -ItemType Directory -Path $AutopilotFolder | Out-Null
-            $result += "Created Autopilot_Data folder.`n"
+            $result += "Created Autopilot_Data 📁 folder.`n"
             Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Created Autopilot_Data folder."
         }
         $existing = Get-CimInstance Win32_Process | Where-Object {
             $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape($AutoPilotScript)
         }
         if ($existing) {
-            $msg = "AutoPilot.ps1 is already Started. The process is ACTIVE!"
+            $msg = "⚛️ AutoPilot.ps1 is already Started. The process is ✅ ACTIVE!"
             $result += "$msg`n"
             Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
         } else {
             $shortcutPath = Join-Path $PSScriptRoot "Shortcuts\AutoPilot.lnk"
             if (Test-Path $shortcutPath) {
                 Start-Process $shortcutPath
-                $msg = "AutoPilot.ps1 Started successfully. AutoPilot is RUNNING."
+                $msg = "⚛️ AutoPilot.ps1 Started successfully. AutoPilot is ✅ RUNNING."
                 $result += "$msg`n"
                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
             } else {
-                $msg = "Shortcut AutoPilot.lnk not found!"
+                $msg = "Shortcut AutoPilot.lnk ⛔ not found!"
                 $result += "$msg`n"
                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
             }
         }
     } catch {
-        $msg = "Error executing Start-AutoPilot: $_"
+        $msg = "⚠️ Error executing Start-AutoPilot: $_"
         $result += "$msg`n"
         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
     }
@@ -681,23 +681,23 @@ function Stop-AutoPilot {
                 foreach ($proc in $existing) {
                     try {
                         Stop-Process -Id $proc.ProcessId -Force
-                        $result += "Process $($proc.ProcessId) has been Closed.`n"
+                        $result += "⚙️ Process $($proc.ProcessId) has been ❌ Closed.`n"
                         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Process $($proc.ProcessId) has been Closed."
                         $childProcs = Get-CimInstance Win32_Process -Filter "ParentProcessId=$($proc.ProcessId)" |
                                       Where-Object { $_.Name -eq "powershell.exe" -and $_.CommandLine -like "*.ps1*" }
                         foreach ($child in $childProcs) {
                             try {
                                 Stop-Process -Id $child.ProcessId -Force
-                                $result += "Child Processs $($child.ProcessId) of parent $($proc.ProcessId) has been Closed.`n"
+                                $result += "🧩 Child Processs $($child.ProcessId) of parent $($proc.ProcessId) has been ❌ Closed.`n"
                                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Child Process $($child.ProcessId) of parent $($proc.ProcessId) has been Closed."
                             } catch {
-                                $msg = "Cannot close the child process $($child.ProcessId): $_"
+                                $msg = "ℹ️ Cannot close the child process $($child.ProcessId): $_"
                                 $result += "$msg`n"
                                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                             }
                         }
                     } catch {
-                        $msg = "Cannot close the child process $($proc.ProcessId): $_"
+                        $msg = "ℹ️ Cannot close the child process $($proc.ProcessId): $_"
                         $result += "$msg`n"
                         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                     }
@@ -713,22 +713,22 @@ function Stop-AutoPilot {
                 try {
                     Stop-Process -Id $cam.Id -Force
                     $foundProcess = $true
-                    $result += "Camera.exe process $($cam.Id) has been Closed.`n"
+                    $result += "📸 Camera.exe process $($cam.Id) has been ❌ Closed.`n"
                     Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Camera.exe process $($cam.Id) has been Closed."
                 } catch {
-                    $msg = "Cannot close the Camera.exe process $($cam.Id): $_"
+                    $msg = "ℹ️ Cannot close the Camera.exe process $($cam.Id): $_"
                     $result += "$msg`n"
                     Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                 }
             }
         }
         if (-not $foundProcess) {
-            $msg = "AutoPilot and Monitoring are already STOPPED!"
+            $msg = "⚛️ AutoPilot and 📈 Monitoring are already ⏹️ STOPPED!"
             $result += "$msg`n"
             Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
         }
     } catch {
-        $msg = "Error executing Stop-AutoPilot: $_"
+        $msg = "⚠️ Error executing Stop-AutoPilot: $_"
         $result += "$msg`n"
         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
     }
@@ -757,12 +757,12 @@ function Restart-AutoPilotWithLog {
                 foreach ($proc in $existing) {
                     try {
                         Stop-Process -Id $proc.ProcessId -Force
-                        $msg = "Process $($proc.ProcessId) ($script) has been Closed."
+                        $msg = "⚙️ Process $($proc.ProcessId) ($script) has been ❌ Closed."
                         $result += "$msg`n"
                         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                         $killedProcesses += $msg
                     } catch {
-                        $msg = "Cannot close the process $($proc.ProcessId) ($script): $_"
+                        $msg = "ℹ️ Cannot close the process $($proc.ProcessId) ($script): $_"
                         $result += "$msg`n"
                         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                     }
@@ -778,11 +778,11 @@ function Restart-AutoPilotWithLog {
                 try {
                     Stop-Process -Id $cam.Id -Force
                     $foundProcess = $true
-                    $msg = "Camera.exe process $($cam.Id) has been Closed."
+                    $msg = "📸 Camera.exe process $($cam.Id) has been ❌ Closed."
                     $result += "$msg`n"
                     Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                 } catch {
-                    $msg = "Cannot close the Camera.exe process $($cam.Id): $_"
+                    $msg = "ℹ️ Cannot close the Camera.exe process $($cam.Id): $_"
                     $result += "$msg`n"
                     Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
                 }
@@ -791,28 +791,28 @@ function Restart-AutoPilotWithLog {
         if ($foundProcess) {
             if (-not (Test-Path $AutopilotFolder)) {
                 New-Item -ItemType Directory -Path $AutopilotFolder | Out-Null
-                $msg = "Create Autopilot_Data folder."
+                $msg = "Create Autopilot_Data 📁 folder."
                 $result += "$msg`n"
                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
             }
             $autoPilotLnk = Join-Path $PSScriptRoot "Shortcuts\AutoPilot.lnk"
             if (Test-Path $autoPilotLnk) {
                 Start-Process $autoPilotLnk
-                $msg = "AutoPilot Started Successfully."
+                $msg = "⚛️ AutoPilot Started ✅ Successfully."
                 $result += "$msg`n"
                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
             } else {
-                $msg = "AutoPilot.lnk not found!"
+                $msg = "Shortcut AutoPilot.lnk ⛔ not found!"
                 $result += "$msg`n"
                 Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
             }
         } else {
-            $msg = "AutoPilot and Monitoring are already STOPPED!"
+            $msg = "⚛ AutoPilot and 📈 Monitoring are already ⏹️ STOPPED!"
             $result += "$msg`n"
             Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
         }
     } catch {
-        $msg = "Error executing Restart-AutoPilotWithLog: $_"
+        $msg = "⚠️ Error executing Restart-AutoPilotWithLog: $_"
         $result += "$msg`n"
         Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
     }
@@ -857,9 +857,9 @@ function Task-Add {
     if ([string]::IsNullOrWhiteSpace($TaskName)) {
         $result = @(
             "==============================",
-            "TASK-CREATE ERROR",
-            "Time: $ts",
-            "TaskName is empty or null",
+            "🚩 TASK-CREATE ERROR",
+            "🕒 Time: $ts",
+            "➡️ TaskName is empty or null",
             "=============================="
         )
         $result -join "`n" | Add-Content -Path $Global:logPath
@@ -868,9 +868,9 @@ function Task-Add {
     if (-not (Test-Path $VbsPath)) {
         $result = @(
             "==============================",
-            "TASK-CREATE ERROR",
-            "Time: $ts",
-            "VBS file does not exist: $VbsPath",
+            "🚩 TASK-CREATE ERROR",
+            "🕒 Time: $ts",
+            "📑 VBS file does not exist: $VbsPath",
             "=============================="
         )
         $result -join "`n" | Add-Content -Path $Global:logPath
@@ -879,10 +879,10 @@ function Task-Add {
     if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
         $result = @(
             "==============================",
-            "TASK-CREATE INFO",
-            "Time: $ts",
-            "TaskName: $TaskName has already been Created",
-            "Auto-Start is already ENABLED",
+            "🚩 TASK-CREATE INFO",
+            "🕒 Time: $ts",
+            "➡️ TaskName: $TaskName has already been Created",
+            "✅ Auto-Start is already ENABLED",
             "=============================="
         )
         $result -join "`n" | Add-Content -Path $Global:logPath
@@ -899,22 +899,22 @@ function Task-Add {
                                -Force | Out-Null
         $result = @(
             "==============================",
-            "TASK-CREATE OK",
-            "Time: $ts",
-            "TaskName: $TaskName",
-            "VBS fajl: $VbsPath",
-            "Trigger: AtLogOn",
-            "Auto-Start is ENABLED",
+            "🚩 TASK-CREATE OK",
+            "🕒 Time: $ts",
+            "➡️ TaskName: $TaskName",
+            "📑 VBS fajl: $VbsPath",
+            "⚡ Trigger: AtLogOn",
+            "✅ Auto-Start is ENABLED",
             "=============================="
         )
     }
     catch {
         $result = @(
             "==============================",
-            "TASK-CREATE ERROR",
-            "Time: $ts",
-            "TaskName: $TaskName",
-            "Error: $_",
+            "🚩 TASK-CREATE ERROR",
+            "🕒 Time: $ts",
+            "➡️ TaskName: $TaskName",
+            "⚠️ Error: $_",
             "=============================="
         )
     }
@@ -933,20 +933,20 @@ function Task-Del {
             Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
             $result = @(
                 "==============================",
-                "TASK-DELETE OK",
-                "Time: $ts",
-                "TaskName: $TaskName delete",
-				"Auto-Start is DISABLED",
+                "🚩 TASK-DELETE OK",
+                "🕒 Time: $ts",
+                "➡️ TaskName: $TaskName delete",
+				"⛔ Auto-Start is DISABLED",
                 "=============================="
             )
         }
         else {
             $result = @(
                 "==============================",
-                "TASK-DELETE INFO",
-                "Time: $ts",
-                "TaskName: $TaskName does not Exist",
-				"Auto-Start is DISABLED",
+                "🚩 TASK-DELETE INFO",
+                "🕒 Time: $ts",
+                "➡️ TaskName: $TaskName does not Exist",
+				"⛔ Auto-Start is DISABLED",
                 "=============================="
             )
         }
@@ -954,10 +954,10 @@ function Task-Del {
     catch {
         $result = @(
             "==============================",
-            "TASK-DELETE ERROR",
-            "Time: $ts",
-            "TaskName: $TaskName",
-            "Error: $_",
+            "🚩 TASK-DELETE ERROR",
+            "🕒 Time: $ts",
+            "➡️ TaskName: $TaskName",
+            "⚠️ Error: $_",
             "=============================="
         )
     }
@@ -974,20 +974,20 @@ function Task-Show {
     if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
         $result = @(
             "==============================",
-            "TASK-SHOW",
-            "Time: $ts",
-            "TaskName: $TaskName EXISTS",
-			"Auto-Start is ENABLED",
+            "🚩 TASK-SHOW",
+            "🕒 Time: $ts",
+            "➡️ TaskName: $TaskName EXISTS",
+			"✅ Auto-Start is ENABLED",
             "=============================="
         )
     }
     else {
         $result = @(
             "==============================",
-            "TASK-SHOW",
-            "Time: $ts",
-            "TaskName: $TaskName NO EXISTS",
-			"Auto-Start is DISABLED",
+            "🚩 TASK-SHOW",
+            "🕒 Time: $ts",
+            "➡️ TaskName: $TaskName NO EXISTS",
+			"⛔ Auto-Start is DISABLED",
             "=============================="
         )
     }
@@ -1001,7 +1001,7 @@ function Auto-Shutdown-System {
         [string]$Time = (Get-Date -Format "HH:mm:ss")
     )
     Write-Log "The System is Shutdown now at $Time."
-    Send-TelegramMessage -Message "Automatic: The System will Shutdown in $Time"
+    Send-TelegramMessage -Message "🤖 Automatic: The System will ⛔ Shutdown in $Time"
     # Shutdown the system
     Stop-Computer -Force
 }
@@ -1012,7 +1012,7 @@ function Auto-Restart-System {
         [string]$Time = (Get-Date -Format "HH:mm:ss")
     )
     Write-Log "The System is Restart now at $Time."
-    Send-TelegramMessage -Message "Automatic: The System will Restart in $Time"
+    Send-TelegramMessage -Message "🤖 Automatic: The System will 🔄 Restart in $Time"
     # Restart the system
     Restart-Computer -Force
 }
@@ -1024,11 +1024,11 @@ function Pause-Script {
         # Create the pause flag
         New-Item -Path $Global:pauseFlagPath -ItemType File -Force | Out-Null
         # Telegram message
-        Send-TelegramMessage -Message "The Script is PAUSED. To Resume, send /resume"
+        Send-TelegramMessage -Message "AutoPilot is ⏸️ PAUSED. To Resume, send /resume"
         # Log
-        Write-Log "The Script is PAUSED"
+        Write-Log "AutoPilot is PAUSED"
     } else {
-        Send-TelegramMessage -Message "The script is already paused."
+        Send-TelegramMessage -Message "AutoPilot is already ⏸️ paused."
     }
 }
 
@@ -1042,28 +1042,28 @@ function Commands-ListAll {
 	$scrPath = "$PSScriptRoot\JSON\scripts_edit.json"
 	# ===== commands_edit.json =====
 	if (-not (Test-Path $cmdPath)) {
-		Send-TelegramMessage -Message " JSON file not found: $cmdPath"
+		Send-TelegramMessage -Message "⚠️ JSON file not found: $cmdPath"
 	} else {
 		try {
 			$cmdJson = Get-Content $cmdPath -Raw | ConvertFrom-Json
 			if (-not $cmdJson.AutoCommands -or $cmdJson.AutoCommands.PSObject.Properties.Count -eq 0) {
-				Send-TelegramMessage -Message " JSON Commands are empty."
+				Send-TelegramMessage -Message "⚠️ JSON Commands are empty."
 			}
 		} catch {
-			Send-TelegramMessage -Message " Error reading the Commands JSON."
+			Send-TelegramMessage -Message "⚠️ Error reading the Commands JSON."
 		}
 	}
 	# ===== scripts_edit.json =====
 	if (-not (Test-Path $scrPath)) {
-		Send-TelegramMessage -Message " JSON file not found: $scrPath"
+		Send-TelegramMessage -Message "⚠️ JSON file not found: $scrPath"
 	} else {
 		try {
 			$scrJson = Get-Content $scrPath -Raw | ConvertFrom-Json
 			if (-not $scrJson.ScheduledScripts -or $scrJson.ScheduledScripts.Count -eq 0) {
-				Send-TelegramMessage -Message " JSON Scripts are empty."
+				Send-TelegramMessage -Message "⚠️ JSON Scripts are empty."
 			}
 		} catch {
-			Send-TelegramMessage -Message " Error reading the Scripts JSON."
+			Send-TelegramMessage -Message "⚠️ Error reading the Scripts JSON."
 		}
 	}
     $timeline = @()
@@ -1084,13 +1084,13 @@ function Commands-ListAll {
 			}
 			# ===== STATUS ИСТ КАКО ПРВИОТ КОД =====
 			switch ($mode.ToLower()){
-				"fixed" { $status = "Interval: FIKS" }
-				"loop"  { $status = "Interval: LOOP" }
-				default { $status = "" }
-			}
+                "fixed" { $status = "𝐅𝐈𝐗𝐄𝐃" }
+                "loop"  { $status = "𝐋𝐎𝐎𝐏" }
+                default { $status = "" }
+            }
 			$timeline += [PSCustomObject]@{
 				Time = $dt
-				Text = "$status | SCRIPT ($([System.IO.Path]::GetFileName($scr.Path))) Command: $($scr.Commands[$i]) | Time: $timeStr | Delay: $($scr.DelaySeconds[$i]) sec | Repeat: $($scr.RepeatIntervalMinutes[$i]) min | Mode: $mode | Day: $dayStr"
+				Text = "$status  ⚛️ SCRIPT ($([System.IO.Path]::GetFileName($scr.Path))) Command: $($scr.Commands[$i])  🕓 Time: $timeStr 🌀 Delay: $($scr.DelaySeconds[$i]) sec  🔂 Repeat: $($scr.RepeatIntervalMinutes[$i]) min  🔃 Mode: $mode  📆 Day: $dayStr"
 			}
 		}
 	}
@@ -1126,10 +1126,10 @@ function Commands-ListAll {
 			}
 			# ===== STATUS =====
 			switch ($mode.ToLower()){
-				"fixed" { $status = "Interval: FIKS" }
-				"loop"  { $status = "Interval: LOOP" }
-				default { $status = "" }
-			}
+                "fixed" { $status = "𝐅𝐈𝐗𝐄𝐃" }
+                "loop"  { $status = "𝐋𝐎𝐎𝐏" }
+                default { $status = "" }
+            }
 			# ===== TYPE TEXT (исто како Load-Timeline) =====
 			switch ($type.ToLower()){
 				"daily"   { $typeText = "" }
@@ -1140,7 +1140,7 @@ function Commands-ListAll {
 			}
 			$timeline += [PSCustomObject]@{
 				Time = $dt
-				Text = "$status$typeText | AUTO COMMAND ($($cmd.Cmd)) | Time: $timeStr | Repeat: $($cmd.RepeatIntervalMinutes[$i]) min | Mode: $mode | Day: $dayStr"
+				Text = "$status$typeText  🅰️ AUTO COMMAND ($($cmd.Cmd))  🕓 Time: $timeStr  🔂 Repeat: $($cmd.RepeatIntervalMinutes[$i]) min  🔀 Type: $type  🔃 Mode: $mode  📆 Day: $dayStr"
 			}
 		}
 	}
@@ -1162,19 +1162,19 @@ function Commands-ListAll {
 	}).Count
     # ================= CREATE TELEGRAM MESSAGES =================
     $messages = @()
-    $currentMessage = "*Timeline Commands*`n"
-    $currentMessage += "Total: $totalCommands | Complete: $executedCommands | Remaing: $leaveCommands`n`n"
+    $currentMessage = "👩🏻‍💻 Timeline Commands`n"
+    $currentMessage += "📋 Total: $totalCommands  🔥 Complete: $executedCommands  🕤 Remaing: $leaveCommands`n`n"
     $counter = 1
     foreach($item in $timeline){
         $marker = ""
 			if ($prevItem -and $item.Time -eq $prevItem.Time -and $item.Text -eq $prevItem.Text) {
-				$marker = "[ * PREV * ]  -  "
+				$marker = "🟣🟣🟣  PREV ➤  "
 			}
 			elseif ($currentItem -and $item.Time -eq $currentItem.Time -and $item.Text -eq $currentItem.Text) {
-				$marker = "[ *** CURRENT *** ]  -  "
+				$marker = "🟢🟢🟢  LAST ➤  "
 			}
 			elseif ($nextItem -and $item.Time -eq $nextItem.Time -and $item.Text -eq $nextItem.Text) {
-				$marker = "[ * NEXT * ]  -  "
+				$marker = "🔵🔵🔵  NEXT ➤  "
 			}
 			$line = "$counter. $marker$($item.Text)`n"
         $line += "`n"  
@@ -1185,7 +1185,7 @@ function Commands-ListAll {
         $currentMessage += $line
         $counter++
     }
-	$currentMessage += "Total: $totalCommands | Complete: $executedCommands | Remaing: $leaveCommands`n`n"
+	$currentMessage += "📋 Total: $totalCommands  🔥 Complete: $executedCommands  🕤 Remaing: $leaveCommands`n`n"
     if ($currentMessage.Length -gt 0) { $messages += $currentMessage }
     # ================= SEND TO TELEGRAM =================
     foreach ($msg in $messages) {
@@ -1203,7 +1203,7 @@ function Show-CMDWindow {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape($scriptPS1)
     }
     if (-not $proc) {
-        Show-DarkWarning -Title "Info" -Message "AP Terminal is not Active."
+        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is not Active."
         return
     }
     # Проверка дали прозорецот е Hidden
@@ -1211,9 +1211,9 @@ function Show-CMDWindow {
         (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).MainWindowHandle 
     } | Where-Object { $_ -ne 0 } | Measure-Object | Select-Object -ExpandProperty Count
     if ($isHidden -gt 0) {
-        Show-DarkWarning -Title "Info" -Message "AP Terminal is already in *VISIBLE* mode."
+        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is already in *VISIBLE* mode."
     } else {
-        Show-DarkWarning -Title "AutoPilot Restart" -Message "Restarting AP Terminal in *VISIBLE* mode..."
+        Show-DarkWarning -Title "⚛️ AutoPilot Restart" -Message "Restarting AP Terminal in *VISIBLE* mode..."
         # === STOP ALL RELEVANT SCRIPTS / PROCESSES ===
         $scriptsToStop = @(
             "$PSScriptRoot\Autopilot.ps1",
@@ -1237,7 +1237,7 @@ function Show-CMDWindow {
         if (Test-Path $scriptLnk) {
             Start-Process -WindowStyle Normal -FilePath $scriptLnk
         } else {
-            Show-DarkWarning -Title "Error" -Message "AutoPilot.lnk not found!"
+            Show-DarkWarning -Title "⚠️ Error" -Message "AutoPilot.lnk ⛔ not found!"
         }
     }
 }
@@ -1251,7 +1251,7 @@ function Hide-CMDWindow {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape($scriptPS1)
     }
     if (-not $proc) {
-        Show-DarkWarning -Title "Info" -Message "AP Terminal is not Active.."
+        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is not Active.."
         return
     }
     # Проверка дали прозорецот е Hidden
@@ -1259,9 +1259,9 @@ function Hide-CMDWindow {
         (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).MainWindowHandle 
     } | Where-Object { $_ -ne 0 } | Measure-Object | Select-Object -ExpandProperty Count
     if ($isHidden -eq 0) {
-        Show-DarkWarning -Title "Info" -Message "AP Terminal is already in *HIDDEN* mode."
+        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is already in *HIDDEN* mode."
     } else {
-        Show-DarkWarning -Title "AutoPilot Restart" -Message "Restarting AP Terminal in *HIDDEN* mode..."
+        Show-DarkWarning -Title "⚛️ AutoPilot Restart" -Message "Restarting AP Terminal in *HIDDEN* mode..."
         # === STOP ALL RELEVANT SCRIPTS / PROCESSES ===
         $scriptsToStop = @(
             "$PSScriptRoot\Autopilot.ps1",
@@ -1285,7 +1285,7 @@ function Hide-CMDWindow {
         if (Test-Path $scriptLnk) {
             Start-Process -WindowStyle Hidden -FilePath $scriptLnk
         } else {
-            Show-DarkWarning -Title "Error" -Message "AutoPilot.lnk not found!"
+            Show-DarkWarning -Title "⚠️ Error" -Message "AutoPilot.lnk ⛔ not found!"
         }
     }
 }
@@ -1296,20 +1296,20 @@ function Dashboard-Open {
     $isRunning = Get-CimInstance Win32_Process |
                  Where-Object { $_.CommandLine -like "*AutoPilot.exe*" }
     if ($isRunning) {
-        $msg = "Dashboard is already Open. The process is ACTIVE!"
+        $msg = "👩🏾‍💻 Dashboard is already Open. The process is ✅ ACTIVE!"
 		Write-Host "Dashboard is already Open. The process is ACTIVE!" -ForegroundColor Yellow
 		Send-TelegramMessage -message $msg
         return
     }
     if (Test-Path $scriptPath) {
-		$msg = "Starting Dashboard..."
+		$msg = "Starting 👩🏾‍💻 Dashboard..."
         Write-Host "Starting Dashboard..." -ForegroundColor Cyan
         Start-Process `
             -FilePath "$scriptPath" `
             -WindowStyle Hidden
     }
     else {
-		$msg = "AutoPilot.exe not found!"
+		$msg = "AutoPilot.exe ⛔ not found!"
         Write-Host "AutoPilot.exe not found!" -ForegroundColor Red
     }
 	Send-TelegramMessage -message $msg
@@ -1320,14 +1320,14 @@ function Dashboard-Stop {
     $running = Get-CimInstance Win32_Process |
                Where-Object { $_.CommandLine -like "*AutoPilot.exe*" }
     if ($running) {
-		$msg = "Exit Dashboard..."
-        Write-Host "Exit Dashboard..." -ForegroundColor Cyan
+		$msg = "❌ Exit from  👩🏾‍💻 Dashboard..."
+        Write-Host "Exit from Dashboard..." -ForegroundColor Cyan
         foreach ($p in $running) {
             Stop-Process -Id $p.ProcessId -Force
         }
     }
     else {
-		$msg = "Dashboard is already EXIT!"
+		$msg = "👩🏾‍💻 Dashboard is already ❌ EXIT!"
         Write-Host "Dashboard is already EXIT!" -ForegroundColor Yellow
     }
 	Send-TelegramMessage -message $msg

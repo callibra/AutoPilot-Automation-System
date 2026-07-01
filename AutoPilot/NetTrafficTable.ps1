@@ -1,4 +1,4 @@
-##### NetTrafficTable #####
+﻿##### NetTrafficTable #####
 function Generate-TableGraph-Day   { return Generate-TableGraph -PeriodDays 1 }
 function Generate-TableGraph-Week  { return Generate-TableGraph -PeriodDays 7 }
 function Generate-TableGraph-Month { return Generate-TableGraph -PeriodDays 30 }
@@ -462,23 +462,23 @@ function Generate-TableGraph {
 
 	# --- Динамичен жолт текст за Period колона ---
 	switch ($PeriodDays) {
-		1   { $dynamicPeriod = "*Period - Day" }
+		1   { $dynamicPeriod = "📆 Period - Day" }
 		7   { 
 			$week = [CultureInfo]::InvariantCulture.Calendar.GetWeekOfYear(
 				(Get-Date),
 				[System.Globalization.CalendarWeekRule]::FirstFourDayWeek,
 				[DayOfWeek]::Monday
 			)
-			$dynamicPeriod = "*Period - Week"  # $week - Week Number
+			$dynamicPeriod = "📆 Period - Week"  # $week - Week Number
 		}
-		30  { $dynamicPeriod = "*Period - Month" }
-		365 { $dynamicPeriod = "*Period - Year" }
-		"All"{ $dynamicPeriod = "*Period - All" }
-		default { $dynamicPeriod = "Period" }
+		30  { $dynamicPeriod = "📆 Period - Month" }
+		365 { $dynamicPeriod = "📆 Period - Year" }
+		"All"{ $dynamicPeriod = "📆 Period - All" }
+		default { $dynamicPeriod = "📆 Period" }
 	}
 
-	$yellowFont = New-Object System.Drawing.Font("Segoe UI", 15, [System.Drawing.FontStyle]::Bold)
-	$yellowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+	$yellowFont = New-Object System.Drawing.Font("Segoe UI Emoji", 15, [System.Drawing.FontStyle]::Bold)
+	$yellowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(253, 255, 0))
 
 	$g.DrawString($dynamicPeriod, $yellowFont, $yellowBrush, $periodTableX + 10, $periodTableY + 5)
 
@@ -525,11 +525,18 @@ function Generate-TableGraph {
     $tableX = 50
     $tableY = $y + 20
     $colWidths = @(200,160,160,160)
-    $headers = @("*Interface","Download","Upload","Total")
+    $headerStrongFont = New-Object System.Drawing.Font("Segoe UI Emoji",15,[System.Drawing.FontStyle]::Bold)  # Emoji Fond
+    $headerStrongBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(253, 255, 0))  # Emoji Color
+    $headers = @("📶 Interface","Download","Upload","Total")
     $g.FillRectangle($headerBrush, $tableX, $tableY, ($colWidths | Measure-Object -Sum).Sum, $headerHeight)
     $x = $tableX
     for ($i=0; $i -lt $headers.Count; $i++) {
-        $g.DrawString($headers[$i], $headerFont, $whiteBrush, $x+10, $tableY+5)
+        if ($i -eq 0) {
+        $g.DrawString($headers[$i], $headerStrongFont, $headerStrongBrush, $x+10, $tableY+5)
+		}
+		else {
+			$g.DrawString($headers[$i], $headerFont, $whiteBrush, $x+10, $tableY+5)  # Only This Line
+		}
         $x += $colWidths[$i]
     }
 
@@ -569,15 +576,20 @@ function Generate-TableGraph {
         $colWidthsSummary = @(200,160,160,160)
         $summaryHeaderHeight = 40
         $summaryRowHeight = 40
-        $summaryHeader = @("*All Data","Download","Upload","*Total")
+        $summaryHeader = @("💾 All Data","Download","Upload","Total")
 
         # Header
         $g.FillRectangle($headerBrush, $summaryTableX, $summaryTableY, ($colWidthsSummary | Measure-Object -Sum).Sum, $summaryHeaderHeight)
         $x = $summaryTableX
         for ($i=0; $i -lt $summaryHeader.Count; $i++) {
-            $g.DrawString($summaryHeader[$i], $headerFont, $whiteBrush, $x+10, $summaryTableY+5)
-            $x += $colWidthsSummary[$i]
-        }
+            if ($i -eq 0) {
+			$g.DrawString($summaryHeader[$i], $headerStrongFont, $headerStrongBrush, $x+10, $summaryTableY+5)
+			}
+			else {
+				$g.DrawString($summaryHeader[$i], $headerFont, $whiteBrush, $x+10, $summaryTableY+5)  # Only This Line
+			}
+			$x += $colWidthsSummary[$i]
+		}
 
         # Rows
 		$y = $summaryTableY + $summaryHeaderHeight
@@ -621,8 +633,8 @@ function Generate-TableGraph {
 			$y += $summaryRowHeight
 		}
 		# === Footer ред со gradient и фиксен бел текст ===
-		$footerText = "*Traffic Data  $(Get-Date -Format 'dddd, dd MMMM yyyy - HH:mm:ss')" # ден, месец со име, година, час:мин:сек
-		$footerFont = New-Object System.Drawing.Font("Segoe UI", 13, [System.Drawing.FontStyle]::Regular)
+		$footerText = "🌐 Traffic Data  $(Get-Date -Format 'dddd, dd MMMM yyyy - HH:mm:ss')" # ден, месец со име, година, час:мин:сек
+		$footerFont = New-Object System.Drawing.Font("Segoe UI Emoji", 13, [System.Drawing.FontStyle]::Bold)
 		$footerRowHeight = 40
 
 		# Случајни бои за gradient (без да бидат премногу светли)
