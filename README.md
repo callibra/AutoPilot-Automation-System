@@ -177,7 +177,22 @@ AutoPilot is a **lightweight, secure, and fully automated system** for:
 
 ✔ Windows monitoring & server automation  
 ✔ Pi Node mining optimization  
+
 ✔ Remote system control via Telegram Bot  
 ✔ Efficient hardware resource management (<1% usage)  
 
 Combines scripts, commands, monitoring, and remote access into a single platform.
+
+## 🖼️ AutoPilot Dashboard Mod 1
+
+<img width="1920" height="1080" alt="das_2" src="https://github.com/user-attachments/assets/b7d23f8e-98f7-4aeb-a021-4a06f055fb4a" />
+
+## 🖼️ AutoPilot Dashboard Mod 2
+
+<img width="1920" height="1080" alt="das_3" src="https://github.com/user-attachments/assets/587567ae-abbf-404c-9b8d-f06c622ed152" />
+
+## 🖼️ AutoPilot Dashboard Mod 3
+
+<img width="1920" height="1080" alt="das_1" src="https://github.com/user-attachments/assets/6946d426-9867-4313-b652-c67989ad6ec0" />
+
+                                                        AutoPilot Automation System
