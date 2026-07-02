@@ -194,5 +194,3 @@ Combines scripts, commands, monitoring, and remote access into a single platform
 ## 🖼️ AutoPilot Dashboard Mod 3
 
 <img width="1920" height="1080" alt="das_1" src="https://github.com/user-attachments/assets/6946d426-9867-4313-b652-c67989ad6ec0" />
-
-                                                        AutoPilot Automation System
