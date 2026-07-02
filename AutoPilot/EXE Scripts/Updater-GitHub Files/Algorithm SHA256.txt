@@ -1,0 +1,1 @@
+Get-FileHash .\settings.json -Algorithm SHA256

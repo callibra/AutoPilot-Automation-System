@@ -596,7 +596,6 @@ write_audit_log(f"✅ DATA Server has started Running...")
 app.run_polling()
 
 ######################################################################## Camera Script End.
-
 # C:\Users\*****\AppData\Local\Python\pythoncore-x.xx-xx\Scripts - Path
 
 # C:\Users\*****\AppData\Local\Python\bin - Path
@@ -608,15 +607,8 @@ app.run_polling()
 
 # pip install opencv-python
 
-# pip install python-dotenv
-
-
 ############ .EXE COMPYLER  Install  ##############
 # pip install pyinstaller ttkbootstrap pillow ZA.EXE FILE COMPILER
-
-# python -m pip install --upgrade pip setuptools wheel  ZA.EXE FILE COMPILER
-
-# python -m pip install pyinstaller  ZA.EXE FILE COMPILER
 
 # pyinstaller --noconsole --onefile --windowed --add-data "media;media" --add-data "JSON;JSON" CommandsEditor.py  - CommandsEditor.exe
 

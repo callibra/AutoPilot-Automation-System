@@ -1069,17 +1069,11 @@ root.mainloop()
 
 ################################################################################################################### End CommandEditor.
 
-
 ############  PIP Install  ##############
 # pip install ttkbootstrap pillow
 
-
 ############ .EXE COMPYLER  Install  ##############
 # pip install pyinstaller ttkbootstrap pillow ZA.EXE FILE COMPILER
-
-# python -m pip install --upgrade pip setuptools wheel  ZA.EXE FILE COMPILER
-
-# python -m pip install pyinstaller  ZA.EXE FILE COMPILER
 
 # pyinstaller --noconsole --onefile --windowed --add-data "media;media" --add-data "JSON;JSON" CommandsEditor.py  - CommandsEditor.exe
 
