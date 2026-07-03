@@ -112,6 +112,12 @@ def open_json_table():
     columns = ["⚛️ Script", "🆔 Row", "⚙️ Command", "🕓 Time", "🌀 Delay", "🔂 Repeat", "🔃 Mode", "📆 Day"]
     tree = ttk.Treeview(table_win, columns=columns, show="headings")
     tree.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    # --- Vertical Scrollbar ---
+    vsb = ttk.Scrollbar(table_win, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=vsb.set)
+    vsb.pack(side="right", fill="y")
+    tree.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
     # --- Apply style AFTER widget is mapped ---
     style = ttk.Style(table_win)
