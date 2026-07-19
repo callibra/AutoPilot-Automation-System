@@ -298,7 +298,7 @@
       "Day": [""]
     },
     "/pauseAP": {
-      "Cmd": "Pause-Script",
+      "Cmd": "Pause-AutoPilot",
       "Description": "Automation command to Pause AutoPilot",
       "Times": ["20:55:00"],
       "RepeatIntervalMinutes": [0],

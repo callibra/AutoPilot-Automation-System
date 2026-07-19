@@ -1018,7 +1018,7 @@ function Auto-Restart-System {
 }
 
 # Function to Pause AutoPilot
-function Pause-Script {
+function Pause-AutoPilot {
     if (-not $global:scriptPaused) {
         $global:scriptPaused = $true
         # Create the pause flag

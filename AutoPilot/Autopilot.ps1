@@ -553,7 +553,7 @@ $ManualCommands = @{
 	"/start"              = @{ Cmd = "Show-HelpMenu" }
 	"/shutdownPC"         = @{ Cmd = "Auto-Shutdown-System" }
 	"/restartPC"          = @{ Cmd = "Auto-Restart-System" }
-	"/pauseAP"            = @{ Cmd = "Pause-Script" }
+	"/pauseAP"            = @{ Cmd = "Pause-AutoPilot" }
 	"/resetAP"            = @{ Cmd = "Reset-AutoPilot" }
 	# Recordings commands
 	"/screen"             = @{ Cmd = "Take-Screenshot" }
