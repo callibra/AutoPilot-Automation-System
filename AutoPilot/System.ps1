@@ -1000,7 +1000,7 @@ function Auto-Shutdown-System {
     param(
         [string]$Time = (Get-Date -Format "HH:mm:ss")
     )
-    Write-Log "The System is Shutdown now at $Time."
+    Write-Log "Automatic command: The System is Shutdown now at $Time."
     Send-TelegramMessage -Message "🤖 Automatic: The System will ⛔ Shutdown in $Time"
     # Shutdown the system
     Stop-Computer -Force
@@ -1011,7 +1011,7 @@ function Auto-Restart-System {
     param(
         [string]$Time = (Get-Date -Format "HH:mm:ss")
     )
-    Write-Log "The System is Restart now at $Time."
+    Write-Log "Automatic command: The System is Restart now at $Time."
     Send-TelegramMessage -Message "🤖 Automatic: The System will 🔄 Restart in $Time"
     # Restart the system
     Restart-Computer -Force
@@ -1024,12 +1024,21 @@ function Pause-Script {
         # Create the pause flag
         New-Item -Path $Global:pauseFlagPath -ItemType File -Force | Out-Null
         # Telegram message
-        Send-TelegramMessage -Message "AutoPilot is ⏸️ PAUSED. To Resume, send /resume"
+        Send-TelegramMessage -Message "🤖 Automatic: AutoPilot is ⏸️ Paused. To Resume, send /resume"
         # Log
-        Write-Log "AutoPilot is PAUSED"
+        Write-Log "Automatic command: AutoPilot is Paused..."
     } else {
-        Send-TelegramMessage -Message "AutoPilot is already ⏸️ paused."
+        Send-TelegramMessage -Message "🤖 Automatic: AutoPilot is already ⏸️ Paused."
     }
+}
+
+# Function to Reset AutoPilot
+function Reset-AutoPilot {
+    Send-TelegramMessage -message "🤖 Automatic: AutoPilot is 🔄 Restarting..."
+    Write-Log "Automatic command: AutoPilot is Restarting..."
+    Stop-WorkerScripts
+    Start-Process -WindowStyle Hidden -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSScriptRoot\Autopilot.ps1`""
+    Stop-Process -Id $PID
 }
 
 # Function Commands List ALL

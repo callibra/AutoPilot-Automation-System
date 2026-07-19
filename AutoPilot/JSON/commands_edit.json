@@ -305,6 +305,15 @@
       "Type": [],
       "Mode": [],
       "Day": []
+    },
+    "/resetAP": {
+      "Cmd": "Reset-AutoPilot",
+      "Description": "Automation command to Reset AutoPilot",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
     }
   }
 }

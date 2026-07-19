@@ -554,6 +554,7 @@ $ManualCommands = @{
 	"/shutdownPC"         = @{ Cmd = "Auto-Shutdown-System" }
 	"/restartPC"          = @{ Cmd = "Auto-Restart-System" }
 	"/pauseAP"            = @{ Cmd = "Pause-Script" }
+	"/resetAP"            = @{ Cmd = "Reset-AutoPilot" }
 	# Recordings commands
 	"/screen"             = @{ Cmd = "Take-Screenshot" }
 	"/record"             = @{ Cmd = "Take-ScreenRecord" }
@@ -926,12 +927,12 @@ try {
 
 # === START TRAFFIC MONITORING ===
 if ($TrafficMonitorAutoStart) {
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $timestamp = Get-Date -Format '📆 yyyy-MM-dd 🕒 HH:mm:ss'
     if (-not (Test-Path ($DataFolder = Join-Path $PSScriptRoot "Data"))) {
         New-Item $DataFolder -ItemType Directory -Force | Out-Null
     }
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\TrafficMonitorWorker.ps1`"" -WindowStyle Hidden
-    Send-TelegramMessage "🌍 Network Monitoring is Starting at $timestamp. TrafficMonitorWorker has Started."
+    Send-TelegramMessage "🌍 Network Monitoring is Starting at: $timestamp. TrafficMonitorWorker has ✅ Started."
 }
 
 # === START MONITORING ===
@@ -939,7 +940,7 @@ function Start-Monitoring {
     $existing = Get-WmiObject Win32_Process | Where-Object {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match "SystemMonitorWorker\.ps1"
     }
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $timestamp = Get-Date -Format '📆 yyyy-MM-dd 🕒 HH:mm:ss'
     # --- Fixed flag file paths ---
     $monitoringStartFlag = "$Global:monitoringLogsFolder\monitoring_start.flag"
     # --- Ako worker proces postoi → ne startuvaj ---
@@ -964,7 +965,7 @@ function Start-Monitoring {
     } else {
         Write-MonitoringLog "ERROR: SystemMonitorWorker process cannot be started!" -NoDisplay
     }
-    $msg = "📈 System Monitoring is Starting at $timestamp. SystemMonitorWorker has Started."
+    $msg = "📈 System Monitoring is Starting at: $timestamp. SystemMonitorWorker has ✅ Started."
     Write-MonitoringLog $msg -NoDisplay
     Send-TelegramMessage $msg
 }
@@ -3037,7 +3038,7 @@ Write-Log "===============================" -Display
 
 if ($AutoPilotTelegramEnabled) {
     $hostname = $env:COMPUTERNAME
-    $startTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $startTime = Get-Date -Format "📆 yyyy-MM-dd 🕒 HH:mm:ss"
     $message = "✅ AutoPilot started...`n🕒 Time: $startTime`n🔂 Maximum repetitions: $maxRuns`n📆 Day: $(Get-Date -Format 'dddd')"
     Send-TelegramMessage -message $message
 }
@@ -3439,7 +3440,7 @@ Write-Host ""
 Write-Log "=== END OF AUTOPILOT ===" -Display
 Write-Host ""
 if ($AutoPilotTelegramEnabled) {
-    $endTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $endTime = Get-Date -Format "📆 yyyy-MM-dd 🕒 HH:mm:ss"
     $duration = ((Get-Date) - $scriptStartTime).ToString("hh\:mm\:ss")
     $message = "🏁 AutoPilot has Finished...`n🕒 End: $endTime`n⏳ Execution time: $duration`n🔂 Repetitions: $($r - 1)"
 	Write-Host "AutoPilot has Finished...`nEnd: $endTime`nExecution time: $duration`nRepetitions: $($r - 1)" -ForegroundColor DarkGreen

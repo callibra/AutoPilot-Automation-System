@@ -305,6 +305,15 @@
       "Type": "yearly",
       "Mode": ["loop"],
       "Day": [""]
+    },
+	"/resetAP": {
+      "Cmd": "Reset-AutoPilot",
+      "Description": "Automation command to Reset AutoPilot",
+      "Times": ["20:56:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
     }
   }
 }
