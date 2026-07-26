@@ -769,22 +769,27 @@ function Start-SingleInstanceExe {
     param (
         [string]$ExePath,
         [string]$ProcessName,
-        [string]$DisplayName
+        [string]$DisplayName,
+		[string]$StartTitle,
+        [string]$StartMessage
     )
     $running = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
     if ($running) {
         Show-DarkWarning `
-            -Title "Information" `
-            -Message "$DisplayName already open."
+            -Title "ℹ️ Information" `
+            -Message "⚠️ $DisplayName already open."
         return
     }
     if (Test-Path $ExePath) {
+		Show-DarkWarning `
+            -Title $StartTitle `
+            -Message $StartMessage
         Start-Process -FilePath $ExePath -WindowStyle Normal
     }
     else {
         Show-DarkWarning `
-            -Title "Error" `
-            -Message "$DisplayName not found!`nPath=`"$ExePath`""
+            -Title "⚠️ Error" `
+            -Message "⛔ $DisplayName not found!`nPath= $ExePath"
     }
 }
 
@@ -1843,10 +1848,12 @@ $btnScripts_Editor.Add_Click({
     } else {
         Join-Path (Get-Location) $exeName
     }
-    Start-SingleInstanceExe `
-        -ExePath $editorPath `
-        -ProcessName $processName `
-        -DisplayName "Scripts Editor"
+	Start-SingleInstanceExe `
+		-ExePath $editorPath `
+		-ProcessName $processName `
+		-DisplayName "Scripts Editor" `
+		-StartTitle "📝 Scripts Editor Started" `
+		-StartMessage "✏️ Edit Scripts Commands!"
 })
 
 # ===================== AutoPilot COMMANDS EDITOR =====================
@@ -1864,10 +1871,12 @@ $btnCommands_Editor.Add_Click({
     } else {
         Join-Path (Get-Location) $exeName
     }
-    Start-SingleInstanceExe `
-        -ExePath $editorPath `
-        -ProcessName $processName `
-        -DisplayName "Commands Editor"
+	Start-SingleInstanceExe `
+		-ExePath $editorPath `
+		-ProcessName $processName `
+		-DisplayName "Commands Editor" `
+		-StartTitle "📝 Commands Editor Started" `
+		-StartMessage "✏️ Edit Automation Commands!"
 })
 
 # ===================== AutoPilot Media Bot ENABLED / DISABLED =====================
@@ -3611,29 +3620,49 @@ Show-DarkWarning `
 })
 $window.FindName("btnTask_show").Add_Click({ Invoke-ManualCommand "/task-show" })
 $window.FindName("btnSettings").Add_Click({
-    Show-DarkWarning -Title "⚙️ AutoPilot Settings" -Message "Changes in this SETTINGS Block will become active after 🔄 Refreshing AutoPilot!"
     $exePath = "$AppRoot\Settings.exe"
+    if (Get-Process -Name "Settings" -ErrorAction SilentlyContinue) {
+        Show-DarkWarning -Title "⚙️ AutoPilot Settings" -Message "⚠️ Settings.exe is already running!"
+        return
+    }
+    Show-DarkWarning -Title "⚙️ AutoPilot Settings" -Message "Changes in this SETTINGS Block will become active after 🔄 Refreshing AutoPilot!"
     if (Test-Path $exePath) {
         Start-Process $exePath
     } else {
-        [Windows.Forms.MessageBox]::Show("Settings.exe not found!","Error")
+        Show-DarkWarning `
+            -Title "⚠️ Error" `
+            -Message "⛔ Settings.exe not found!`nPath: $exePath"
     }
 })
 $window.FindName("btnSettingsScripts").Add_Click({
-    Show-DarkWarning -Title "📝 Scripts Settings" -Message "Changes in this SCRIPTS SETTINGS Block will take effect after 🔄 Refreshing AutoPilot!"
     $exePath = "$AppRoot\SettingsScripts.exe"
+    if (Get-Process -Name "SettingsScripts" -ErrorAction SilentlyContinue) {
+        Show-DarkWarning -Title "📝 Scripts Settings" -Message "⚠️ SettingsScripts.exe is already running!"
+        return
+    }
+    Show-DarkWarning -Title "📝 Scripts Settings" -Message "Changes in this SCRIPTS SETTINGS Block will take effect after 🔄 Refreshing AutoPilot!"
     if (Test-Path $exePath) {
         Start-Process $exePath
     } else {
-        [Windows.Forms.MessageBox]::Show("ScriptsSettings.exe not found!","Error")
+        Show-DarkWarning `
+            -Title "⚠️ Error" `
+            -Message "⛔ SettingsScripts.exe not found!`nPath: $exePath"
     }
 })
 $window.FindName("btnSystem_Data").Add_Click({
     $exePath = "$AppRoot\Data.exe"
+    if (Get-Process -Name "Data" -ErrorAction SilentlyContinue) {
+        Show-DarkWarning -Title "🛢️ AutoPilot Data System" -Message "⚠️ Data.exe is already running!"
+        return
+    }
+    Show-DarkWarning -Title "🛢️ AutoPilot Data System" -Message "All Hardware and Traffic System Data!"
     if (Test-Path $exePath) {
         Start-Process $exePath
-    } else {
-        [Windows.Forms.MessageBox]::Show("Data.exe not found!","Error")
+    }
+    else {
+        Show-DarkWarning `
+            -Title "⚠️ Error" `
+            -Message "⛔ Data.exe not found!`nPath: $exePath"
     }
 })
 $window.FindName("btnShowCmd").Add_Click({ Invoke-ManualCommand "/show_cmd" })
