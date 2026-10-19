@@ -189,8 +189,94 @@ Combines scripts, commands, monitoring, and remote access into a single platform
 
 ## 🖼️ AutoPilot Dashboard Mod 2
 
-<img width="1920" height="1080" alt="das_3" src="https://github.com/user-attachments/assets/587567ae-abbf-404c-9b8d-f06c622ed152" />
+<img width="1920" height="1080" alt="das" src="https://github.com/user-attachments/assets/aa16a266-1e06-4aa4-876f-793d9ac8064a" />
 
 ## 🖼️ AutoPilot Dashboard Mod 3
 
 <img width="1920" height="1080" alt="das_1" src="https://github.com/user-attachments/assets/6946d426-9867-4313-b652-c67989ad6ec0" />
+
+## 🖼️ AutoPilot Dashboard Mod 4
+
+<img width="1920" height="1080" alt="das2" src="https://github.com/user-attachments/assets/cead4076-c989-4a53-a576-4b55e4f38bab" />
+
+## 🖼️ AutoPilot Dashboard Mod 5
+
+<img width="1920" height="1080" alt="das3" src="https://github.com/user-attachments/assets/2175b4e4-8134-40bc-8385-e3873ec9b2c8" />
+
+## 🖼️ AutoPilot Dashboard Theme 1
+
+<img width="1920" height="1080" alt="das4" src="https://github.com/user-attachments/assets/6dbdbe7e-f245-475d-af2b-40f9842d6ab3" />
+
+## 🖼️ AutoPilot Dashboard Theme 2
+
+<img width="1920" height="1080" alt="das5" src="https://github.com/user-attachments/assets/10156433-8802-44c4-9269-f6d8a12b3c2d" />
+
+## 🖼️ AutoPilot Dashboard Pause 
+
+<img width="1920" height="1080" alt="das6" src="https://github.com/user-attachments/assets/7a6ead03-fce2-4931-8191-f06d7f9ebbc6" />
+
+## 🖼️ AutoPilot Dashboard Stop
+
+<img width="1920" height="1080" alt="das7" src="https://github.com/user-attachments/assets/ace5d811-5d08-4822-a034-dec9f79a0a88" />
+
+## 🖼️ AutoPilot Dashboard Commands List
+
+<img width="1920" height="1080" alt="das8" src="https://github.com/user-attachments/assets/152ba954-ccca-469d-a2bb-11d72d9e23f9" />
+
+## 🖼️ AutoPilot Dashboard with CMD
+
+<img width="1920" height="1080" alt="das9" src="https://github.com/user-attachments/assets/cd69c22b-2f87-42d2-9903-4d8166206bbc" />
+
+## 🖼️ AutoPilot Settings
+
+<img width="1920" height="1080" alt="das10" src="https://github.com/user-attachments/assets/a52c4463-3996-41ef-9651-fcc8dfba320d" />
+
+## 🖼️ AutoPilot Scripts Settings
+
+<img width="1920" height="1080" alt="das11" src="https://github.com/user-attachments/assets/aa2eef29-d8cb-4eda-9ddf-9f27d3cb34af" />
+
+## 🖼️ AutoPilot Scripts Commands Editor
+
+<img width="1920" height="1080" alt="das12" src="https://github.com/user-attachments/assets/73819f66-2a31-4303-8669-95c77b040f80" />
+
+## 🖼️ AutoPilot Automation Commands Editor
+
+<img width="1920" height="1080" alt="das13" src="https://github.com/user-attachments/assets/67c4153a-6b4f-4577-bd59-c4c1f3cd50a3" />
+
+## 🖼️ AutoPilot Data System 1
+
+<img width="1920" height="1080" alt="das14" src="https://github.com/user-attachments/assets/f20cae37-70af-454f-a12b-793b9e3fb344" />
+
+## 🖼️ AutoPilot Data System 2
+
+<img width="1920" height="1080" alt="das15" src="https://github.com/user-attachments/assets/8bb1593c-caad-4983-9f9d-ab8a7cec1e39" />
+
+## 🖼️ AutoPilot VLC Player
+
+<img width="1920" height="1080" alt="das16" src="https://github.com/user-attachments/assets/1419769f-43d8-40af-bd4b-0f1e2fd1934c" />
+
+## 🖼️ AutoPilot Scipts
+
+<img width="1920" height="1080" alt="das17" src="https://github.com/user-attachments/assets/5544fcdf-2605-447f-baa3-29600100e395" />
+
+## 🖼️ AutoPilot CMD
+
+<img width="1920" height="1080" alt="terminal" src="https://github.com/user-attachments/assets/ca67651e-4ccb-4194-a296-bf70ddbc9d9e" />
+
+<h1 align="center">
+  ⚛️ AutoPilot Automation System
+</h1>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
