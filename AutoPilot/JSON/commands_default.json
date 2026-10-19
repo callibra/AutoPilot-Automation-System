@@ -314,6 +314,42 @@
       "Type": "yearly",
       "Mode": ["loop"],
       "Day": [""]
+    },
+	"/vlc_play": {
+      "Cmd": "Play-Radio",
+      "Description": "Starts the selected VLC radio station",
+      "Times": ["22:57:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/vlc_stop": {
+      "Cmd": "Stop-Radio",
+      "Description": "Stops VLC player",
+      "Times": ["23:00:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/vlc_next": {
+      "Cmd": "Next-Radio",
+      "Description": "Plays the next VLC radio station",
+      "Times": ["22:58:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
+    },
+    "/vlc_prev": {
+      "Cmd": "Prev-Radio",
+      "Description": "Plays the previous VLC radio station",
+      "Times": ["22:59:00"],
+      "RepeatIntervalMinutes": [0],
+      "Type": "yearly",
+      "Mode": ["loop"],
+      "Day": [""]
     }
   }
 }

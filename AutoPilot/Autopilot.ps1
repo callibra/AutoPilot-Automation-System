@@ -98,6 +98,14 @@ try {
     exit
 }
 
+# ===================== Scripts Fixed Commands In/Out LOOP (ON/OFF) =====================
+if ($null -ne $config.FIXED_NO_BLOCK_CYCLE) {
+    $fixedNoBlockCycle = [bool]$config.FIXED_NO_BLOCK_CYCLE
+}
+else {
+    $fixedNoBlockCycle = $false
+}
+
 # ================= HELPER FUNCTIONS =================
 function Get-IntConfigValue([PSCustomObject]$cfg, [string]$name, [int]$default) {
     if ($cfg.PSObject.Properties.Name -contains $name -and [int]::TryParse($cfg.$name,[ref]$null)) {
@@ -248,8 +256,6 @@ $global:scriptStopped = $false
 $global:scriptPaused = $false
 $global:confirmationRequests = @{}
 $lastUpdateId = 0
-$global:CurrentStationIndex = 0
-$global:VLCProcess = $null
 
 # --- Anti-spam alarm rate-limit 
 if (-not $global:LastAuditAlert) { $global:LastAuditAlert = @{} }
@@ -266,6 +272,7 @@ $global:commandsExecuted = @{}
 . "$PSScriptRoot\Media.ps1"
 . "$PSScriptRoot\NetTrafficTable.ps1"
 . "$PSScriptRoot\System.ps1"
+. "$PSScriptRoot\Vlc.ps1"
 
 # 🟩 INICIJALIZACIJA NA LOGOVI ZA AUTOPILOT Main ***
 $Global:logDate = Get-Date -Format 'yyyy-MM-dd'
@@ -301,18 +308,6 @@ if (-not (Test-Path $Global:updaterLogsFolder)) {
 }
 # 📄 Лог фајл за UPDATER (фиксно име)
 $Global:updaterLogFile = "$Global:updaterLogsFolder\Updater.log"
-
-# --- Vlc radio station
-$vlcPath = "C:\Program Files\VideoLAN\VLC\vlc.exe"
-# Радио станици
-$global:RadioStations = @(
-    "http://hirschmilch.de:7000/techno.mp3",
-    "http://hirschmilch.de:7000/psytrance.mp3",
-    "http://hirschmilch.de:7000/progressive.mp3",
-	"http://hirschmilch.de:7000/prog-house.mp3",
-    "http://hirschmilch.de:7000/electronic.mp3",
-    "http://hirschmilch.de:7000/chillout.mp3"
-)
 
 # --- Avtomatski komandi ---
 function Load-AutoCommandsFromJson {
@@ -351,6 +346,7 @@ function Load-AutoCommandsFromJson {
 		if ($command.PSObject.Properties.Name -contains "Day" -and
 			$command.Day -and
 			$command.Day.Count -gt 0) {
+			$rawDays = @($command.Day)
 			for ($i = 0; $i -lt $command.Day.Count; $i++) {
 				if (-not [string]::IsNullOrWhiteSpace($command.Day[$i])) {
 					# Formatiraj datum da se osiguraju 2 cifri za mesec i dan
@@ -372,6 +368,7 @@ function Load-AutoCommandsFromJson {
             Times = $timesArray
             RepeatIntervalMinutes = $repeatArray
             Type = $command.Type
+			Mode = @($command.Mode)
             Day = $dayArray
         }
     }
@@ -398,7 +395,6 @@ $global:CommandToImagePath = @{
     "Generate-DiskGraph-Month"  = Join-Path $AppRoot "Data\disk_30d.png"
     "Generate-DiskGraph-Year"   = Join-Path $AppRoot "Data\disk_365d.png"
 	"Generate-DiskGraph-All"    = Join-Path $AppRoot "Data\disk_Alld.png"
-
 	"Take-Screenshot"           = Join-Path $AppRoot "Screenshot\screenshot.png"
 
 	# Table Network Traffic
@@ -445,23 +441,6 @@ foreach ($script in $config.ScheduledScripts) {
         RepeatIntervalMinutes = $script.RepeatIntervalMinutes
         Mode = $script.Mode
         Day = $script.Day
-    }
-    # Popuni Day array samo ako JSON ima vrednosti
-    for ($i = 0; $i -lt $script.Commands.Count; $i++) {
-        if ($script.PSObject.Properties.Name -contains "Day" -and
-            $script.Day -and
-            $script.Day.Count -gt $i -and
-            -not [string]::IsNullOrWhiteSpace($script.Day[$i])) {
-            # Formatiraj datum da se osiguraju 2 cifri za mesec i dan
-            $parts = $script.Day[$i] -split "-"
-            $year = $parts[0]
-            $month = "{0:D2}" -f [int]$parts[1]
-            $day = "{0:D2}" -f [int]$parts[2]
-            $ScheduledScripts[-1].Day += "$year-$month-$day"
-        }
-        else {
-            # Empty
-        }
     }
 }
 
@@ -610,6 +589,7 @@ $ManualCommands = @{
     "/vlc_stop"   = @{ Cmd = "Stop-VLC" }
     "/vlc_next"   = @{ Cmd = "Next-Station" }
     "/vlc_prev"   = @{ Cmd = "Prev-Station" }
+	"/vlc_list"   = @{ Cmd = "Vlc-List" }
     "/vlc_status" = @{ Cmd = "VLC-Status" }
 }
 # 📌 Vreme na start na skriptata (za trajanje)
@@ -653,7 +633,7 @@ function Write-Log {
     Update-LogPath
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "$timestamp - $Message"
-    Add-Content -Path $Global:logPath -Value $logMessage
+    Add-Content -Path $Global:logPath -Value $logMessage -Encoding UTF8
 
     if ($Display) {
         Write-Host $Message -ForegroundColor Green
@@ -677,7 +657,8 @@ function Write-MonitoringLog {
             [System.IO.FileAccess]::Write,
             [System.IO.FileShare]::ReadWrite
         )
-        $sw = New-Object System.IO.StreamWriter($fs)
+        $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+        $sw = [System.IO.StreamWriter]::new($fs, $utf8NoBom)
         $sw.WriteLine($logMessage)
         $sw.Close()
         $fs.Close()
@@ -1046,6 +1027,7 @@ function Get-MonitoringStatus {
 function Check-AutoCommands {
     if ($global:scriptStopped) { return }
     $currentTime = Get-Date
+    $todayStr = $currentTime.ToString("yyyy-MM-dd")
     # ================= BUILD SORTED TASK LIST =================
     $sortedTasks = @()
     foreach ($commandKey in $global:AutoCommands.Keys) {
@@ -1059,11 +1041,11 @@ function Check-AutoCommands {
             $dayStr = if ($cmdInfo.ContainsKey("Day") -and $cmdInfo.Day.Count -gt $i -and $cmdInfo.Day[$i]) {
                 $cmdInfo.Day[$i]
             } else { "" }
-            # ===== ИСТА TIME ЛОГИКА КАКО TIMELINE =====
+			# ===== ИСТА TIME ЛОГИКА КАКО TIMELINE =====
             if ($mode -eq "fixed" -and $dayStr) {
                 $dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
             } else {
-               $today = Get-Date
+                $today = Get-Date
                 $timeParts = $timeStr -split ":"
                 $dt = $today.Date.
                     AddHours([int]$timeParts[0]).
@@ -1093,7 +1075,6 @@ function Check-AutoCommands {
             }
         }
     }
-
     # ===== СОРТИРАЊЕ ПО ВРЕМЕ =====
     $sortedTasks = $sortedTasks | Sort-Object DateTime
     # ================= EXECUTION =================
@@ -1107,14 +1088,11 @@ function Check-AutoCommands {
         if ($cmdInfo.ContainsKey("RepeatIntervalMinutes") -and $cmdInfo.RepeatIntervalMinutes.Count -gt $i) {
             $repeatMinutes = $cmdInfo.RepeatIntervalMinutes[$i]
         }
-        $execKey = "$commandKey|$i|$timeStr"   # delimiter
-        # $execKey = "$commandKey-$i-$timeStr"
-        # ===== TYPE CHECK (исто како порано) =====
+        $execKey = "$commandKey|$i|$timeStr|$todayStr"
         $shouldRun = $true
         $type = if ($cmdInfo.ContainsKey("Type")) {
             if ($cmdInfo.Type -is [Array]) { $cmdInfo.Type[$i] } else { $cmdInfo.Type }
         } else { "daily" }
-
         switch ($type.ToLower()) {
             "weekly" {
                 if ($currentTime.DayOfWeek -ne 'Sunday') { $shouldRun = $false }
@@ -1129,26 +1107,55 @@ function Check-AutoCommands {
                 }
             }
         }
-        # ===== DAY CHECK (fixed) =====
+		# ===== DAY CHECK (fixed) =====
         if ($shouldRun -and $cmdInfo.ContainsKey("Day") -and $cmdInfo.Day.Count -gt $i -and $cmdInfo.Day[$i]) {
-            $todayStr = $currentTime.ToString("yyyy-MM-dd")
             if ($cmdInfo.Day[$i] -ne $todayStr) {
                 $shouldRun = $false
             }
         }
         if (-not $shouldRun) { continue }
-        # ===== EXECUTION WINDOW (FIXED) =====
+        # ===== EXECUTION WINDOW =====
         $diff = ($currentTime - $targetTime).TotalSeconds
         if ($diff -ge 0 -and $diff -le 120 -and $targetTime -ge $scriptStartTime) {
             if (-not $global:commandsExecuted.ContainsKey($execKey)) {
-                Invoke-CommandAndNotify $commandKey $cmdInfo.Cmd $timeStr
-                $global:commandsExecuted[$execKey] = $currentTime
-                if ($repeatMinutes -gt 0) {
-                    $global:commandsExecuted["$execKey-Repeat"] = $currentTime
-                }
-            }
-        }
-        # ===== REPEAT (НЕ МЕНУВАМЕ ЛОГИКА) =====
+			# ===== SECURITY CHECK =====
+			if ($AutoPilotTelegramEnabled) {
+				$allowedOwnerId = ([string]$OwnerId).Trim()
+				$chatId = ([string]$telegramChatId).Trim()
+				if (
+					[string]::IsNullOrWhiteSpace($allowedOwnerId) -or
+					[string]::IsNullOrWhiteSpace($chatId) -or
+					$chatId -cne $allowedOwnerId
+				) {
+					$blockedKey = "$execKey|SecurityBlocked"
+					if (-not $global:commandsExecuted.ContainsKey($blockedKey)) {
+						Write-Log "🛡️ AUDIT: Unauthorized AutoCommand | 👨‍💼 UserId=$allowedOwnerId | 🆔 ChatId=$chatId | 📨 Command: $commandKey"
+						$now = Get-Date
+						Send-TelegramMessage -message @"
+🛡️ SECURITY ALERT 🛡️
+Unauthorized Access Attempt!
+
+👨‍💼 UserId: $allowedOwnerId
+🆔 ChatId: $chatId
+📨 Command: $commandKey  ⛔ Blocked
+🕒 Time: $now
+
+⛔ Automatic command blocked.
+"@
+					$global:commandsExecuted[$blockedKey] = $now
+				}
+				continue
+			}
+		}
+		# ===== EXECUTE COMMAND =====
+		        Invoke-CommandAndNotify $commandKey $cmdInfo.Cmd $timeStr
+				$global:commandsExecuted[$execKey] = $currentTime
+				if ($repeatMinutes -gt 0) {
+					$global:commandsExecuted["$execKey-Repeat"] = $currentTime
+				}
+			}
+		}
+        # ===== REPEAT =====
         if ($repeatMinutes -gt 0 -and $global:commandsExecuted.ContainsKey("$execKey-Repeat")) {
             $lastRun = $global:commandsExecuted["$execKey-Repeat"]
             $minutesSinceLast = ($currentTime - $lastRun).TotalMinutes
@@ -1162,14 +1169,9 @@ function Check-AutoCommands {
     # ================= CLEANUP =================
     $keysToRemove = @()
     foreach ($key in $global:commandsExecuted.Keys) {
-        if ($key -notmatch "Repeat") {
-            $parts = $key -split '\|'   # delimiter
-            $timeStr = $parts[-1]   # delimiter
-            # $timeStr = ($key -split '-')[ -1 ]
-            $targetTime = [datetime]::Today.Add([timespan]::Parse($timeStr))
-            if ($currentTime -ge $targetTime.AddMinutes(2)) {
-                $keysToRemove += $key
-            }
+        $executedTime = $global:commandsExecuted[$key]
+        if ($currentTime -ge $executedTime.AddHours(24)) {
+            $keysToRemove += $key
         }
     }
     foreach ($k in $keysToRemove) {
@@ -1181,7 +1183,7 @@ function Check-AutoCommands {
 function Invoke-CommandAndNotify {
 	param($commandKey, $cmdToRun, $timeStr)
 
-	Write-Output "Executing command: $cmdToRun ($timeStr)"
+	Write-Output "🔰 Executing command: $cmdToRun ($timeStr)"
 
 	# Иницијализирај глобални хаштабли ако не постојат
 	if ($null -eq $global:CommandToImagePath) { $global:CommandToImagePath = @{} }
@@ -1550,65 +1552,6 @@ Active Adapter  : $adapterName
         return "⚠️ Internet: NOT WORKING!"
     }
 }
-
-# VLC player функции
-function Play-VLC {
-    if (-not (Test-Path $vlcPath)) {
-		Write-Host "VLC is Not Installed."
-        return "ℹ️ VLC is Not Installed."
-    }
-    # Затвори било кој активен VLC пред да пуштиш нов стрим
-    Get-Process vlc -ErrorAction SilentlyContinue | Stop-Process -Force
-    $url = $global:RadioStations[$global:CurrentStationIndex]
-    Start-Process -FilePath $vlcPath -ArgumentList $url
-	Write-Host "VLC is Started."
-    return "🔊 Station started: $url"
-	
-}
-
-function Stop-VLC {
-    if (-not (Test-Path $vlcPath)) {
-		Write-Host "VLC is Not Installed."
-        return "ℹ️ VLC is Not Installed."
-    }
-    Get-Process vlc -ErrorAction SilentlyContinue | Stop-Process -Force
-    return "VLC is ❌ closed."
-}
-
-function Next-Station {
-    if (-not (Test-Path $vlcPath)) {
-		Write-Host "VLC is Not Installed."
-        return "ℹ️ VLC is Not Installed."
-    }
-    $global:CurrentStationIndex = ($global:CurrentStationIndex + 1) % $global:RadioStations.Count
-    return Play-VLC
-}
-
-function Prev-Station {
-    if (-not (Test-Path $vlcPath)) {
-		Write-Host "VLC is Not Installed."
-        return "ℹ️ VLC is Not Installed."
-    }
-    $global:CurrentStationIndex = ($global:CurrentStationIndex - 1)
-    if ($global:CurrentStationIndex -lt 0) {
-        $global:CurrentStationIndex = $global:RadioStations.Count - 1
-    }
-    return Play-VLC
-}
-
-function VLC-Status {
-    if (-not (Test-Path $vlcPath)) {
-		Write-Host "VLC is Not Installed."
-        return "ℹ️ VLC is Not Installed."
-    }
-    if (Get-Process vlc -ErrorAction SilentlyContinue) {
-        $url = $global:RadioStations[$global:CurrentStationIndex]
-        return "VLC is ✅ running. 🔊 Current station: $url"
-    } else {
-        return "ℹ️ VLC is not active."
-    }
-}
-#################### end VLC Player ########################################
 
 #  Network statistic meter
 function Get-TrafficMonitorStats {
@@ -2109,7 +2052,7 @@ function Autopilot-Log {
     $logFile = "$Global:logFolder\autopilot_$logDate.txt"
 
     if (Test-Path $logFile) {
-        $logLines = Get-Content -Path $logFile -Tail 20
+        $logLines = Get-Content -Path $logFile -Tail 20 -Encoding UTF8
         $logContent = $logLines -join "`n"
         Send-TelegramMessage -message "📝 Last 20 lines from the AUTOPILOT log:`n$logContent"
     } else {
@@ -2123,7 +2066,7 @@ function Monitoring-Log {
     $monitoringLogFile = "$Global:monitoringLogsFolder\monitoring_$monitoringDate.txt"
 
     if (Test-Path $monitoringLogFile) {
-        $logLines = Get-Content -Path $monitoringLogFile -Tail 20
+        $logLines = Get-Content -Path $monitoringLogFile -Tail 20 -Encoding UTF8
         $logContent = $logLines -join "`n"
         Send-TelegramMessage -message "📝 Last 20 lines from the MONITORING log:`n$logContent"
     } else {
@@ -2137,7 +2080,7 @@ function Data-Log {
     $dataLogFile = Join-Path $Global:dataLogFolder "audit_$dataDate.txt"
 
     if (Test-Path -LiteralPath $dataLogFile) {
-        $logLines = Get-Content -Path $dataLogFile -Tail 20
+        $logLines = Get-Content -Path $dataLogFile -Tail 20 -Encoding UTF8
         $logContent = $logLines -join "`n"
         Send-TelegramMessage -message "📝 Last 20 lines from the DATA log:`n$logContent"
     } else {
@@ -2151,7 +2094,7 @@ function Update-Log {
     $logFile = $Global:updaterLogFile  #  Updater.log
 
     if (Test-Path -LiteralPath $logFile) {
-        $logLines = Get-Content -Path $logFile -Tail 35
+        $logLines = Get-Content -Path $logFile -Tail 35 -Encoding UTF8
         $logContent = $logLines -join "`n"
         Send-TelegramMessage -message "📝 Last 35 lines from the UPDATER log:`n$logContent"
     } else {
@@ -2230,16 +2173,16 @@ function Send-Graph {
 # ALL COMMANDS #
 function Show-HelpMenu {
     $msg = @"
-🔰 START MENU  List of commands by category:
+🔰 START MENU:
 
- 🛡️ Defender commands:
+ 🛡️ Defender:
 🔶/def1  Stop Real-Time 
 🔶/def2  Start Real-Time 
 🔶/def3  Status Real-Time  
 🔶/def4  Tamper Protection  
 🔶/def5  Start Tamper Protection  
 
- 👷 Pi commands:
+ 👷 Pi Network:
 🔷/pi1  Start Pi Node
 🔷/pi2  Status Pi Node 
 🔷/pi3  Stop Pi Node  
@@ -2247,7 +2190,7 @@ function Show-HelpMenu {
 🔷/pi5  Disable Pi Node 
 🔷/pi6  Clear Pi Node Cache
 
- 🐳 Docker commands:
+ 🐳 Docker:
 🔷/docker1  Star Pi Node  
 🔷/docker2  Stop Pi Node  
 🔷/docker3  Restart Pi Node  
@@ -2259,7 +2202,7 @@ function Show-HelpMenu {
 🔷/docker9  Clear Cache Docker 
 🔷/docker10  Clear Temp Folder
 
- 🗑️ Cleaner commands:
+ 🗑️ Cleaner:
 🔶/cleaner1  Status Hibernation 
 🔶/cleaner2  Stop Hibernation 
 🔶/cleaner3  Clear Windows Temp 
@@ -2273,7 +2216,7 @@ function Show-HelpMenu {
 🔶/cleaner11  Status 
 🔶/cleaner12  Clean Registry  
 
- 📶 Network commands:
+ 📶 Network:
 🔷/net1  Connect to WiFi 1
 🔷/net2  Connect to WiFi 2
 🔷/net3  TASK (Switch WiFi 1 to WiFi 2)
@@ -2284,7 +2227,7 @@ function Show-HelpMenu {
 🔷/net8  Network Status
 🔷/net9  Network Restart
 
- 🌍 Net Traffic commands:
+ 🌍 Net Traffic:
 🔷/net_monitoring1  Net Monitoring Start 
 🔷/net_monitoring2  Net Monitoring Stop
 🔷/net_monitoring3  Net Monitoring Status
@@ -2294,7 +2237,7 @@ function Show-HelpMenu {
 🔷/net_monitoring7  Net Monitor Open
 🔷/net_monitoring8  Net Monitor Exit
 
- ⚙️ System commands:
+ ⚙️ System:
 🔷/system_status  System Status  
 🔷/ping  Ping Test
 🔷/autopilot_log  Autopilot Log File
@@ -2322,53 +2265,53 @@ function Show-HelpMenu {
 🔷/restart  Restart PC
 🔷/shutdown  Shutdown PC 
 
- 🖥️ Recording commands:
+ 🖥️ Recording:
 🔶/screen  Desktop Screenshot
 🔶/record  Desktop Recording
 🔶/rec_start  Start Recording
 🔶/rec_stop  Stop Recording
 🔶/data  Recordings Video Storage
 
- 📸 Camera commands:
+ 📸 Camera:
 🔶/cam_start  Start Camera 
 🔶/cam_stop  Stop Camera
 🔶/data  Camera Video Storage
 
- 👨🏻‍💻 Monitoring commands:
+ 👨🏻‍💻 System Monitoring:
 🔷/monitoring_start  Start Monitoring
 🔷/monitoring_stop  Stop Monitoring
 🔷/monitoring_status  Status Monitoring
 🔷/monitoring_log  Monitoring Log File
 
- 📊 Graph Load commands:
+ 📊 Graph Load:
 🔷/load_day  Load Day 
 🔷/load_week  Load Week   
 🔷/load_month  Load Month
 🔷/load_year  Load Year 
 🔷/load_all  Load All 
 
- 📊 Graph Temperature commands:
+ 📊 Graph Temperature:
 🔷/temp_day  Temperature Day        
 🔷/temp_week  Temperature Week       
 🔷/temp_month  Temperature Month     
 🔷/temp_year  Temperature Year
 🔷/temp_all  Temperature All 
 
- 📊 Graph Disk Load commands:
+ 📊 Graph Disk Load:
 🔷/disk_day  Disk Load Day
 🔷/disk_week  Disk Load Week
 🔷/disk_month  Disk Load Month
 🔷/disk_year  Disk Load Year
 🔷/disk_all  Disk Load All 
 
- 📉 Table Net Traffic commands:
+ 📉 Table Net Traffic:
 🔷/table_day  Net Traffic Day
 🔷/table_week  Net Traffic Week
 🔷/table_month  Net Traffic Month
 🔷/table_year  Net Traffic Year
 🔷/table_all  Net Traffic All 
 
- 📱 Third-party App commands:
+ 📱 Third-party App:
 🔷/teamviewer_start  Start TW
 🔷/teamviewer_stop  Stop TW 
 🔷/teamviewer_status  Status TW
@@ -2380,13 +2323,13 @@ function Show-HelpMenu {
 🔷/monitor_status  Status 
 🔷/netusage  Network Usage 
 
- 📟 VLC commands:
+ 📟 Vlc Player:
 🔶/vlc_play  Play Vlc
 🔶/vlc_stop  Stop Vlc
 🔶/vlc_next  Next 
 🔶/vlc_prev  Prew
+🔶/vlc_list  Play List
 🔶/vlc_status  Status Vlc
-
 "@
     return $msg
 }
@@ -2455,13 +2398,18 @@ function Process-ManualCommands {
 
     $updates = Get-Updates -offset ($lastUpdateId.Value + 1)
     foreach ($update in $updates) {
+		# Handle VLC station button clicks
+		if ($update.callback_query) {
+			Invoke-VLCStationCallback -CallbackQuery $update.callback_query
+			continue
+		}
         if (-not ($update.message -and $update.message.text)) {
             continue
         }
         # 🛡️ SECURITY GATE 
 		# Private chat
 		if ($update.message.chat.type -ne "private") {
-			Write-Log "AUDIT: Message from non-private chat | ChatType=$($update.message.chat.type) | ChatId=$($update.message.chat.id)"
+			Write-Log "🛡️ AUDIT: Message from non-private chat | 📝 ChatType=$($update.message.chat.type) | 🆔 ChatId=$($update.message.chat.id)"
 			$lastUpdateId.Value = $update.update_id
 			continue
 		}
@@ -2472,20 +2420,20 @@ function Process-ManualCommands {
 		$chatId = $update.message.chat.id
 		$now = Get-Date
 		# 📜 AUDIT LOG 
-		Write-Log "AUDIT: Unauthorized Access | UserId=$userId | ChatId=$chatId | Text='$($update.message.text)'"
+		Write-Log "🛡️ AUDIT: Unauthorized Access | 👨‍💼 UserId=$userId | 🆔 ChatId=$chatId | 📨 Message='$($update.message.text)'"
 		# 🔔 ALARM (rate-limited)
 		if (
 			-not $global:LastAuditAlert.ContainsKey($userId) -or
 			($now - $global:LastAuditAlert[$userId]).TotalMinutes -ge 3
 		) {
 			Send-TelegramMessage -message @"
- 🛡️ SECURITY ALERT 🛡️
- Unauthorized Access Attempt!
+🛡️ SECURITY ALERT 🛡️
+Unauthorized Access Attempt!
 
- 👨‍💼 UserId: $userId
- 🆔 ChatId: $chatId
- 📨 Message: '$($update.message.text)'
- 🕒 Time: $now
+👨‍💼 UserId: $OwnerId
+🆔 ChatId: $chatId
+📨 Message: $($update.message.text)
+🕒 Time: $now
 "@
 		$global:LastAuditAlert[$userId] = $now
 		}
@@ -2582,7 +2530,6 @@ function Process-ManualCommands {
 
 			$timeout = 355 # vo sekundi vremeto potrebno za da se izvrsi KOMANDA (Auto Manuelna).
 			$jobCompleted = $job | Wait-Job -Timeout $timeout
-
 			if ($jobCompleted) {
 				try {
 					$output = Receive-Job -Job $job
@@ -2834,6 +2781,12 @@ function Process-ManualCommands {
                             $response = VLC-Status
                             Send-TelegramMessage -message $response -chatId $chatId
                         }
+						"Vlc-List" {
+						$response = Vlc-List -ChatId $chatId
+							if ($response) {
+								Send-TelegramMessage -message $response -chatId $chatId
+							}
+						}
 						"Net-Usage" {
                             $usage = Get-TrafficMonitorStats
                             if (-not $usage) {
@@ -3064,18 +3017,130 @@ function Sync-PauseStateFromFlag {
     }
 }
 
-# Inicializiraj promenliva za sledniot update_id na Telegram
+# 💎 Inicializiraj promenliva za sledniot update_id na Telegram
 $lastTelegramUpdateId = 0
-# Dodatna promenliva za sledno vreme na proverka temperatura
+# 🔥 Dodatna promenliva za sledno vreme na proverka temperatura
 $lastTempCheckTime = Get-Date
+# ==================== HELPER FUNCTIONS BLOCK =====================
+# 🧹 Clean overdue entries from the in-memory schedule queue.
+function Send-StaleCleanupSummary {
+    param([object[]]$Items)
+    if (-not $Items -or $Items.Count -eq 0) { return }
+    $groups = @($Items | Group-Object ScriptPath, Command | Sort-Object Name)
+    $lines = @(
+        "⚛️ AutoPilot 🗑️ Cleanup Summary"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "🗑️ Cleanup executions: $($Items.Count)"
+        "⚙️ Different commands: $($groups.Count)"
+        "🛡️ Rule: More than 5 minutes overdue"
+        ""
+    )
+    $n = 0
+    foreach ($g in $groups) {
+        $entries = @($g.Group | Sort-Object { [datetime]$_.ExecTime })
+        $first = $entries[0]
+        $last  = $entries[-1]
+        $name = Split-Path $first.ScriptPath -Leaf
+        $firstTime = ([datetime]$first.ExecTime).ToString("yyyy-MM-dd HH:mm")
+        $lastTime  = ([datetime]$last.ExecTime).ToString("yyyy-MM-dd HH:mm")
+        $range = $firstTime
+        if ($firstTime -ne $lastTime) {
+            $range += " ➜ $lastTime"
+        }
+        $n++
+        $lines += (
+            "{0:D2}. 📝 {1} 🔹 ⚙️ Command: {2} 🔹 🗑️ Cleanup: {3}x 🔹 🕒 Time: {4}" -f
+            $n, $name, $first.Command, $entries.Count, $range
+        )
+        # Blank vertical space between commands
+        $lines += ""
+    }
+    $report = $lines -join "`r`n"
+    Write-Log $report
+    # Split long Telegram messages into smaller parts
+    $telegramLimit = 3500
+    $telegramMessages = @()
+    $currentMessage = ""
+    foreach ($line in $lines) {
+        $candidate = if ($currentMessage.Length -gt 0) {
+            "$currentMessage`r`n$line"
+        } else {
+            [string]$line
+        }
+        if ($candidate.Length -gt $telegramLimit -and $currentMessage.Length -gt 0) {
+            $telegramMessages += $currentMessage
+            $currentMessage = "⚛️ AutoPilot 🗑️ Cleanup Summary (continued)`r`n$line"
+        } else {
+            $currentMessage = $candidate
+        }
+    }
+    if ($currentMessage.Length -gt 0) {
+        $telegramMessages += $currentMessage
+    }
+    foreach ($telegramMessage in $telegramMessages) {
+        Send-TelegramMessage -message $telegramMessage
+    }
+}
+# 🕓 Detect manual or automatic wall-clock changes in either direction.
+function Test-ClockAdjustment {
+    param (
+        [Parameter(Mandatory = $true)]
+        [ref]$LastWallClock,
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Stopwatch]$MonotonicClock,
+        [double]$ToleranceSeconds = 5
+    )
+    $currentWallClock = Get-Date
+    $wallElapsedSeconds = ($currentWallClock - $LastWallClock.Value).TotalSeconds
+    $monotonicElapsedSeconds = $MonotonicClock.Elapsed.TotalSeconds
+    $clockShiftSeconds = $wallElapsedSeconds - $monotonicElapsedSeconds
+    $LastWallClock.Value = $currentWallClock
+    $MonotonicClock.Restart()
 
+    return [bool]([Math]::Abs($clockShiftSeconds) -ge $ToleranceSeconds)
+}
+# 🛡️ Telegram auto message security gate 
+function Send-AutoTelegramMessage {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+    # 🛡️ SECURITY GATE
+    $allowedOwnerId = ([string]$OwnerId).Trim()
+    $chatId = ([string]$telegramChatId).Trim()
+    $now = Get-Date
+    # 👤 OWNER CHECK
+    if (
+        [string]::IsNullOrWhiteSpace($allowedOwnerId) -or
+        [string]::IsNullOrWhiteSpace($chatId) -or
+        $chatId -cne $allowedOwnerId
+    ) {
+        # 📜 AUDIT LOG
+        Write-Log "🛡️ AUDIT: Unauthorized Automatic Message | 👨‍💼 UserId=$allowedOwnerId | 🆔 ChatId=$chatId"
+        # 🔔 IMMEDIATE SECURITY ALERT
+        Send-TelegramMessage -message @"
+🛡️ SECURITY ALERT 🛡️
+Unauthorized Access Attempt!
+
+👨‍💼 UserId: $allowedOwnerId
+🆔 ChatId: $chatId
+📨 Command: $(($Message -split '\r?\n')[0])  ⛔ Blocked
+🕒 Time: $now
+
+⛔ Automatic command blocked.
+"@
+        return
+    }
+    # ✅ AUTHORIZED — send normal message only
+    Send-TelegramMessage -message $Message
+}
 # 🔁 Glaven loop za brojot na povtoruvanja
 $r = 1
 while ($maxRuns -eq 0 -or $r -le $maxRuns) {
     Sync-PauseStateFromFlag  # 👈 Pause from FLAG
     # Ako je pauza, čekaj na /resume komandu
     while ($global:scriptPaused) {
-        Write-Log "AutoPilot is PAUSED. Waiting for the /resume command..."
+        Write-Log "AutoPilot is ⏸️ PAUSED. Waiting for the /resume command..."
         Start-Sleep -Seconds 5
         Process-ManualCommands -lastUpdateId ([ref]$lastTelegramUpdateId)
         Sync-PauseStateFromFlag  # 👈 Pause from FLAG 
@@ -3097,18 +3162,19 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 		timestamp      = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
 	} | ConvertTo-Json -Depth 5 | Set-Content "$PSScriptRoot\JSON\autopilot_state.json"
 	# =====================================================
-        Write-Log "Skip: Day not allowed ($($now.DayOfWeek))"
+        Write-Log "⛔ Skip: Day not allowed ($($now.DayOfWeek))"
 		Write-Host "" 
-		Write-Host "Skip: Day not allowed ($($now.DayOfWeek))" -ForegroundColor DarkYellow
+		Write-Host "⛔ Skip: Day not allowed ($($now.DayOfWeek))" -ForegroundColor DarkYellow
 		Write-Host ""
         if ($AutoPilotTelegramEnabled) {
-			Write-Host "AutoPilot did not run today ($($now.DayOfWeek))." -ForegroundColor DarkYellow
+			Write-Host "ℹ️ AutoPilot did not run today ($($now.DayOfWeek))." -ForegroundColor DarkYellow
             Send-TelegramMessage -message "ℹ️ AutoPilot did not run today ($($now.DayOfWeek))."
         }
         break
     }
 
-    Write-Log "Repetition number: $r" -Display
+    $repeatLabel = if ($maxRuns -eq 0) { "Loop" } else { "Repetition $r of $maxRuns Started..." }
+    Write-Log "🔂 $repeatLabel" -Display
 	# ================= REPETITION =================
 	$global:runStatus = "Running"
 	$global:finishReason = $null
@@ -3122,13 +3188,17 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 	} | ConvertTo-Json -Depth 5 | Set-Content "$PSScriptRoot\JSON\autopilot_state.json"
 	# =====================================================
     Write-Host ""
-    Write-Host "-List of completed automatic commands:" -ForegroundColor Yellow
-    if ($AutoPilotTelegramEnabled) {
-        Send-TelegramMessage -message "🔂 Repetition $r started..."
-    }
+    Write-Host "📝 List of completed automatic commands:" -ForegroundColor Yellow
+	if ($AutoPilotTelegramEnabled) {
+		$repeatLabel = if ($maxRuns -eq 0) { "Loop" } else { "Repetition $r of $maxRuns" }
+		Send-TelegramMessage -message "🔂 $repeatLabel Started..."
+	}
 	
     # --- Pravi listu svih narednih izvršenja komandi sa ponavljanjem i Day ---
 	$allCommands = @()
+	# Telegram: collect FIXED command notifications per repetition
+	$fixedSkippedTelegramItems = @()
+	$fixedAllowedTelegramItems = @()
 	foreach ($script in $ScheduledScripts) {
 		for ($i = 0; $i -lt $script.Commands.Count; $i++) {
 			$timeSpan = [TimeSpan]::Parse($script.Times[$i])
@@ -3145,6 +3215,81 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 				$script.Day -and
 				$script.Day.Count -gt $i -and
 				-not [string]::IsNullOrWhiteSpace($script.Day[$i])
+				# FIXED_NO_BLOCK_CYCLE=true:
+				# Skip FIXED commands until the final finite repetition.
+				# If total is LOOP/unlimited, preserve the current behavior and skip them.
+				# FIXED_NO_BLOCK_CYCLE=false remains unchanged.
+				if ($fixedNoBlockCycle -and $useExplicitDay) {
+					# Ignore FIXED commands whose scheduled date/time has already passed.
+					$fixedScheduledTime = [datetime]::ParseExact(
+						"$($script.Day[$i]) $($script.Times[$i])",
+						"yyyy-MM-dd HH:mm:ss",
+						$null
+					)
+					if ($fixedScheduledTime -lt (Get-Date)) {
+						continue
+					}
+					$statePath = "$PSScriptRoot\JSON\autopilot_state.json"
+					$state = $null
+					try {
+						if (Test-Path -LiteralPath $statePath) {
+							$state = Get-Content -LiteralPath $statePath -Raw |
+								ConvertFrom-Json -ErrorAction Stop
+						}
+					}
+					catch {
+						$state = $null
+						Write-Log "Could not read ⚛️ AutoPilot state; FIXED command will be ⛔ skipped safely."
+						Send-TelegramMessage -message "Could not read ⚛️ AutoPilot state; FIXED command will be ⛔ skipped safely."
+					}
+					$currentCycle = 0
+					$totalCycles = 0
+					$totalText = ""
+					if ($null -ne $state) {
+						if ($null -ne $state.cycle) {
+							$currentCycle = [int]$state.cycle
+						}
+						if ($null -ne $state.total) {
+							$totalText = ([string]$state.total).Trim()
+						}
+					}
+					# Only a positive numeric total is considered a finite run.
+					$hasFiniteTotal = $false
+					if ($totalText -match '^\d+$') {
+						$totalCycles = [int]$totalText
+						$hasFiniteTotal = ($totalCycles -gt 0)
+					}
+					# Unlimited LOOP, invalid state, or not the final repetition:
+					# skip this FIXED command.
+					if (
+						-not $hasFiniteTotal -or
+						$currentCycle -lt $totalCycles
+					) {
+						# Keep individual log entries unchanged.
+						Write-Log "FIXED_NO_BLOCK_CYCLE=true: ⛔ Skipping FIXED Command $($script.Commands[$i]) from $($script.Path); cycle=$currentCycle; total=$totalText."
+						# Collect skipped commands for ONE Telegram message.
+						$fixedSkippedTelegramItems += [PSCustomObject]@{
+							Command = [string]$script.Commands[$i]
+							Script  = [string]$script.Path
+							Day     = [string]$script.Day[$i]
+							Time    = [string]$script.Times[$i]
+							Cycle   = $currentCycle
+							Total   = $totalText
+						}
+						continue
+					}
+					# Final repetition reached: allow existing scheduling logic.
+					Write-Log "FIXED_NO_BLOCK_CYCLE=true: ✅ Allowing FIXED Command $($script.Commands[$i]) on final repetition $currentCycle/$totalCycles."
+					# Collect allowed commands for ONE Telegram message.
+					$fixedAllowedTelegramItems += [PSCustomObject]@{
+						Command = [string]$script.Commands[$i]
+						Script  = [string]$script.Path
+						Day     = [string]$script.Day[$i]
+						Time    = [string]$script.Times[$i]
+						Cycle   = $currentCycle
+						Total   = $totalCycles
+					}
+				}	
 			# ---------- BASE TIME (FIXED + LOOP како TIMELINE) ----------
 			$now = Get-Date
 			if ($useExplicitDay) {
@@ -3199,67 +3344,241 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 			}
 		}
 	}
+	# ================= GROUPED TELEGRAM NOTIFICATIONS =================
+	# ONE message containing ALL skipped FIXED commands.
+	if (@($fixedSkippedTelegramItems).Count -gt 0) {
+		$firstSkipped = $fixedSkippedTelegramItems[0]
+		$message = @"
+⚙️ Fixed Commands  ⚠️ Out Of Loop
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🔂 Repetition: $($firstSkipped.Cycle)/$($firstSkipped.Total)
+⛔ Skipped commands: $(@($fixedSkippedTelegramItems).Count)
 
+"@
+	$number = 0
+	foreach ($item in $fixedSkippedTelegramItems) {
+		$number++
+		$skipRepText = if ([string]$item.Total -match '^\d+$') {
+		"🔂 Rep:1 to $([int]$item.Total - 1)"
+		}
+		elseif ([string]$item.Total -ieq "LOOP") {
+			"🔂 Rep:1 in Loop"
+		}
+		else {
+			"🔂 Rep:Unavailable"
+		}
+		$message += @"
+
+$number. ⚙️ Command: $($item.Command)
+	   📝 Script: $(Split-Path $item.Script -Leaf)
+	   📅 Date: $($item.Day)
+	   🕒 Time: $($item.Time)
+	   ⛔ Skipped: $skipRepText
+	   
+"@
+		}
+		# Split long Telegram messages into smaller parts
+		$telegramLimit = 3500
+		$telegramMessages = @()
+		$currentMessage = ""
+		$messageLines = $message.Trim() -split "\r?\n"
+		foreach ($line in $messageLines) {
+			$candidate = if ($currentMessage.Length -gt 0) {
+				"$currentMessage`r`n$line"
+			} else {
+				[string]$line
+			}
+			if ($candidate.Length -gt $telegramLimit -and $currentMessage.Length -gt 0) {
+				$telegramMessages += $currentMessage
+				$currentMessage = "⚙️ Fixed Commands ⚠️ Out Of Loop (continued)`r`n$line"
+			} else {
+				$currentMessage = $candidate
+			}
+		}
+		if ($currentMessage.Length -gt 0) {
+			$telegramMessages += $currentMessage
+		}
+		foreach ($telegramMessage in $telegramMessages) {
+			Send-TelegramMessage -message $telegramMessage
+		}
+	}
+	# ONE message containing ALL FIXED commands allowed on the final repetition.
+	if (@($fixedAllowedTelegramItems).Count -gt 0) {
+		$firstAllowed = $fixedAllowedTelegramItems[0]
+		$message = @"
+⚙️ Fixed Commands  ✅ Allowed
+━━━━━━━━━━━━━━━━━━━━━━━━
+🔂 Final repetition: $($firstAllowed.Cycle)/$($firstAllowed.Total)
+✅ Commands allowed: $(@($fixedAllowedTelegramItems).Count)
+
+"@
+	$number = 0
+	foreach ($item in $fixedAllowedTelegramItems) {
+		$number++
+		$message += @"
+
+$number. ⚙️ Command: $($item.Command)
+	   📝 Script: $(Split-Path $item.Script -Leaf)
+	   📅 Date: $($item.Day)
+	   🕒 Time: $($item.Time)
+	   ✅ Allowed: 🔂 Rep:$($item.Cycle)
+
+"@
+		}
+		# Split long Telegram messages into smaller parts
+		$telegramLimit = 3500
+		$telegramMessages = @()
+		$currentMessage = ""
+		$messageLines = $message.Trim() -split "\r?\n"
+		foreach ($line in $messageLines) {
+			$candidate = if ($currentMessage.Length -gt 0) {
+				"$currentMessage`r`n$line"
+			} else {
+				[string]$line
+			}
+			if ($candidate.Length -gt $telegramLimit -and $currentMessage.Length -gt 0) {
+				$telegramMessages += $currentMessage
+				$currentMessage = "⚙️ Fixed Commands ✅ Allowed (continued)`r`n$line"
+			} else {
+				$currentMessage = $candidate
+			}
+		}
+		if ($currentMessage.Length -gt 0) {
+			$telegramMessages += $currentMessage
+		}
+		foreach ($telegramMessage in $telegramMessages) {
+			Send-TelegramMessage -message $telegramMessage
+		}
+	}
+    # ================================================================
     # Sortiraj komande po ExecTime
     $sortedCommands = $allCommands | Sort-Object ExecTime
+	# 🧹 Clean overdue entries from the in-memory schedule queue.
+	$staleCleanupItems = @()
+	$cleanupCutoff = (Get-Date).AddMinutes(-5)
+	$stalePendingCommands = @(
+		$sortedCommands | Where-Object { $_.ExecTime -lt $cleanupCutoff }
+	)
+	if ($stalePendingCommands.Count -gt 0) {
+		foreach ($staleCmd in $stalePendingCommands) {
+			$staleCleanupItems += [PSCustomObject]@{
+				Command    = [string]$staleCmd.Command
+				ScriptPath = [string]$staleCmd.ScriptPath
+				ExecTime   = $staleCmd.ExecTime
+			}
+		}
+		$sortedCommands = @(
+			$sortedCommands | Where-Object { $_.ExecTime -ge $cleanupCutoff }
+		)
+	}
+	# Monitor wall-clock against a monotonic timer during this repetition.
+    $lastClockWallTime = Get-Date
+    $clockStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $clockResetRequested = $false
     # --- Izvrši komande po redosledu ---
     foreach ($cmd in $sortedCommands) {
+		# Detect any clock adjustment since the last sample.
+        if (Test-ClockAdjustment -LastWallClock ([ref]$lastClockWallTime) -MonotonicClock $clockStopwatch) {
+            Write-Log "System 🕓 clock changed forward/backward. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+			Send-TelegramMessage -message "System 🕓 clock changed forward/backward. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+            $clockResetRequested = $true
+            break
+        }
         # Čekaj dok ne dođe vreme izvršenja komande
+		if (
+		$staleCleanupItems.Count -gt 0 -and
+		$cmd.ExecTime -ge (Get-Date).AddMinutes(-5)
+	    ) {
+		Send-StaleCleanupSummary -Items $staleCleanupItems
+		$staleCleanupItems = @()
+	    }
         while ((Get-Date) -lt $cmd.ExecTime) {
 			Sync-PauseStateFromFlag   # 👈 Pause from FLAG
             Start-Sleep -Seconds 1
             Process-ManualCommands -lastUpdateId ([ref]$lastTelegramUpdateId)
 			Check-AutoCommands # NE RABOTI VO PAUSE
 			# DODADI proverka temperatura na na 5 minuti  OVA E PLUS SAMO VO KODOT!
-                # DELETE
-				# 🔹 NOVO - da se proveruva temperatura i dok e pauzirano
+				# 🔹 Temperature - da se proveruva temperatura i dok e pauzirano
                 $now = Get-Date
                 if (($now - $lastTempCheckTime).TotalSeconds -ge $TempCheckInterval) {
                     Check-TemperatureAndNotify
                     $lastTempCheckTime = $now
                 }
-                # 🔹 KRAJ
-				# DELETE
+                # 🔹 Temperature
+	        # Detect a clock change while waiting for the scheduled execution time.
+            if (Test-ClockAdjustment -LastWallClock ([ref]$lastClockWallTime) -MonotonicClock $clockStopwatch) {
+                Write-Log "System 🕓 clock changed forward/backward while ⌛ waiting. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+				Send-TelegramMessage -message "System 🕓 clock changed forward/backward while ⌛ waiting. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+                $clockResetRequested = $true
+                break
+            }
             while ($global:scriptPaused) {
-                Write-Log "AutoPilot is PAUSED. Waiting for the /resume..."
+                Write-Log "⚛️ AutoPilot is ⏸️ PAUSED. ⌛ Waiting for the /resume..."
 				Sync-PauseStateFromFlag   # 👈 Pause from FLAG
-                # DELETE
-				# 🔹 NOVO - da se proveruva temperatura i dok e pauzirano
+				# 🔹 Temperature - da se proveruva temperatura i dok e pauzirano
                 $now = Get-Date
                 if (($now - $lastTempCheckTime).TotalSeconds -ge $TempCheckInterval) {
                     Check-TemperatureAndNotify
                     $lastTempCheckTime = $now
                 }
-                # 🔹 KRAJ
-				# DELETE
+                # 🔹 Temperature
 				Start-Sleep -Seconds 5
                 Process-ManualCommands -lastUpdateId ([ref]$lastTelegramUpdateId)
 				# Check-AutoCommands # RABOTI VO PAUSE
                 if ($global:scriptStopped) { break 3 } # Izlaz iz foreach i oba while
+                if (Test-ClockAdjustment -LastWallClock ([ref]$lastClockWallTime) -MonotonicClock $clockStopwatch) {
+                    Write-Log "System 🕓 clock changed forward/backward while ⏸️ paused. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+					Send-TelegramMessage -message "System 🕓 clock changed forward/backward while ⏸️ paused. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+                    $clockResetRequested = $true
+                    break 2
+                }
             }
-
+            if ($clockResetRequested) { break }
             if ($global:scriptStopped) { break 2 }
         }
+		
+		# Catch a clock adjustment at the edge of the scheduled wait.
+        if (-not $clockResetRequested -and (Test-ClockAdjustment -LastWallClock ([ref]$lastClockWallTime) -MonotonicClock $clockStopwatch)) {
+            Write-Log "System 🕓 clock changed forward/backward before command ⚡ execution. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+			Send-TelegramMessage -message "System 🕓 clock changed forward/backward before command ⚡ execution. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+            $clockResetRequested = $true
+        }
+        if ($clockResetRequested) { break }
 
         # Provera pauze pre pokretanja komande
         while ($global:scriptPaused) {
-            Write-Log "AutoPilot is PAUSED before executing the command. Waiting for /resume..."
+            Write-Log "⚛️ AutoPilot is ⏸️ PAUSED before executing the command. ⌛ Waiting for /resume..."
+			Send-TelegramMessage -message "⚛️ AutoPilot is ⏸️ PAUSED before executing the command. ⌛ Waiting for /resume..."
 			Sync-PauseStateFromFlag   # 👈 Pause from FLAG
-                # DELETE
-				# 🔹 NOVO - da se proveruva temperatura i dok e pauzirano
+				# 🔹 Temperature - da se proveruva temperatura i dok e pauzirano
                 $now = Get-Date
                 if (($now - $lastTempCheckTime).TotalSeconds -ge $TempCheckInterval) {
                     Check-TemperatureAndNotify
                     $lastTempCheckTime = $now
                 }
-                # 🔹 KRAJ
-				# DELETE
+                # 🔹 Temperature
 			Start-Sleep -Seconds 5
             Process-ManualCommands -lastUpdateId ([ref]$lastTelegramUpdateId)
             if ($global:scriptStopped) { break 2 }
+            if (Test-ClockAdjustment -LastWallClock ([ref]$lastClockWallTime) -MonotonicClock $clockStopwatch) {
+                Write-Log "System 🕓 clock changed forward/backward while ⏸️ paused before command ⚡ execution. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+				Send-TelegramMessage -message "System 🕓 clock changed forward/backward while ⏸️ paused before command ⚡ execution. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+                $clockResetRequested = $true
+                break
+            }
         }
-
+        if ($clockResetRequested) { break }
         if ($global:scriptStopped) { break }
+		# 🧹 Collect this overdue command and continue with the next one.
+		if ($cmd.ExecTime -lt (Get-Date).AddMinutes(-5)) {
+			$staleCleanupItems += [PSCustomObject]@{
+				Command    = [string]$cmd.Command
+				ScriptPath = [string]$cmd.ScriptPath
+				ExecTime   = $cmd.ExecTime
+			}
+			continue
+		}
+		
         # Avtomatski RESTART SHUTDOWN RESTART-SCRIPT ako ne se izvrsi nekoja komanda !!!
 		Write-Log "Invocation $($cmd.ScriptPath) -AutoRunOps $($cmd.Command)"
         $scriptName = Split-Path $cmd.ScriptPath -Leaf
@@ -3272,14 +3591,13 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 
 			$timeout = 355 # vo sekundi vremeto potrebno za da se izvrsi KOMANDA (Auto Manuelna).
 			$jobCompleted = $job | Wait-Job -Timeout $timeout
-
 			if ($jobCompleted) {
 				try {
 					$output = Receive-Job -Job $job
-					Write-Log "Result: $output"
-					Send-TelegramMessage -message "➡️ Result from $($cmd.Command) ($scriptName):`n$output"
+					Write-Log "📝 Result: $output"
+					Send-AutoTelegramMessage -Message "➡️ Result from $($cmd.Command) ($scriptName):`n$output"
 				} catch {
-					Write-Log "Error retrieving result from job: $_"
+					Write-Log "⚠️ Error retrieving result from job: $_"
 					Send-TelegramMessage -message "⚠️ Error executing command $text ($scriptName)."
 				}
 			} 
@@ -3310,43 +3628,8 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 				try {
 					$updates = Get-Updates
 					foreach ($update in $updates) {
-                        # 🛡️ SECURITY GATE 
-						# Private chat
-						if ($update.message.chat.type -ne "private") {
-							Write-Log "AUDIT: Message from non-private chat | ChatType=$($update.message.chat.type) | ChatId=$($update.message.chat.id)"
-							$lastUpdateId.Value = $update.update_id
-							continue
-						}
-						# Chat OWNER
-						$userId = $update.message.from.id
-						if ($userId -ne $OwnerId) {
-						$chatId = $update.message.chat.id
-						$now = Get-Date
-						# 📜 AUDIT LOG 
-						Write-Log "AUDIT: Unauthorized Access | UserId=$userId | ChatId=$chatId | Text='$($update.message.text)'"
-						# 🔔 ALARM (rate-limited)
-						if (
-							-not $global:LastAuditAlert.ContainsKey($userId) -or
-							($now - $global:LastAuditAlert[$userId]).TotalMinutes -ge 3
-						) {
-							Send-TelegramMessage -message @"
- 🛡️ SECURITY ALERT 🛡️
- Unauthorized Access Attempt!
-
- 👨‍💼 UserId: $userId
- 🆔 ChatId: $chatId
- 📨 Message: '$($update.message.text)'
- 🕒 Time: $now
-"@
-						$global:LastAuditAlert[$userId] = $now
-						}
-						# 🚫 Block
-						Send-TelegramMessage -message "Access to Chat is ⛔ Forbidden."
-						$lastUpdateId.Value = $update.update_id
-						continue
-						}
-						$msgText = ($update.message.text).Trim()  
-						if ($msgText -cmatch '^[YN]$') {          
+						$msgText = ($update.message.text).Trim()
+						if ($msgText -cmatch '^[YN]$') {
 							$response = $msgText
 							break
 						} else {
@@ -3356,9 +3639,8 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
 				} catch {
 					Write-Log "Error checking Telegram response: $_"
 				}
-            } 
-
-            while (([datetime]::Now - $startTime).TotalSeconds -lt 300 -and -not $response)
+			}
+			while (([datetime]::Now - $startTime).TotalSeconds -lt 300 -and -not $response)
 
 			# Ako nema odgovor vo 5 minuti, default 'Y'
 			if (-not $response) {
@@ -3413,15 +3695,38 @@ while ($maxRuns -eq 0 -or $r -le $maxRuns) {
         # Čekaj delay posle izvršenja komande
         Start-Sleep -Seconds $cmd.DelaySeconds
         Process-ManualCommands -lastUpdateId ([ref]$lastTelegramUpdateId)
+        # Detect clock changes that happened while the command was running or
+        # during its existing post-command delay; keep all command logic intact.
+        if (Test-ClockAdjustment -LastWallClock ([ref]$lastClockWallTime) -MonotonicClock $clockStopwatch) {
+            Write-Log "System 🕓 clock changed forward/backward during command ⚡ execution. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+			Send-TelegramMessage -message "System 🕓 clock changed forward/backward during command ⚡ execution. Discarding the old 📝 command timeline and rebuilding 🔂 repetition $r."
+            $clockResetRequested = $true
+            break
+        }
     }
-
-    Write-Log "Repetition number completed $r"
+	
+	# 🧹 Cleaner end code
+	if ($staleCleanupItems.Count -gt 0) {
+    Send-StaleCleanupSummary -Items $staleCleanupItems
+    $staleCleanupItems = @()
+    }
+	
+    # Rebuild the same repetition from the current clock without incrementing $r.
+    if ($clockResetRequested) {
+        Write-Log "Old 📝 schedule discarded after a 🕓 clock adjustment; rebuilding 🔂 repetition $r from the current 🕒 time."
+		Send-TelegramMessage -message "Old 📝 schedule discarded after a 🕓 clock adjustment; rebuilding 🔂 repetition $r from the current 🕒 time."
+        continue
+    }
+	$completedLabel = if ($maxRuns -eq 0) { "LOOP" } else { "$r of $maxRuns" }
+	Write-Log "🔂 Repetition number $completedLabel Completed." -Display
     if ($AutoPilotTelegramEnabled) {
-        Send-TelegramMessage -message "🔂 Repetition $r completed."
-    }
+		$repeatLabel = if ($maxRuns -eq 0) { "LOOP" } else { "Repetition $r of $maxRuns" }
+		Send-TelegramMessage -message "🔂 $repeatLabel Completed."
+	}
 
     $r++
 }
+
 # ================= COMPLETED =================
 $global:runStatus = "Finished"
 $global:finishReason = "Completed"

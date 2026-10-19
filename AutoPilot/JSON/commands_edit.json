@@ -314,6 +314,42 @@
       "Type": [],
       "Mode": [],
       "Day": []
+    },
+	"/vlc_play": {
+      "Cmd": "Play-Radio",
+      "Description": "Starts the selected VLC radio station",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/vlc_stop": {
+      "Cmd": "Stop-Radio",
+      "Description": "Stops VLC player",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/vlc_next": {
+      "Cmd": "Next-Radio",
+      "Description": "Plays the next VLC radio station",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
+    },
+    "/vlc_prev": {
+      "Cmd": "Prev-Radio",
+      "Description": "Plays the previous VLC radio station",
+      "Times": [],
+      "RepeatIntervalMinutes": [],
+      "Type": [],
+      "Mode": [],
+      "Day": []
     }
   }
 }

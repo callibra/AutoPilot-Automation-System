@@ -51,5 +51,6 @@
   "AUTOPILOT_TELEGRAM_ENABLED":  true,
   "MEDIA_TELEGRAM_ENABLED":  true,
   "ENABLE_RESTART":  true,
-  "ENABLE_SHUTDOWN":  true
+  "ENABLE_SHUTDOWN":  true,
+  "FIXED_NO_BLOCK_CYCLE":  false
 }

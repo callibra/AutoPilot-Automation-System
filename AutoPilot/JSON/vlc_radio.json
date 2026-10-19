@@ -1,0 +1,22 @@
+{
+    "RADIO_STATIONS": [
+		"http://hirschmilch.de:7000/techno.mp3",
+		"http://hirschmilch.de:7000/psytrance.mp3",
+		"http://hirschmilch.de:7000/progressive.mp3",
+		"http://hirschmilch.de:7000/prog-house.mp3",
+		"http://hirschmilch.de:7000/electronic.mp3",
+		"http://hirschmilch.de:7000/chillout.mp3",
+		"http://cast.magicstreams.gr:9125/stream",
+		"http://cast.magicstreams.gr:9111/stream"
+    ],
+    "RADIO_STATION_TITLES": [
+        "Techno",
+        "PsyTrance",
+        "Progressive",
+		"Prog-House",
+		"Electronic",
+		"Chillout",
+		"Psyndora Chillout",
+		"Psyndora Trance"
+    ]
+}

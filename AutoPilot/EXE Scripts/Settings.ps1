@@ -78,6 +78,12 @@ if (-not (Test-Path $jsonPath)) {
         HardwareMonitor=@{ SampleIntervalSeconds=300 }
         ScreenCapture=@{ IncludeAudio=$true; AudioDevice="" }
         CameraCapture=@{ VideoDevice=""; AudioDevice="" }
+		AUTOPILOT_TELEGRAM_ENABLED=$false
+		MEDIA_TELEGRAM_ENABLED=$false
+		ENABLE_RESTART=$false
+		ENABLE_SHUTDOWN=$false
+		FIXED_NO_BLOCK_CYCLE=$false
+		VIDEO_RETENTION_DAYS=15
     } | ConvertTo-Json -Depth 5 | Set-Content $jsonPath -Encoding UTF8
 }
 $config = Get-Content $jsonPath | ConvertFrom-Json
@@ -494,11 +500,63 @@ $sub2.Left = 10
 $sub2.Top = $y
 $days.Controls.Add($sub2)
 $y += 30
-$maxRuns = SpinRow $days "⏳ Max Runs / Session:" $config.MAX_RUNS 0 10 $y
+$maxRuns = SpinRow $days "⏳ Max Runs / Session:" $config.MAX_RUNS 0 99 $y
 AddEmoji $days "🔄" $maxRuns
-$y += $spacing
+$y += 15
+# ---- Subsection 3: Scripts Fixed Commands In/Out LOOP (ON/OFF) ----
+$y += 20
+$subFixed = New-Object Windows.Forms.Label
+$subFixed.Text = "● Scripts Fixed Commands In/Out LOOP"
+$subFixed.Font = $FONT_LABEL
+$subFixed.ForeColor = [Drawing.Color]::FromArgb(191,90,242)
+$subFixed.AutoSize = $true
+$subFixed.Left = 10
+$subFixed.Top = $y
+$days.Controls.Add($subFixed)
+$y += 30
+# Custom label
+$fixedCycleLabel = New-Object Windows.Forms.Label
+$fixedCycleLabel.AutoSize = $true
+$fixedCycleLabel.Font = $FONT_LABEL
+$fixedCycleLabel.ForeColor = [Drawing.Color]::White
+$fixedCycleLabel.Left = 10
+$fixedCycleLabel.Top = $y
+$days.Controls.Add($fixedCycleLabel)
+# Toggle button
+$fixedCycleToggle = New-Object Windows.Forms.Button
+$fixedCycleToggle.Width  = 90
+$fixedCycleToggle.Height = 30
+$fixedCycleToggle.Left   = 380
+$fixedCycleToggle.Top    = $y - 5
+$fixedCycleToggle.Font   = $FONT_BUTTON
+$fixedCycleToggle.ForeColor = [Drawing.Color]::White
+$fixedCycleToggle.FlatStyle = 'Flat'
+$fixedCycleToggle.FlatAppearance.BorderSize = 0
+# ON = false in JSON, OFF = true in JSON
+Set-ToggleState $fixedCycleToggle (-not [bool]$config.FIXED_NO_BLOCK_CYCLE)
+# Dynamic label
+if ($fixedCycleToggle.Text -eq "ON") {
+    $fixedCycleLabel.Text = "🔄 Fixed Commands is In (Loop):"
+}
+else {
+    $fixedCycleLabel.Text = "🔀 Fixed Commands is Out (Loop):"
+}
+$fixedCycleToggle.Add_Click({
+    $newState = ($this.Text -eq "OFF")
+    Set-ToggleState $this $newState
+    if ($this.Text -eq "ON") {
+        $fixedCycleLabel.Text = "🔄 Fixed Commands is In (Loop):"
+    }
+    else {
+        $fixedCycleLabel.Text = "🔀 Fixed Commands is Out (Loop):"
+    }
+    Mark-Dirty
+})
+$days.Controls.Add($fixedCycleToggle)
+AddEmoji $days "🔄" $fixedCycleToggle
+$y += 15 
 # ---- Subsection 3: Telegram Bot Toggles ----
-$y += 40  
+$y += 30  
 $sub3 = New-Object Windows.Forms.Label
 $sub3.Text = "● Telegram Bots"
 $sub3.Font = $FONT_LABEL
@@ -518,7 +576,8 @@ AddEmoji $days "🔵" $mediaToggle
 $y += $spacing
 AddFooterLine $days "● Specify the days you want AutoPilot to run.
 ● In the Interview Run section, set the number of repetitions.
-● Choose a number from 0 to 10, where 0 means an unlimited number of repetitions.
+● Scripts Fixed Commands In/Out LOOP (ON/OFF).
+● Choose a number from 0 to 99, where 0 means an unlimited number of repetitions.
 ● Use the AutoPilot without the *AutoPilot Bot* and *Media Bot* using the On/Off buttons."
 
 # ================= GLOBAL SAVE BUTTON =================
@@ -558,6 +617,8 @@ $save.Add_Click({
 	# Telegram Toggles
     $config.AUTOPILOT_TELEGRAM_ENABLED = ($autoPilotToggle.Text -eq "ON")
     $config.MEDIA_TELEGRAM_ENABLED     = ($mediaToggle.Text -eq "ON")
+	# Scripts Fixed Commands In/Out LOOP (ON/OFF)
+    $config.FIXED_NO_BLOCK_CYCLE = -not ($fixedCycleToggle.Text -eq "ON")
 	# Pro / Test Mode
 	$config.ENABLE_RESTART  = ($proTestBtn.Text -eq "PRO")
 	$config.ENABLE_SHUTDOWN = ($proTestBtn.Text -eq "PRO")
@@ -641,6 +702,8 @@ $defaultBtn.Add_Click({
 	# ---------- Telegram Bots ----------
 	Set-ToggleState $autoPilotToggle $def.AUTOPILOT_TELEGRAM_ENABLED
     Set-ToggleState $mediaToggle     $def.MEDIA_TELEGRAM_ENABLED
+	# ---------- Scripts Fixed Commands In/Out LOOP (ON/OFF) ----------
+    Set-ToggleState $fixedCycleToggle (-not [bool]$def.FIXED_NO_BLOCK_CYCLE)
 	# ---------- Pro / Test Mode ----------
 	if ($def.ENABLE_RESTART -and $def.ENABLE_SHUTDOWN) {
 		$proTestBtn.Text = "PRO"
@@ -726,6 +789,8 @@ $resetBtn.Add_Click({
 	# ---------- Telegram Bots ----------
 	Set-ToggleState $autoPilotToggle $false
     Set-ToggleState $mediaToggle     $false
+	# ---------- Scripts Fixed Commands In/Out LOOP (ON/OFF) ----------
+    Set-ToggleState $fixedCycleToggle $true
 	# ---------- Pro / Test Mode ----------
 	$proTestBtn.Text = "TEST"
 	$proTestBtn.BackColor = [Drawing.Color]::FromArgb(255,69,58)

@@ -1076,30 +1076,163 @@ function Commands-ListAll {
 		}
 	}
     $timeline = @()
-    # ================= SCRIPTS =================
-    foreach($scr in $scrJson.ScheduledScripts){
-		for($i=0; $i -lt $scr.Times.Count; $i++){
+	# ================= SCRIPTS =================
+	$settingsPath = "$PSScriptRoot\JSON\settings.json"
+	$fixedNoBlockCycle = $false
+	if (Test-Path $settingsPath) {
+		try {
+			$config = Get-Content $settingsPath -Raw | ConvertFrom-Json
+			$fixedNoBlockCycle = [bool]$config.FIXED_NO_BLOCK_CYCLE
+		}
+		catch {
+			$fixedNoBlockCycle = $false
+		}
+	}
+	# ================= CURRENT AUTOPILOT STATE =================
+	$statePath = "$PSScriptRoot\JSON\autopilot_state.json"
+	$currentR = 1
+	$state = $null
+	if (Test-Path $statePath) {
+		try {
+			$state = Get-Content $statePath -Raw | ConvertFrom-Json
+			if ($null -ne $state.cycle) {
+				$currentR = [int]$state.cycle
+			}
+		}
+		catch {
+			$currentR = 1
+			$state = $null
+		}
+	}
+	# ================= CHECK FUTURE FIXED BLOCK =================
+	$futureFixedExists = $false
+	$nextFixedDate = $null
+	if (-not $fixedNoBlockCycle) {
+		foreach($checkScr in $scrJson.ScheduledScripts){
+			for($j = 0; $j -lt $checkScr.Times.Count; $j++){
+				$checkMode = $checkScr.Mode[$j]
+				$hasDay =
+					$checkScr.Day -and
+					$checkScr.Day.Count -gt $j -and
+					-not [string]::IsNullOrWhiteSpace(
+						$checkScr.Day[$j]
+					)
+				if ($checkMode -eq "fixed" -and $hasDay) {
+					$checkFixedTime = [datetime]::ParseExact(
+						"$($checkScr.Day[$j]) $($checkScr.Times[$j])",
+						"yyyy-MM-dd HH:mm:ss",
+						$null
+					)
+					if ($checkFixedTime -gt (Get-Date)) {
+						if (
+							$null -eq $nextFixedDate -or
+							$checkFixedTime -lt $nextFixedDate
+						) {
+							$nextFixedDate = $checkFixedTime
+						}
+						$futureFixedExists = $true
+					}
+				}
+			}
+		}
+	}
+	# ================= BUILD SCRIPT TIMELINE =================
+	foreach($scr in $scrJson.ScheduledScripts){
+		for($i = 0; $i -lt $scr.Times.Count; $i++){
 			$mode = $scr.Mode[$i]
 			$type = "daily"
 			$timeStr = $scr.Times[$i]
-			$dayStr = if($scr.Day[$i] -and $scr.Day[$i].Trim() -ne "") { $scr.Day[$i] } else { "No Data" }
-			# ===== ИСТА ЛОГИКА КАКО Load-Timeline =====
+			$dayStr =
+				if(
+					$scr.Day[$i] -and
+					$scr.Day[$i].Trim() -ne ""
+				) {
+					$scr.Day[$i]
+				}
+				else {
+					"No Data"
+				}
+			# ================= TIME =================
 			if($mode -eq "fixed" -and $dayStr){
-				$dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
-			} else {
+				$dt = [datetime]::ParseExact(
+					"$dayStr $timeStr",
+					"yyyy-MM-dd HH:mm:ss",
+					$null
+				)
+			}
+			else {
 				$today = Get-Date
 				$timeParts = $timeStr -split ":"
-				$dt = $today.Date.AddHours([int]$timeParts[0]).AddMinutes([int]$timeParts[1]).AddSeconds([int]$timeParts[2])
+				$dt = $today.Date.
+					AddHours([int]$timeParts[0]).
+					AddMinutes([int]$timeParts[1]).
+					AddSeconds([int]$timeParts[2])
 			}
-			# ===== STATUS ИСТ КАКО ПРВИОТ КОД =====
+			# ================= STATUS =================
 			switch ($mode.ToLower()){
-                "fixed" { $status = "𝐅𝐈𝐗𝐄𝐃" }
-                "loop"  { $status = "𝐋𝐎𝐎𝐏" }
-                default { $status = "" }
+				"fixed" { $status = "𝐅𝐈𝐗𝐄𝐃" }
+				"loop" { $status = "𝐋𝐎𝐎𝐏" }
+				default { $status = "" }
+			}
+			# ================= COMPLETED FIXED =================
+			$completedText = ""
+			if(
+				$mode -eq "fixed" -and
+				$dt -lt (Get-Date)
+			){
+				$completedText = "  <<< ✅ Completed (Time's Up)"
+			}
+			# ================= OUT OF LOOP STATUS =================
+			$outOfLoopText = ""
+			$hasExplicitDay = (
+				-not [string]::IsNullOrWhiteSpace([string]$dayStr) -and
+				$dayStr -ne "No Data"
+			)
+			$now = Get-Date
+			if (
+				$fixedNoBlockCycle -and
+				($mode -eq "fixed" -or $hasExplicitDay) -and
+				$hasExplicitDay -and
+				$dt -ge $now
+			) {
+				$stateTotal = ""
+				if ($null -ne $state -and $null -ne $state.total) {
+					$stateTotal = ([string]$state.total).Trim()
+				}
+				# FINITE LOOP: prikazi oznaka samo pred posledniot ciklus.
+				if ($stateTotal -match '^\d+$' -and [int]$stateTotal -gt 0) {
+					$totalR = [int]$stateTotal
+					if ($currentR -lt $totalR) {
+						$outOfLoopText = "  <<< ⚠️ Out of Loop (Rep:$currentR/$totalR)"
+					}
+				}
+				# BESKONECEN LOOP: FIXED se preskoknuvaat neograniceno.
+				elseif ($stateTotal -ieq "LOOP") {
+					$outOfLoopText = "  <<< ⚠️ Out of Loop (Rep:$currentR/Loop)"
+				}
+				# Ako sostojbata ne e dostapna, zadrzi ja starata oznaka.
+				else {
+					$outOfLoopText = "  <<< ⚠️ Out of Loop (Skipped)"
+				}
+			}
+            # ================= SKIPPED REP STATUS =================
+            $previewStatus = ""
+            if (
+                $mode -eq "loop" -and
+                -not $fixedNoBlockCycle -and
+                $futureFixedExists -and
+                $null -ne $state -and
+                $null -ne $state.timestamp -and
+                (Get-Date) -ge ([datetime]$state.timestamp).AddDays(1)
+            ) {
+                $previewStatus = "  <<< ⛔ Skipped (Rep:$currentR)"
             }
+			# ================= ADD TO TIMELINE =================
 			$timeline += [PSCustomObject]@{
 				Time = $dt
-				Text = "$status  ⚛️ SCRIPT ($([System.IO.Path]::GetFileName($scr.Path))) Command: $($scr.Commands[$i])  🕓 Time: $timeStr 🌀 Delay: $($scr.DelaySeconds[$i]) sec  🔂 Repeat: $($scr.RepeatIntervalMinutes[$i]) min  🔃 Mode: $mode  📆 Day: $dayStr"
+				Mode = $mode
+				Type = $type
+				Text = "$status  ⚛️ SCRIPT ($([System.IO.Path]::GetFileName($scr.Path))) Command: $($scr.Commands[$i])  🕓 Time: $timeStr 🌀 Delay: $($scr.DelaySeconds[$i]) sec  🔂 Repeat: $($scr.RepeatIntervalMinutes[$i]) min 🔃 Mode: $mode 📆 Day: $dayStr$previewStatus$completedText$outOfLoopText"
 			}
 		}
 	}
@@ -1139,6 +1272,14 @@ function Commands-ListAll {
                 "loop"  { $status = "𝐋𝐎𝐎𝐏" }
                 default { $status = "" }
             }
+			# ================= COMPLETED FIXED =================
+			$completedText = ""
+			if(
+				$mode -eq "fixed" -and
+				$dt -lt (Get-Date)
+			){
+				$completedText = "  <<< ✅ Completed (Time's Up)"
+			}
 			# ===== TYPE TEXT (исто како Load-Timeline) =====
 			switch ($type.ToLower()){
 				"daily"   { $typeText = "" }
@@ -1147,9 +1288,12 @@ function Commands-ListAll {
 				"yearly"  { $typeText = " Mode: YEAR" }
 				default   { $typeText = "" }
 			}
+			# ================= ADD TO TIMELINE =================
 			$timeline += [PSCustomObject]@{
 				Time = $dt
-				Text = "$status$typeText  🅰️ AUTO COMMAND ($($cmd.Cmd))  🕓 Time: $timeStr  🔂 Repeat: $($cmd.RepeatIntervalMinutes[$i]) min  🔀 Type: $type  🔃 Mode: $mode  📆 Day: $dayStr"
+				Mode = $mode
+				Type = $type
+				Text = "$status$typeText  🅰️ AUTO COMMAND ($($cmd.Cmd))  🕓 Time: $timeStr  🔂 Repeat: $($cmd.RepeatIntervalMinutes[$i]) min  🔀 Type: $type  🔃 Mode: $mode  📆 Day: $dayStr$completedText"
 			}
 		}
 	}
@@ -1340,6 +1484,115 @@ function Dashboard-Stop {
         Write-Host "Dashboard is already EXIT!" -ForegroundColor Yellow
     }
 	Send-TelegramMessage -message $msg
+}
+
+# ===================== VLC PLAYER =====================
+# Play
+function Play-Radio {
+    if (-not (Test-Path -LiteralPath $vlcPath -PathType Leaf)) {
+        $msg = "ℹ️ VLC is Not Installed. 📥 Please install VLC to the default path: 📂 C:\Program Files\VideoLAN\VLC\vlc.exe`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    if (-not (Test-VLCRadioStations)) {
+        $msg = "⚠️ VLC radio unavailable: $($global:VlcRadioConfigProblem)`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    # Close any active VLC before starting a new stream
+    Get-Process vlc -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+    $index = $global:CurrentStationIndex
+    $url = $global:RadioStations[$index]
+    $title = "RadioStation $($index + 1)"
+    $path = $vlcRadioSettingsPath
+    if ([string]::IsNullOrWhiteSpace($path)) {
+        $path = Join-Path $PSScriptRoot "JSON\vlc_radio.json"
+    }
+    try {
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            $cfg = Get-Content -LiteralPath $path -Raw -ErrorAction Stop |
+                ConvertFrom-Json -ErrorAction Stop
+            $titles = @($cfg.RADIO_STATION_TITLES)
+            if (
+                $index -lt $titles.Count -and
+                $titles[$index] -is [string] -and
+                -not [string]::IsNullOrWhiteSpace($titles[$index])
+            ) {
+                $title = $titles[$index].Trim()
+            }
+        }
+    }
+    catch {}
+    try {
+        Start-Process -FilePath $vlcPath -ArgumentList $url -ErrorAction Stop
+        $msg = "🔊 Station started: $($index + 1). $title`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    catch {
+        $msg = "⚠️ Failed to start VLC: $($_.Exception.Message)"
+        Write-Log "VLC RADIO ERROR: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+}
+# Stop
+function Stop-Radio {
+    if (-not (Test-Path -LiteralPath $vlcPath -PathType Leaf)) {
+        $msg = "ℹ️ VLC is Not Installed. 📥 Please install VLC to the default path: 📂 C:\Program Files\VideoLAN\VLC\vlc.exe`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    Get-Process vlc -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+    $msg = "VLC is ❌ closed.`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+    Write-Log "VLC RADIO: $msg"
+    Send-TelegramMessage -message $msg
+    return $msg
+}
+# Next
+function Next-Radio {
+    if (-not (Test-Path -LiteralPath $vlcPath -PathType Leaf)) {
+        $msg = "ℹ️ VLC is Not Installed. 📥 Please install VLC to the default path: 📂 C:\Program Files\VideoLAN\VLC\vlc.exe`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    if (-not (Test-VLCRadioStations)) {
+        $msg = "⚠️ VLC radio unavailable: $($global:VlcRadioConfigProblem)`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    $global:CurrentStationIndex = (
+        $global:CurrentStationIndex + 1
+    ) % $global:RadioStations.Count
+    return Play-Radio
+}
+# Prev
+function Prev-Radio {
+    if (-not (Test-Path -LiteralPath $vlcPath -PathType Leaf)) {
+        $msg = "ℹ️ VLC is Not Installed. 📥 Please install VLC to the default path: 📂 C:\Program Files\VideoLAN\VLC\vlc.exe`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    if (-not (Test-VLCRadioStations)) {
+        $msg = "⚠️ VLC radio unavailable: $($global:VlcRadioConfigProblem)`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+        Write-Log "VLC RADIO: $msg"
+        Send-TelegramMessage -message $msg
+        return $msg
+    }
+    $global:CurrentStationIndex = $global:CurrentStationIndex - 1
+    if ($global:CurrentStationIndex -lt 0) {
+        $global:CurrentStationIndex = $global:RadioStations.Count - 1
+    }
+    return Play-Radio
 }
 
 ########################################################################################################################### System End.

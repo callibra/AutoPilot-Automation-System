@@ -982,6 +982,13 @@ $xaml = @"
 				</Border>
 				<TextBlock Text="AutoPilot Mode" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
 			</StackPanel>
+			<!-- Internet Connection Panel -->
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <Border x:Name="borderInternet" CornerRadius="10" Height="45" Width="110"  Background="#BE3737" Padding="5" Margin="0,0,8,0">
+                <TextBlock x:Name="txtInternet" Text="🚫 Disconnected" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="Network" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            </StackPanel>
 			<!-- Uptime Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
 				<Border x:Name="borderUptime" CornerRadius="10" Height="45" Width="120" Background="#0D73BA" Padding="5" Margin="0,0,20,0">
@@ -1098,7 +1105,7 @@ $xaml = @"
 			<!-- ToolTip Notification -->
 			<Button.ToolTip>
 				<ToolTip Background="#FF2D2D30"  Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
-					<TextBlock Text="Use Mod 2 or 3 for Smallers Display" TextWrapping="Wrap" FontSize="17"/>
+					<TextBlock Text="Use Mod 2 to 5 for Smallers Display" TextWrapping="Wrap" FontSize="17"/>
 				</ToolTip>
 			</Button.ToolTip>
 		</Button>
@@ -1159,6 +1166,7 @@ $xaml = @"
 					<Button x:Name="btnSettingsScripts" Content="⚙️ Scripts Settings" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnHideCmd" Content="⛔ Hide Cmd" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnShowCmd" Content="🗔 Show Cmd" Style="{StaticResource ModernButton}" />
+					<Button x:Name="btnVlc" Content="🎵 Vlc List" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnLock" Content="🔒 Lock Dashboard" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnOpenFolder" Content="🖱️ SetUp" Style="{StaticResource ModernButton}" />
 					<Button x:Name="btnAbout" Content="ℹ️ AboutUs" Style="{StaticResource ModernButton}"/>
@@ -1497,6 +1505,567 @@ if ($btnRefreshTimeline) {
         }
     })
 }
+# ===================== VLC RADIO LIST PANEL (PowerShell / WPF) =====================
+$Global:VlcRadioJsonPath = Join-Path -Path $AppRoot -ChildPath "JSON\vlc_radio.json"
+$Global:VlcListOwnerWindow = $window
+function Set-VlcListStatus {
+    param(
+        [string]$Message,
+        [ValidateSet('Info', 'Success', 'Warning', 'Error')]
+        [string]$Level = 'Info'
+    )
+    $hex = switch ($Level) {
+        'Success' { '#83E6A2' }
+        'Warning' { '#FFC66D' }
+        'Error'   { '#FF8585' }
+        default   { '#D7DEE8' }
+    }
+    if ($Global:VlcListStatusText) {
+        $Global:VlcListStatusText.Text = $Message
+        $Global:VlcListStatusText.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.ColorConverter]::ConvertFromString($hex)
+        )
+    }
+    if ($Level -eq 'Warning' -or $Level -eq 'Error') {
+        Write-Host $Message -ForegroundColor $(if ($Level -eq 'Error') { 'Red' } else { 'Yellow' })
+        try {
+            if (Get-Command -Name Write-Log -ErrorAction SilentlyContinue) {
+                Write-Log $Message
+            }
+            elseif (-not [string]::IsNullOrWhiteSpace($Global:logPath)) {
+                $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+                Add-Content -LiteralPath $Global:logPath -Value "$stamp - $Message" -Encoding UTF8 -ErrorAction Stop
+            }
+        }
+        catch {
+            Write-Host "Could not write VLC panel status to log: $($_.Exception.Message)" -ForegroundColor DarkYellow
+        }
+    }
+}
+# Test Vlc radio url
+function Test-VlcRadioUrl {
+    param([string]$Url)
+    return (-not [string]::IsNullOrWhiteSpace($Url) -and $Url.Trim() -match '^https?://\S+$')
+}
+# Update the visible station numbering after add/update/delete.
+function Update-VlcStationDisplayNumbers {
+    if (-not $Global:VlcStationList) { return }
+    for ($i = 0; $i -lt $Global:VlcStationList.Items.Count; $i++) {
+        $stationItem = $Global:VlcStationList.Items[$i]
+        if ($stationItem -is [System.Windows.Controls.ListBoxItem] -and $stationItem.Tag) {
+            $stationTitle = [string]$stationItem.Tag.Title
+            $url = [string]$stationItem.Tag.Url
+            $stationItem.Content = "{0}. {1} - {2}" -f ($i + 1), $stationTitle, $url
+        }
+    }
+}
+# Load Vlc radio Json
+function Load-VlcRadioJson {
+    $Global:VlcStationList.Items.Clear()
+    $Global:VlcJsonDamaged = $false
+    $path = $Global:VlcRadioJsonPath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Show-DarkWarning `
+            -Title "⚠️ Error" `
+            -Message "⛔ JSON file not found: $path.`nAdd stations and press Save JSON to create it."
+        return
+    }
+    try {
+        $raw = Get-Content -LiteralPath $path -Raw -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            throw 'The JSON file is empty.'
+        }
+        $cfg = ConvertFrom-Json -InputObject $raw -ErrorAction Stop
+        if ($null -eq $cfg -or $cfg -is [array]) {
+            throw 'The JSON root must be an object.'
+        }
+        if ($cfg.PSObject.Properties.Name -notcontains 'RADIO_STATIONS') {
+            throw 'The RADIO_STATIONS property is missing.'
+        }
+        if ($raw -match '(?is)"RADIO_STATIONS"\s*:\s*null' -or $cfg.RADIO_STATIONS -is [string]) {
+            throw 'RADIO_STATIONS must be an array of URLs, not null or a single string.'
+        }
+        $items = @($cfg.RADIO_STATIONS)
+        $titles = @()
+        if ($cfg.PSObject.Properties.Name -contains 'RADIO_STATION_TITLES' -and $null -ne $cfg.RADIO_STATION_TITLES) {
+            $titles = @($cfg.RADIO_STATION_TITLES)
+        }
+        $invalidCount = 0
+        for ($sourceIndex = 0; $sourceIndex -lt $items.Count; $sourceIndex++) {
+            $url = [string]$items[$sourceIndex]
+            if (Test-VlcRadioUrl $url) {
+                $stationNumber = $Global:VlcStationList.Items.Count + 1
+                $stationTitle = ''
+                if (($sourceIndex -lt $titles.Count) -and ($titles[$sourceIndex] -is [string])) {
+                    $stationTitle = $titles[$sourceIndex].Trim()
+                }
+                if ([string]::IsNullOrWhiteSpace($stationTitle)) {
+                    $stationTitle = "RadioStation $stationNumber"
+                }
+                $stationItem = New-Object System.Windows.Controls.ListBoxItem
+                $stationItem.Tag = [PSCustomObject]@{
+                    Title = $stationTitle
+                    Url   = $url.Trim()
+                }
+                $stationItem.Content = "{0}. {1} - {2}" -f $stationNumber, $stationTitle, $url.Trim()
+                [void]$Global:VlcStationList.Items.Add($stationItem)
+            }
+            else {
+                $invalidCount++
+            }
+        }
+        if ($invalidCount -gt 0) {
+            Show-DarkWarning `
+                -Title "⚠️ Warning" `
+                -Message "⚠ Loaded $($Global:VlcStationList.Items.Count) valid station(s); ignored $invalidCount invalid entry/entries. Save JSON to update the file."
+        }
+        else {
+            Show-DarkWarning `
+                -Title "🎵 Vlc Play List" `
+                -Message "Loaded $($Global:VlcStationList.Items.Count) station(s) from vlc_radio.json."
+        }
+    }
+    catch {
+        $Global:VlcJsonDamaged = $true
+        $Global:VlcStationList.Items.Clear()
+        Show-DarkWarning `
+            -Title "⚠️ Error" `
+            -Message "⛔ JSON file is damaged or incorrectly configured:`n$($_.Exception.Message)`nAdd the stations again and Save JSON. The original file will be backed up first."
+    }
+}
+# Save Vlc radio json
+function Save-VlcRadioJson {
+    $path = $Global:VlcRadioJsonPath
+    $stations = @()
+    $titles = @()
+    foreach ($item in $Global:VlcStationList.Items) {
+        if ($item -is [System.Windows.Controls.ListBoxItem] -and $item.Tag) {
+            $url = [string]$item.Tag.Url
+            $stationTitle = [string]$item.Tag.Title
+        }
+        else {
+            $url = [string]$item
+            $stationTitle = ''
+        }
+        if (-not (Test-VlcRadioUrl $url)) {
+            Set-VlcListStatus "Invalid URL found in the list. Correct it before saving." Error
+            return
+        }
+        if ([string]::IsNullOrWhiteSpace($stationTitle)) {
+            $stationTitle = "RadioStation $($stations.Count + 1)"
+        }
+        $stations += $url.Trim()
+        $titles += $stationTitle.Trim()
+    }
+    try {
+        $folder = Split-Path -Path $path -Parent
+        if (-not (Test-Path -LiteralPath $folder -PathType Container)) {
+            New-Item -Path $folder -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        }
+        $backupPath = "$path.bak"
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            Copy-Item -LiteralPath $path -Destination $backupPath -Force -ErrorAction Stop
+        }
+        $document = [ordered]@{
+            RADIO_STATIONS       = @($stations)
+            RADIO_STATION_TITLES = @($titles)
+        }
+        $json = $document | ConvertTo-Json -Depth 4
+        [System.IO.File]::WriteAllText(
+            $path,
+            ($json + [Environment]::NewLine),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $Global:VlcJsonDamaged = $false
+        $backupNote = if (Test-Path -LiteralPath $backupPath -PathType Leaf) { ' Backup: vlc_radio.json.bak' } else { '' }
+        Set-VlcListStatus "✅ Saved $($stations.Count) station(s) with titles to vlc_radio.json.$backupNote" Success
+    }
+    catch {
+        Set-VlcListStatus "❌ Could not save vlc_radio.json: $($_.Exception.Message)" Error
+    }
+}
+# New Vlc panel button
+function New-VlcPanelButton {
+    param(
+        [string]$Text,
+        [string]$Color = '#303A49'
+    )
+    $button = New-Object System.Windows.Controls.Button
+    $button.Content = $Text
+    $button.Background = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.ColorConverter]::ConvertFromString($Color)
+    )
+    $button.Foreground = [System.Windows.Media.Brushes]::White
+    $button.BorderThickness = [System.Windows.Thickness]::new(0)
+    $button.Padding = [System.Windows.Thickness]::new(14, 8, 14, 8)
+    $button.Margin = [System.Windows.Thickness]::new(5)
+    $button.FontFamily = 'Segoe UI'
+    $button.FontSize = 14
+    $button.FontWeight = 'SemiBold'
+    $button.MinHeight = 40
+    $button.Cursor = [System.Windows.Input.Cursors]::Hand
+    return $button
+}
+# Button Vlc
+$btnVlc = $window.FindName('btnVlc')
+if ($btnVlc) {
+    $btnVlc.Add_Click({
+        # Reuse the panel if it is already open.
+        if ($Global:VlcListWindow -and $Global:VlcListWindow.IsVisible) {
+            if ($Global:VlcListWindow.WindowState -eq [System.Windows.WindowState]::Minimized) {
+                $Global:VlcListWindow.WindowState = [System.Windows.WindowState]::Normal
+            }
+            $Global:VlcListWindow.Activate()
+            return
+        }
+        $vlcWindow = New-Object System.Windows.Window
+        $Global:VlcListWindow = $vlcWindow
+        $vlcWindow.Title = 'VLC Radio Stations'
+        $vlcWindow.Width = 980
+        $vlcWindow.Height = 690
+        $vlcWindow.MinWidth = 760
+        $vlcWindow.MinHeight = 540
+        $vlcWindow.WindowStartupLocation = 'CenterOwner'
+        $vlcWindow.Background = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(20, 20, 20)
+        )
+        if ($Global:VlcListOwnerWindow) { $vlcWindow.Owner = $Global:VlcListOwnerWindow }
+        $vlcWindow.Add_Closed({
+            $Global:VlcListWindow = $null
+            $Global:VlcStationList = $null
+            $Global:VlcStationTitleBox = $null
+            $Global:VlcStationUrlBox = $null
+            $Global:VlcListStatusText = $null
+        })
+        $grid = New-Object System.Windows.Controls.Grid
+        $grid.Margin = [System.Windows.Thickness]::new(16)
+        foreach ($height in @('Auto', 'Auto', 'Auto', '*', 'Auto')) {
+            $row = New-Object System.Windows.Controls.RowDefinition
+            if ($height -eq '*') {
+                $row.Height = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+            }
+            else {
+                $row.Height = [System.Windows.GridLength]::Auto
+            }
+            $grid.RowDefinitions.Add($row)
+        }
+        # Title and description, matching the dark AutoPilot panel style.
+        $header = New-Object System.Windows.Controls.StackPanel
+        $header.Margin = [System.Windows.Thickness]::new(0, 0, 0, 12)
+        $title = New-Object System.Windows.Controls.TextBlock
+        $title.Text = '🎵  VLC Radio Stations'
+        $title.Foreground = [System.Windows.Media.Brushes]::White
+        $title.FontSize = 27
+        $title.FontWeight = 'Bold'
+        $subtitle = New-Object System.Windows.Controls.TextBlock
+        $subtitle.Text = 'Add unlimited station URLs and titles, select one to edit, then save the list to JSON.'
+        $subtitle.Foreground = [System.Windows.Media.Brushes]::LightGray
+        $subtitle.FontSize = 14
+        $subtitle.Margin = [System.Windows.Thickness]::new(2, 5, 0, 0)
+        $header.Children.Add($title)
+        $header.Children.Add($subtitle)
+        [System.Windows.Controls.Grid]::SetRow($header, 0)
+        $grid.Children.Add($header)
+        # Status message.
+        $statusBorder = New-Object System.Windows.Controls.Border
+        $statusBorder.Background = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(35, 35, 35)
+        )
+        $statusBorder.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(65, 65, 65)
+        )
+        $statusBorder.BorderThickness = [System.Windows.Thickness]::new(1)
+        $statusBorder.CornerRadius = [System.Windows.CornerRadius]::new(4)
+        $statusBorder.Padding = [System.Windows.Thickness]::new(10, 8, 10, 8)
+        $statusBorder.Margin = [System.Windows.Thickness]::new(0, 0, 0, 12)
+        $Global:VlcListStatusText = New-Object System.Windows.Controls.TextBlock
+        $Global:VlcListStatusText.TextWrapping = 'Wrap'
+        $Global:VlcListStatusText.FontSize = 14
+        $Global:VlcListStatusText.Foreground = [System.Windows.Media.Brushes]::LightGray
+        $statusBorder.Child = $Global:VlcListStatusText
+        [System.Windows.Controls.Grid]::SetRow($statusBorder, 1)
+        $grid.Children.Add($statusBorder)
+        # Title and URL entry.
+        $inputGrid = New-Object System.Windows.Controls.Grid
+        $inputGrid.Margin = [System.Windows.Thickness]::new(0, 0, 0, 12)
+        $labelColumn = New-Object System.Windows.Controls.ColumnDefinition
+        $labelColumn.Width = [System.Windows.GridLength]::Auto
+        $urlColumn = New-Object System.Windows.Controls.ColumnDefinition
+        $urlColumn.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+        $inputGrid.ColumnDefinitions.Add($labelColumn)
+        $inputGrid.ColumnDefinitions.Add($urlColumn)
+        $titleRow = New-Object System.Windows.Controls.RowDefinition
+        $titleRow.Height = [System.Windows.GridLength]::Auto
+        $inputGrid.RowDefinitions.Add($titleRow)
+        $urlRow = New-Object System.Windows.Controls.RowDefinition
+        $urlRow.Height = [System.Windows.GridLength]::Auto
+        $inputGrid.RowDefinitions.Add($urlRow)
+        $titleLabel = New-Object System.Windows.Controls.TextBlock
+        $titleLabel.Text = 'Station Title:'
+        $titleLabel.Foreground = [System.Windows.Media.Brushes]::White
+        $titleLabel.FontSize = 15
+        $titleLabel.VerticalAlignment = 'Center'
+        $titleLabel.Margin = [System.Windows.Thickness]::new(0, 0, 12, 8)
+        [System.Windows.Controls.Grid]::SetColumn($titleLabel, 0)
+        [System.Windows.Controls.Grid]::SetRow($titleLabel, 0)
+        $inputGrid.Children.Add($titleLabel)
+        $Global:VlcStationTitleBox = New-Object System.Windows.Controls.TextBox
+        $Global:VlcStationTitleBox.Height = 40
+        $Global:VlcStationTitleBox.Padding = [System.Windows.Thickness]::new(10, 7, 10, 7)
+        $Global:VlcStationTitleBox.FontSize = 15
+        $Global:VlcStationTitleBox.FontFamily = 'Segoe UI'
+        $Global:VlcStationTitleBox.Foreground = [System.Windows.Media.Brushes]::White
+        $Global:VlcStationTitleBox.Background = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(31, 31, 31)
+        )
+        $Global:VlcStationTitleBox.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(75, 75, 75)
+        )
+        $Global:VlcStationTitleBox.CaretBrush = [System.Windows.Media.Brushes]::White
+        $Global:VlcStationTitleBox.Margin = [System.Windows.Thickness]::new(0, 0, 0, 8)
+        [System.Windows.Controls.Grid]::SetColumn($Global:VlcStationTitleBox, 1)
+        [System.Windows.Controls.Grid]::SetRow($Global:VlcStationTitleBox, 0)
+        $inputGrid.Children.Add($Global:VlcStationTitleBox)
+        $urlLabel = New-Object System.Windows.Controls.TextBlock
+        $urlLabel.Text = 'Station URL:'
+        $urlLabel.Foreground = [System.Windows.Media.Brushes]::White
+        $urlLabel.FontSize = 15
+        $urlLabel.VerticalAlignment = 'Center'
+        $urlLabel.Margin = [System.Windows.Thickness]::new(0, 0, 12, 0)
+        [System.Windows.Controls.Grid]::SetColumn($urlLabel, 0)
+        [System.Windows.Controls.Grid]::SetRow($urlLabel, 1)
+        $inputGrid.Children.Add($urlLabel)
+        $Global:VlcStationUrlBox = New-Object System.Windows.Controls.TextBox
+        $Global:VlcStationUrlBox.Height = 40
+        $Global:VlcStationUrlBox.Padding = [System.Windows.Thickness]::new(10, 7, 10, 7)
+        $Global:VlcStationUrlBox.FontSize = 15
+        $Global:VlcStationUrlBox.FontFamily = 'Segoe UI'
+        $Global:VlcStationUrlBox.Foreground = [System.Windows.Media.Brushes]::White
+        $Global:VlcStationUrlBox.Background = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(31, 31, 31)
+        )
+        $Global:VlcStationUrlBox.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(75, 75, 75)
+        )
+        $Global:VlcStationUrlBox.CaretBrush = [System.Windows.Media.Brushes]::White
+        [System.Windows.Controls.Grid]::SetColumn($Global:VlcStationUrlBox, 1)
+        [System.Windows.Controls.Grid]::SetRow($Global:VlcStationUrlBox, 1)
+        $inputGrid.Children.Add($Global:VlcStationUrlBox)
+        [System.Windows.Controls.Grid]::SetRow($inputGrid, 2)
+        $grid.Children.Add($inputGrid)
+        # Station list.
+        $Global:VlcStationList = New-Object System.Windows.Controls.ListBox
+        $Global:VlcStationList.Background = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(29, 29, 29)
+        )
+        $Global:VlcStationList.Foreground = [System.Windows.Media.Brushes]::White
+        $Global:VlcStationList.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(65, 65, 65)
+        )
+        $Global:VlcStationList.BorderThickness = [System.Windows.Thickness]::new(1)
+        $Global:VlcStationList.FontFamily = 'Segoe UI'
+        $Global:VlcStationList.FontSize = 16
+        $Global:VlcStationList.Padding = [System.Windows.Thickness]::new(5)
+        $Global:VlcStationList.Margin = [System.Windows.Thickness]::new(0, 0, 0, 12)
+        [System.Windows.Controls.Grid]::SetRow($Global:VlcStationList, 3)
+        $grid.Children.Add($Global:VlcStationList)
+        # Action buttons.
+        $buttonPanel = New-Object System.Windows.Controls.WrapPanel
+        $buttonPanel.HorizontalAlignment = 'Center'
+        $buttonPanel.Margin = [System.Windows.Thickness]::new(0, 0, 0, 0)
+        [System.Windows.Controls.Grid]::SetRow($buttonPanel, 4)
+        $addButton = New-VlcPanelButton '➕ Add URL' '#18794E'
+        $updateButton = New-VlcPanelButton '✏️ Update selected' '#245DA8'
+        $deleteButton = New-VlcPanelButton '🗑 Delete selected' '#8C3434'
+        $deleteAllButton = New-VlcPanelButton '🧹 Delete all' '#963E32'
+        $saveButton = New-VlcPanelButton '💾 Save JSON' '#8C671D'
+        $closeButton = New-VlcPanelButton '✖ Close' '#3A3A3A'
+        foreach ($button in @($addButton, $updateButton, $deleteButton, $deleteAllButton, $saveButton, $closeButton)) {
+            $buttonPanel.Children.Add($button)
+        }
+        $grid.Children.Add($buttonPanel)
+        # Select a station to copy its title and URL into the edit fields.
+        $Global:VlcStationList.Add_SelectionChanged({
+            $selected = $Global:VlcStationList.SelectedItem
+            if ($selected -is [System.Windows.Controls.ListBoxItem] -and $selected.Tag) {
+                $Global:VlcStationTitleBox.Text = [string]$selected.Tag.Title
+                $Global:VlcStationUrlBox.Text = [string]$selected.Tag.Url
+            }
+        })
+        $addButton.Add_Click({
+            $url = $Global:VlcStationUrlBox.Text.Trim()
+            if (-not (Test-VlcRadioUrl $url)) {
+                Set-VlcListStatus 'Enter a valid HTTP or HTTPS radio URL.' Error
+                return
+            }
+            $stationTitle = $Global:VlcStationTitleBox.Text.Trim()
+            if ([string]::IsNullOrWhiteSpace($stationTitle)) {
+                $stationTitle = "RadioStation $($Global:VlcStationList.Items.Count + 1)"
+            }
+            $stationItem = New-Object System.Windows.Controls.ListBoxItem
+            $stationItem.Tag = [PSCustomObject]@{
+                Title = $stationTitle
+                Url   = $url
+            }
+            $stationItem.Content = "{0}. {1} - {2}" -f ($Global:VlcStationList.Items.Count + 1), $stationTitle, $url
+            [void]$Global:VlcStationList.Items.Add($stationItem)
+            Update-VlcStationDisplayNumbers
+            $Global:VlcStationList.SelectedIndex = $Global:VlcStationList.Items.Count - 1
+            Set-VlcListStatus 'Station added to the list. Press Save JSON to write your changes.' Success
+        })
+        $updateButton.Add_Click({
+            $index = $Global:VlcStationList.SelectedIndex
+            if ($index -lt 0) {
+                Set-VlcListStatus 'Select a station to update first.' Warning
+                return
+            }
+            $url = $Global:VlcStationUrlBox.Text.Trim()
+            if (-not (Test-VlcRadioUrl $url)) {
+                Set-VlcListStatus 'Enter a valid HTTP or HTTPS radio URL.' Error
+                return
+            }
+            $stationTitle = $Global:VlcStationTitleBox.Text.Trim()
+            if ([string]::IsNullOrWhiteSpace($stationTitle)) {
+                $stationTitle = "RadioStation $($index + 1)"
+            }
+            $stationItem = New-Object System.Windows.Controls.ListBoxItem
+            $stationItem.Tag = [PSCustomObject]@{
+                Title = $stationTitle
+                Url   = $url
+            }
+            $stationItem.Content = "{0}. {1} - {2}" -f ($index + 1), $stationTitle, $url
+            $Global:VlcStationList.Items.RemoveAt($index)
+            $Global:VlcStationList.Items.Insert($index, $stationItem)
+            Update-VlcStationDisplayNumbers
+            $Global:VlcStationList.SelectedIndex = $index
+            Set-VlcListStatus 'Selected station updated in the list. Press Save JSON to write your changes.' Success
+        })
+        $deleteButton.Add_Click({
+            $index = $Global:VlcStationList.SelectedIndex
+            if ($index -lt 0) {
+                Set-VlcListStatus 'Select a station to delete first.' Warning
+                return
+            }
+            $selected = $Global:VlcStationList.SelectedItem
+            $answer = [System.Windows.MessageBox]::Show(
+                $Global:VlcListWindow,
+                "Delete this radio station?`n`n$($selected.Content)",
+                'Delete radio station',
+                [System.Windows.MessageBoxButton]::YesNo,
+                [System.Windows.MessageBoxImage]::Warning
+            )
+            if ($answer -eq [System.Windows.MessageBoxResult]::Yes) {
+                $Global:VlcStationList.Items.RemoveAt($index)
+                Update-VlcStationDisplayNumbers
+                $Global:VlcStationTitleBox.Clear()
+                $Global:VlcStationUrlBox.Clear()
+                Set-VlcListStatus 'Station removed from the list. Press Save JSON to write your changes.' Success
+            }
+        })
+        $deleteAllButton.Add_Click({
+            if ($Global:VlcStationList.Items.Count -eq 0) {
+                Set-VlcListStatus 'The station list is already empty.' Info
+                return
+            }
+            $answer = [System.Windows.MessageBox]::Show(
+                $Global:VlcListWindow,
+                'Delete ALL radio stations from the list?',
+                'Delete all stations',
+                [System.Windows.MessageBoxButton]::YesNo,
+                [System.Windows.MessageBoxImage]::Warning
+            )
+            if ($answer -eq [System.Windows.MessageBoxResult]::Yes) {
+                $Global:VlcStationList.Items.Clear()
+                $Global:VlcStationTitleBox.Clear()
+                $Global:VlcStationUrlBox.Clear()
+                Set-VlcListStatus 'All stations removed from the list. Press Save JSON to save an empty RADIO_STATIONS array.' Warning
+            }
+        })
+        $saveButton.Add_Click({ Save-VlcRadioJson })
+        $closeButton.Add_Click({ $Global:VlcListWindow.Close() })
+        $vlcWindow.Content = $grid
+        Load-VlcRadioJson
+        $vlcWindow.ShowDialog() | Out-Null
+    })
+}
+else {
+    Write-Host 'VLC list button btnVlc was not found in the main window.' -ForegroundColor Yellow
+}
+# ===================== Network Panel =====================
+$txtInternet    = $window.FindName("txtInternet")
+$borderInternet = $window.FindName("borderInternet")
+function Update-NetworkPanel {
+    try {
+        $adapters = @(
+            Get-NetAdapter -Physical -ErrorAction SilentlyContinue |
+            Where-Object { $_.Status -eq "Up" }
+        )
+        $wifi = $adapters |
+            Where-Object {
+                $_.NdisPhysicalMedium -eq 9 -or
+                $_.Name -match 'Wi-?Fi|Wireless|WLAN' -or
+                $_.InterfaceDescription -match 'Wi-?Fi|Wireless|WLAN'
+            } |
+            Select-Object -First 1
+        $ethernet = $adapters |
+            Where-Object {
+                $_.NdisPhysicalMedium -eq 14 -or
+                $_.Name -match 'Ethernet' -or
+                $_.InterfaceDescription -match 'Ethernet'
+            } |
+            Select-Object -First 1
+        if ($wifi) {
+            $profile = Get-NetConnectionProfile `
+                -InterfaceIndex $wifi.ifIndex `
+                -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($profile) {
+                $ssid = $profile.Name
+                $txtInternet.Text = "📶 $ssid"
+                $borderInternet.Background =
+                [System.Windows.Media.SolidColorBrush]::new(
+                    [System.Windows.Media.Color]::FromRgb(50, 173, 54)
+                )
+            return
+            }
+        }
+        if ($ethernet) {
+            $txtInternet.Text = "🖥️ $($ethernet.Name)"
+            $borderInternet.Background =
+                [System.Windows.Media.SolidColorBrush]::new(
+                    [System.Windows.Media.Color]::FromRgb(11, 146, 150)
+                )
+            return
+        }
+        $txtInternet.Text = "🚫 Disconnected"
+        $borderInternet.Background =
+            [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(190, 55, 55)
+            )
+    }
+    catch {
+        $txtInternet.Text = "🚫 Disconnected"
+        $borderInternet.Background =
+            [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(190, 55, 55)
+            )
+
+        Write-Log "Network panel error: $_"
+    }
+}
+# Initial network status
+Update-NetworkPanel
+# Refresh network status every 3 seconds
+$networkTimer = New-Object System.Windows.Threading.DispatcherTimer
+$networkTimer.Interval = [TimeSpan]::FromSeconds(55)
+$networkTimer.Add_Tick({
+    Update-NetworkPanel
+})
+$networkTimer.Start()
+# Stop timer when window closes
+$window.Add_Closed({
+    $networkTimer.Stop()
+})
 # ===================== Sound ON/OFF Batton =====================
 $btnSound = $window.FindName("btnSound")
 # default: muted
@@ -2309,36 +2878,76 @@ $Global:popupMaxHeight = 1015
 $Global:statusMaxHeight = 1000
 $Global:popupItemWidth = 180 
 $Global:popupItemHeight = 70
-
 # ===================== MODE TOGGLE =====================
 function Toggle-DashboardSize {
-    # ротирање 1 → 2 → 3 → 1
+    # ротирање 1 → 2 → 3 → 4 → 5 → 1
     $Global:mode++
-    if ($Global:mode -gt 3) { $Global:mode = 1 }
+    if ($Global:mode -gt 5) { $Global:mode = 1 }
+    # 🔹 РЕСЕТИРАЊЕ НА СТАНДАРДНИТЕ ВРЕДНОСТИ (За Мод 1, 2 и 3)
+    $txtPrev.FontSize = 17 
+    $txtCurrent.FontSize = 18
+    $txtNext.FontSize = 17
+    $txtPrev.Margin = "0,0,10,0"
+    $txtCurrent.Margin = "0,0,10,0"
+    $txtNext.Margin = "0,0,10,0"
     # ===================== MODE 2 =====================
     if ($Global:mode -eq 2) {
         $btnAction.Content = "❷ Mod"
         $headerGrid.Margin = "0,0,0,5"
-		$Global:popupMaxHeight = 855
-		$Global:statusMaxHeight = 855
+        $Global:popupMaxHeight = 855
+        $Global:statusMaxHeight = 855
     }
     # ===================== MODE 3 =====================
     elseif ($Global:mode -eq 3) {
         $btnAction.Content = "❸ Mod"
         $headerGrid.Margin = "0,0,0,5"
         $Global:popupMaxHeight = 655
-		$Global:statusMaxHeight = 655
+        $Global:statusMaxHeight = 655
         $Global:popupItemWidth = 155 
         $Global:popupItemHeight = 55
         $wpDashboard.ItemWidth = $Global:popupItemWidth
         $wpDashboard.ItemHeight = $Global:popupItemHeight
+    }
+    # ===================== MODE 4 =====================
+    elseif ($Global:mode -eq 4) { 
+        $btnAction.Content = "❹ Mod" 
+        $headerGrid.Margin = "0,0,0,5" 
+        $Global:popupMaxHeight = 655 
+        $Global:statusMaxHeight = 655 
+        $Global:popupItemWidth = 155 
+        $Global:popupItemHeight = 55 
+        $wpDashboard.ItemWidth = $Global:popupItemWidth 
+        $wpDashboard.ItemHeight = $Global:popupItemHeight
+        $txtPrev.FontSize = 16 
+        $txtCurrent.FontSize = 16
+        $txtNext.FontSize = 16
+        $txtPrev.Margin = "0,1,10,0"
+        $txtCurrent.Margin = "0,1,10,0"
+        $txtNext.Margin = "0,1,10,0"
+    }	
+    # ===================== MODE 5 =====================
+    elseif ($Global:mode -eq 5) { 
+        $btnAction.Content = "❺ Mod" 
+        $headerGrid.Margin = "0,0,0,5" 
+        $Global:popupMaxHeight = 655 
+        $Global:statusMaxHeight = 655 
+        $Global:popupItemWidth = 155 
+        $Global:popupItemHeight = 55 
+        $wpDashboard.ItemWidth = $Global:popupItemWidth 
+        $wpDashboard.ItemHeight = $Global:popupItemHeight
+        $txtPrev.FontSize = 15 
+        $txtCurrent.FontSize = 15
+        $txtNext.FontSize = 15
+        $txtPrev.Margin = "0,2,10,0"
+        $txtCurrent.Margin = "0,2,10,0"
+        $txtNext.Margin = "0,2,10,0"
     }
     # ===================== MODE 1 =====================
     else {
         $btnAction.Content = "❶ Mod"
         $headerGrid.Margin = "0,0,0,20"
         $Global:popupMaxHeight = 1015
-		$Global:statusMaxHeight = 1000
+        $Global:statusMaxHeight = 1000
         $Global:popupItemWidth = 180 
         $Global:popupItemHeight = 70
         $wpDashboard.ItemWidth = $Global:popupItemWidth
@@ -2770,6 +3379,13 @@ $btnTimelineList.Add_Click({
 	$listBox.FontSize = 19
 	$listBox.FontFamily = "Segoe UI"
 	$listBox.Foreground = [System.Windows.Media.Brushes]::White
+	# MODE 4,5 - намален font
+	if ($Global:mode -eq 4) {
+		$listBox.FontSize = 17
+	}
+	elseif ($Global:mode -eq 5) {
+    $listBox.FontSize = 15
+    }
     $Global:TimelineListBox = $listBox
 	$scrollViewer = New-Object System.Windows.Controls.ScrollViewer
 	$scrollViewer.Content = $listBox
@@ -2868,19 +3484,91 @@ function Load-Timeline {
     $scrJson = Get-Content "$AppRoot\JSON\scripts_edit.json" -Raw | ConvertFrom-Json
     $timeline = @()
     # ================= SCRIPTS =================
+    $settingsPath = "$AppRoot\JSON\settings.json"
+    $fixedNoBlockCycle = $false
+    if (Test-Path $settingsPath) {
+        try {
+            $config = Get-Content $settingsPath -Raw | ConvertFrom-Json
+            $fixedNoBlockCycle = [bool]$config.FIXED_NO_BLOCK_CYCLE
+        }
+        catch {
+            $fixedNoBlockCycle = $false
+        }
+    }
+    # ================= CURRENT AUTOPILOT STATE =================
+    $statePath = "$AppRoot\JSON\autopilot_state.json"
+    $currentR = 1
+    $state = $null
+    if (Test-Path $statePath) {
+        try {
+            $state = Get-Content $statePath -Raw | ConvertFrom-Json
+            if ($null -ne $state.cycle) {
+                $currentR = [int]$state.cycle
+            }
+        }
+        catch {
+            $currentR = 1
+            $state = $null
+        }
+    }
+    # ================= CHECK FUTURE FIXED BLOCK =================
+    $futureFixedExists = $false
+    $nextFixedDate = $null
+    if (-not $fixedNoBlockCycle) {
+        foreach($checkScr in $scrJson.ScheduledScripts){
+            for($j = 0; $j -lt $checkScr.Times.Count; $j++){
+                $checkMode = $checkScr.Mode[$j]
+                $hasDay =
+                    $checkScr.Day -and
+                    $checkScr.Day.Count -gt $j -and
+                    -not [string]::IsNullOrWhiteSpace(
+                        $checkScr.Day[$j]
+                    )
+                if ($checkMode -eq "fixed" -and $hasDay) {
+                    $checkFixedTime = [datetime]::ParseExact(
+                        "$($checkScr.Day[$j]) $($checkScr.Times[$j])",
+                        "yyyy-MM-dd HH:mm:ss",
+                        $null
+                    )
+                    if ($checkFixedTime -gt (Get-Date)) {
+                        if (
+                            $null -eq $nextFixedDate -or
+                            $checkFixedTime -lt $nextFixedDate
+                        ) {
+                            $nextFixedDate = $checkFixedTime
+                        }
+                        $futureFixedExists = $true
+                    }
+                }
+            }
+        }
+    }
     foreach($scr in $scrJson.ScheduledScripts){
         for($i=0; $i -lt $scr.Times.Count; $i++){
-            $mode = $scr.Mode[$i]         # fixed или loop
-            $type = "daily"               # за script, default daily
+            $mode = $scr.Mode[$i]
+            $type = "daily"
             $timeStr = $scr.Times[$i]
-            $dayStr = if($scr.Day[$i] -and $scr.Day[$i].Trim() -ne "") { $scr.Day[$i] } else { "No Data" }
-            # Време
+            $dayStr =
+                if($scr.Day[$i] -and $scr.Day[$i].Trim() -ne "") {
+                    $scr.Day[$i]
+                }
+                else {
+                    "No Data"
+                }
             if($mode -eq "fixed" -and $dayStr){
-                $dt = [datetime]::ParseExact("$dayStr $timeStr","yyyy-MM-dd HH:mm:ss",$null)
-            } else {
+                $dt = [datetime]::ParseExact(
+                    "$dayStr $timeStr",
+                    "yyyy-MM-dd HH:mm:ss",
+                    $null
+                )
+            }
+            else {
                 $today = Get-Date
                 $timeParts = $timeStr -split ":"
-                $dt = $today.Date.AddHours([int]$timeParts[0]).AddMinutes([int]$timeParts[1]).AddSeconds([int]$timeParts[2])
+                $dt = $today.Date.
+                    AddHours([int]$timeParts[0]).
+                    AddMinutes([int]$timeParts[1]).
+                    AddSeconds([int]$timeParts[2])
             }
             # ================= STATUS TEXT =================
             switch ($mode.ToLower()){
@@ -2888,12 +3576,64 @@ function Load-Timeline {
                 "loop"  { $status = "𝐋𝐎𝐎𝐏" }
                 default { $status = "" }
             }
-            # за scripts секогаш Daily, така што ништо дополнително не се додава
+			# ================= COMPLETED FIXED =================
+			$completedText = ""
+			if(
+				$mode -eq "fixed" -and
+				$dt -lt (Get-Date)
+			){
+				$completedText = "  🡸 ✅ Completed (Time's Up)"
+			}
+			# ================= OUT OF LOOP STATUS =================
+			$outOfLoopText = ""
+			$hasExplicitDay = (
+				-not [string]::IsNullOrWhiteSpace([string]$dayStr) -and
+				$dayStr -ne "No Data"
+			)
+			$now = Get-Date
+			if (
+				$fixedNoBlockCycle -and
+				($mode -eq "fixed" -or $hasExplicitDay) -and
+				$hasExplicitDay -and
+				$dt -ge $now
+			) {
+				$stateTotal = ""
+				if ($null -ne $state -and $null -ne $state.total) {
+					$stateTotal = ([string]$state.total).Trim()
+				}
+				# FINITE LOOP: prikazi oznaka samo pred posledniot ciklus.
+				if ($stateTotal -match '^\d+$' -and [int]$stateTotal -gt 0) {
+					$totalR = [int]$stateTotal
+					if ($currentR -lt $totalR) {
+						$outOfLoopText = "  🡸 ⚠️ Out of Loop (Rep:$currentR/$totalR)"
+					}
+				}
+				# BESKONECEN LOOP: FIXED se preskoknuvaat neograniceno.
+				elseif ($stateTotal -ieq "LOOP") {
+					$outOfLoopText = "  🡸 ⚠️ Out of Loop (Rep:$currentR/Loop)"
+				}
+				# Ako sostojbata ne e dostapna, zadrzi ja starata oznaka.
+				else {
+					$outOfLoopText = "  🡸 ⚠️ Out of Loop (Skipped)"
+				}
+			}
+            # ================= SKIPPED REP STATUS =================
+            $previewStatus = ""
+            if (
+                $mode -eq "loop" -and
+                -not $fixedNoBlockCycle -and
+                $futureFixedExists -and
+                $null -ne $state -and
+                $null -ne $state.timestamp -and
+                (Get-Date) -ge ([datetime]$state.timestamp).AddDays(1)
+            ) {
+                $previewStatus = "  🡸 ⛔ Skipped (Rep:$currentR)"
+            }
             $timeline += [PSCustomObject]@{
                 Time = $dt
                 Mode = $mode
                 Type = $type
-                Text = "$status  📑 SCRIPT ({0}) Command: {1}  🕓 Time: {2}  🌀 Delay: {3} sec  🔂 Repeat: {4} min  🔃 Mode: {5}  📆 Day: {6}" -f `
+                Text = "$status  📑 SCRIPT ({0}) Command: {1}  🕓 Time: {2}  🌀 Delay: {3} sec  🔂 Repeat: {4} min  🔃 Mode: {5}  📆 Day: {6}$previewStatus$completedText$outOfLoopText" -f `
                         ([System.IO.Path]::GetFileName($scr.Path)),
                         $scr.Commands[$i],
                         $scr.Times[$i],
@@ -2938,6 +3678,14 @@ function Load-Timeline {
                 "loop"  { $status = "𝐋𝐎𝐎𝐏" }
                 default { $status = "" }
             }
+			# ================= COMPLETED FIXED =================
+			$completedText = ""
+			if(
+				$mode -eq "fixed" -and
+				$dt -lt (Get-Date)
+			){
+				$completedText = "  🡸 ✅ Completed (Time's Up)"
+			}
             # ================= TYPE TEXT =================
             switch ($type.ToLower()){
                 "daily"   { $typeText = "" }         # оставаме истиот LOOP или FIKS
@@ -2950,7 +3698,7 @@ function Load-Timeline {
                 Time = $dt
                 Mode = $mode
                 Type = $type
-                Text = "$status $typeText  🅰️ AUTO COMMAND ({0})  🕓 Time: {1}  🔂 Repeat: {2} min  🔀 Type: {3}  🔃 Mode: {4}  📆 Day: {5}" -f `
+                Text = "$status $typeText  🅰️ AUTO COMMAND ({0})  🕓 Time: {1}  🔂 Repeat: {2} min  🔀 Type: {3}  🔃 Mode: {4}  📆 Day: {5}$completedText" -f `
                         $cmd.Cmd,
                         $cmd.Times[$i],
                         $cmd.RepeatIntervalMinutes[$i],
@@ -3350,6 +4098,39 @@ function Update-TimelineDisplay {
 			)
 		  }
 		}
+		# ===================== FIXED IN LOOP DISPLAY =====================
+		$run13 = New-Object System.Windows.Documents.Run
+		$fixedNoBlockCycleDisplay = $false
+		try {
+			$settingsPath = "$AppRoot\JSON\settings.json"
+			if (Test-Path $settingsPath) {
+				$settingsData = Get-Content $settingsPath -Raw | ConvertFrom-Json
+				if ($null -ne $settingsData.FIXED_NO_BLOCK_CYCLE) {
+					$fixedNoBlockCycleDisplay = [bool]$settingsData.FIXED_NO_BLOCK_CYCLE
+				}
+			}
+		}
+		catch {
+			$fixedNoBlockCycleDisplay = $false
+		}
+		$run13.Text = "  🡸  🔃 Fixed: "
+		$run13.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+			[System.Windows.Media.Color]::FromRgb(158, 158, 158)
+		)
+		$run13Value = New-Object System.Windows.Documents.Run
+		$run13Suffix = New-Object System.Windows.Documents.Run
+		if ($fixedNoBlockCycleDisplay -eq $false) {
+			$run13Value.Text = "In"
+			$run13Value.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(83, 201, 83)
+			)
+		}
+		else {
+			$run13Value.Text = "Out"
+			$run13Value.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+				[System.Windows.Media.Color]::FromRgb(159, 150, 255)
+			)
+		}
 		$txtStats.Inlines.Add($run1)
 		$txtStats.Inlines.Add($run2)
 		$txtStats.Inlines.Add($run3)
@@ -3367,6 +4148,8 @@ function Update-TimelineDisplay {
 			$txtStats.Inlines.Add($run10Value)
 			$txtStats.Inlines.Add($run11)
 			$txtStats.Inlines.Add($run12)
+			$txtStats.Inlines.Add($run13)
+            $txtStats.Inlines.Add($run13Value)
 		}
 		$txtStats.FontWeight = "SemiBold"
 	}
@@ -3559,6 +4342,39 @@ Update-TimelineDisplay
 
 # ===================== START WATCHERS =====================
 Setup-TimelineWatcher | Out-Null
+
+# ===================== WATCH AUTOPILOT STATE =====================
+function Setup-AutoPilotStateWatcher {
+    $statePath = "$AppRoot\JSON"
+    $stateFile = "autopilot_state.json"
+    $watcher = New-Object System.IO.FileSystemWatcher
+    $watcher.Path = $statePath
+    $watcher.Filter = $stateFile
+    $watcher.NotifyFilter = [System.IO.NotifyFilters]'LastWrite'
+    $watcher.EnableRaisingEvents = $true
+    Register-ObjectEvent $watcher Changed -Action {
+        Start-Sleep -Milliseconds 200
+        try {
+            $fullStatePath = "$AppRoot\JSON\autopilot_state.json"
+            if (-not (Test-Path $fullStatePath)) {
+                return
+            }
+            $state = Get-Content $fullStatePath -Raw | ConvertFrom-Json
+            if (
+                $null -ne $state.timestamp -or
+                $null -ne $state.cycle
+            ) {
+                Load-Timeline
+                Update-TimelineDisplay
+            }
+        }
+        catch {
+            Write-Host "Error reloading timeline after AutoPilot state change: $_"
+        }
+    }
+}
+# ===================== START AUTOPILOT STATE WATCHER =====================
+Setup-AutoPilotStateWatcher | Out-Null
 
 # ===================== TIMER =====================
 $timerTimeline = New-Object System.Windows.Threading.DispatcherTimer

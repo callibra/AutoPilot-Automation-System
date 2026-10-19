@@ -43,5 +43,6 @@
     "MEDIA_TELEGRAM_ENABLED":  false,
     "ENABLE_RESTART":  false,
     "ENABLE_SHUTDOWN":  false,
+	"FIXED_NO_BLOCK_CYCLE":  false,
 	"VIDEO_RETENTION_DAYS":  15
 }
