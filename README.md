@@ -262,14 +262,14 @@ Combines scripts, commands, monitoring, and remote access into a single platform
 ## 🖼️ AutoPilot CMD
 
 <img width="1920" height="1080" alt="terminal" src="https://github.com/user-attachments/assets/ca67651e-4ccb-4194-a296-bf70ddbc9d9e" />
-
 <h1 align="center">
   ⚛️ AutoPilot Automation System
 </h1>
-
-
-
-
+<div align="center">
+    <a href="https://github.com/callibra/AutoPilot-Automation-System/releases" title="Download AutoPilot Latest Release">
+       <img src="https://img.shields.io/badge/📥%20Download-10B981?style=for-the-badge&logo=download&logoColor=white&labelColor=047857" height="35" style="vertical-align: middle;"/>
+    </a>
+</div>
 
 
 
