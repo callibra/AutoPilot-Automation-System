@@ -4,7 +4,7 @@
 
 [Setup]
 AppName=Autopilot Automation System
-AppVersion=1.0.0
+AppVersion=1.0.3.0
 DefaultDirName=C:\AutoPilot
 DefaultGroupName=AutoPilot
 OutputBaseFilename=AutoPilot_SetUp
@@ -58,7 +58,7 @@ begin
   Exec('taskkill', '/IM Dashboard.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM CommandsEditor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM ScriptsEditor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec('taskkill', '/IM Camera.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/IM FileStorage.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM Lock.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM Updater.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM Data.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
@@ -66,6 +66,7 @@ begin
   Exec('taskkill', '/IM SettingsScripts.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM NetMonitor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM SystemMonitor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/IM ProcessManager.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   { --- CLOSE ALL AUTOPILOT POWERSHELL SCRIPTS --- }
   Exec(ExpandConstant('{win}\System32\WindowsPowerShell\v1.0\powershell.exe'),
@@ -80,6 +81,7 @@ begin
     '$_.CommandLine -like ''*SetDocker.ps1*'' -or ' +
     '$_.CommandLine -like ''*PowerPlan.ps1*'' -or ' +
     '$_.CommandLine -like ''*TrafficMonitorWorker.ps1*''} ' +
+    '$_.CommandLine -like ''*SystemMonitorWorker.ps1*''} ' +
     '| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;

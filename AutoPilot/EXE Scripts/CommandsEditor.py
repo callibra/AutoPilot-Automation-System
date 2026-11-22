@@ -412,11 +412,11 @@ def confirm_save_command_if_dirty():
         "Unsaved Changes",
         "You have unsaved changes for this command.\nDo you want to save them?"
     )
-
     if answer:
         # YES → Save current command
         if current_command_key is not None:
             save_config()  # GUI → config → JSON
+            save_all_config()  # ако имаш и целосно save за scripts
     else:
         # NO → ресетирај dirty бидејќи одлучивме да не зачувуваме
         config_dirty = False
@@ -533,21 +533,24 @@ def add_row(cmd_data=None, idx=None):
     s_var = tk.StringVar(value=f"{s:02d}")
     time_frame = tk.Frame(frame, bg="#1E1E1E")
     time_frame.pack(side="left", padx=(25,20))
-    tk.Spinbox(time_frame, from_=0, to=23, width=3, textvariable=h_var, font=spin_font,
-               state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left")
+    h_spin = tk.Spinbox(time_frame, from_=0, to=23, width=3, textvariable=h_var, font=spin_font,
+                        state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center")
+    h_spin.pack(side="left")
     tk.Label(time_frame, text=":", bg="#1E1E1E", fg=spin_fg, font=spin_font).pack(side="left")
-    tk.Spinbox(time_frame, from_=0, to=59, width=3, textvariable=m_var, font=spin_font,
-               state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left")
+    m_spin = tk.Spinbox(time_frame, from_=0, to=59, width=3, textvariable=m_var, font=spin_font,
+                        state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center")
+    m_spin.pack(side="left")
     tk.Label(time_frame, text=":", bg="#1E1E1E", fg=spin_fg, font=spin_font).pack(side="left")
-    tk.Spinbox(time_frame, from_=0, to=59, width=3, textvariable=s_var, font=spin_font,
-               state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center").pack(side="left")
-
+    s_spin = tk.Spinbox(time_frame, from_=0, to=59, width=3, textvariable=s_var, font=spin_font,
+                        state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center")
+    s_spin.pack(side="left")
+    
     # --- Repeat ---
     r_var = tk.StringVar(value=str(cmd_data["RepeatIntervalMinutes"][idx]) if cmd_data else "0")
     r_spin = tk.Spinbox(frame, from_=0, to=10000, width=6, textvariable=r_var, font=spin_font,
                         state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center")
     r_spin.pack(side="left", padx=(18,50))
-
+    
     # --- Type ---
     if cmd_data and "Type" in cmd_data:
         type_value = cmd_data["Type"][idx] if isinstance(cmd_data["Type"], list) else cmd_data["Type"]
@@ -674,6 +677,28 @@ def add_row(cmd_data=None, idx=None):
     day_spin = tk.Spinbox(date_frame, from_=1, to=31, width=3, textvariable=day_var,
                           state="readonly", readonlybackground=spin_bg, fg=spin_fg, justify="center", font=spin_font)
     day_spin.pack(side="left")
+    
+    # --- Mouse Wheel Support for ALL Spinboxes ---
+    for spin in (
+        h_spin, m_spin, s_spin,
+        r_spin,
+        year_spin, month_spin, day_spin
+    ):
+        spin.bind(
+            "<MouseWheel>",
+            lambda e, w=spin: (
+                w.invoke("buttonup" if e.delta > 0 else "buttondown"),
+                "break"
+            )
+        )
+        spin.bind(
+            "<Button-4>",
+            lambda e, w=spin: (w.invoke("buttonup"), "break")
+        )
+        spin.bind(
+            "<Button-5>",
+            lambda e, w=spin: (w.invoke("buttondown"), "break")
+        )
 
     # --- Update day limits ---
     def update_day_limit(*args):
@@ -997,7 +1022,334 @@ def update_status_no_command():
         add_btn.config(state="normal")
         save_btn.config(state="normal")
         default_btn.config(state="normal")
+        
+# --- Recovery (Backup / Restore / Delete) ---
+# Backups are plain copies of JSON/commands_edit.json stored in JSON/Backups_Commands/<name>.json
+BACKUP_DIR = APP_ROOT / "JSON" / "Backups_Commands"
+root.recovery_win = None
+recovery_ui = {}
 
+def get_backup_files():
+    if not BACKUP_DIR.exists():
+        return []
+    files = [p for p in BACKUP_DIR.glob("*.json") if p.is_file()]
+
+    def sort_key(p):
+        st = p.stat()
+        return (getattr(st, "st_birthtime", st.st_ctime), p.name.lower())
+    return sorted(files, key=sort_key)
+
+def ask_backup_name(parent, message, initial):
+    result = {"value": None}
+    dlg = tk.Toplevel(parent)
+    dlg.title("New Backup")
+    dlg.configure(bg="#1E1E1E")
+    dlg.transient(parent)
+    dlg.resizable(False, False)
+    try:
+        dlg.iconbitmap(str(ICON_PATH))
+    except Exception:
+        pass
+
+    tk.Label(
+        dlg, text=message, bg="#1E1E1E", fg="white",
+        font=("Segoe UI Emoji", 11), justify="left", wraplength=420
+    ).pack(padx=20, pady=(20, 10), anchor="w")
+
+    name_var = tk.StringVar(value=initial)
+    entry = ttk.Entry(dlg, textvariable=name_var, font=("Segoe UI", 12, "bold"), width=40)
+    entry.pack(padx=20, pady=5, fill="x")
+
+    btns = tk.Frame(dlg, bg="#1E1E1E")
+    btns.pack(pady=(15, 20))
+
+    def ok(event=None):
+        result["value"] = name_var.get()
+        dlg.destroy()
+
+    def cancel(event=None):
+        dlg.destroy()
+
+    ttk.Button(btns, text="✔️ Create", bootstyle="success", command=ok).pack(side="left", padx=10)
+    ttk.Button(btns, text="❌ Cancel", bootstyle="secondary", command=cancel).pack(side="left", padx=10)
+    dlg.bind("<Return>", ok)
+    dlg.bind("<Escape>", cancel)
+
+    dlg.update_idletasks()
+    x = parent.winfo_rootx() + (parent.winfo_width() - dlg.winfo_width()) // 2
+    y = parent.winfo_rooty() + (parent.winfo_height() - dlg.winfo_height()) // 2
+    dlg.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+    dlg.grab_set()
+    entry.focus_set()
+    entry.select_range(0, "end")
+    parent.wait_window(dlg)
+    return result["value"]
+
+def recovery_update_scroll(event=None):
+    rc = recovery_ui.get("canvas")
+    rvs = recovery_ui.get("vscroll")
+    lf = recovery_ui.get("list_frame")
+    if rc is None or rvs is None or lf is None:
+        return
+    try:
+        rc.update_idletasks()
+        content_h = lf.winfo_reqheight()
+        canvas_h = rc.winfo_height()
+        rc.configure(scrollregion=(0, 0, rc.winfo_width(), max(content_h, canvas_h)))
+        if content_h <= canvas_h:
+            if rvs.winfo_ismapped():
+                rvs.pack_forget()
+            rc.yview_moveto(0)
+        else:
+            if not rvs.winfo_ismapped():
+                rvs.pack(side="right", fill="y", before=rc)
+    except tk.TclError:
+        pass
+
+def refresh_backup_list():
+    lf = recovery_ui.get("list_frame")
+    if lf is None:
+        return
+    try:
+        if not lf.winfo_exists():
+            return
+    except tk.TclError:
+        return
+
+    for w in lf.winfo_children():
+        w.destroy()
+
+    files = get_backup_files()
+    if not files:
+        tk.Label(
+            lf, text="No backup has been created yet.",
+            bg="#1E1E1E", fg="#9E9E9E", font=("Segoe UI Emoji", 14)
+        ).pack(pady=70)
+    else:
+        for i, path in enumerate(files, start=1):
+            row = tk.Frame(lf, bg="#2D2D30")
+            row.pack(fill="x", pady=4)
+            row.grid_columnconfigure(1, weight=1)
+
+            tk.Label(
+                row, text=f"{i}.", width=4, bg="#2D2D30", fg="#FFD700",
+                font=("Segoe UI", 14, "bold")
+            ).grid(row=0, column=0, padx=(8, 4), pady=8)
+
+            name_lbl = tk.Label(
+                row, text=path.stem, width=1, anchor="w", bg="#2D2D30", fg="white",
+                font=("Segoe UI", 13, "bold")
+            )
+            name_lbl.grid(row=0, column=1, sticky="ew", padx=4)
+            try:
+                created = datetime.fromtimestamp(
+                    getattr(path.stat(), "st_birthtime", path.stat().st_ctime)
+                ).strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                created = "-"
+            Tooltip(name_lbl).set_text(f"{path.stem}\nCreated: {created}")
+
+            ttk.Button(
+                row, text="♻️ Restore", bootstyle="info",
+                command=lambda p=path: restore_backup(p)
+            ).grid(row=0, column=2, padx=6, pady=8)
+            ttk.Button(
+                row, text="🗑️ Delete", bootstyle="danger",
+                command=lambda p=path: delete_backup(p)
+            ).grid(row=0, column=3, padx=(0, 10), pady=8)
+
+    recovery_update_scroll()
+
+def schedule_refresh_backup_list():
+    win = recovery_ui.get("win")
+    if win is not None:
+        try:
+            win.after(10, refresh_backup_list)
+        except tk.TclError:
+            pass
+
+def create_backup():
+    win = recovery_ui.get("win")
+    if not CONFIG_FILE.exists():
+        messagebox.showerror("Backup", "commands_edit.json was not found.", parent=win)
+        return
+
+    msg = "Enter a name for the new backup:"
+    if config_dirty:
+        msg += "\n\n⚠️ You have unsaved changes. The backup contains only the settings that are currently SAVED."
+    name = ask_backup_name(win, msg, "Backup " + datetime.now().strftime("%Y-%m-%d %H-%M"))
+    if name is None:
+        return
+
+    clean = "".join(ch for ch in name if ch not in '<>:"/\\|?*' and ord(ch) >= 32)
+    clean = clean.strip().rstrip(".").strip()
+    if clean.lower().endswith(".json"):
+        clean = clean[:-5].strip()
+    if not clean:
+        messagebox.showwarning("Backup", "The backup name is empty or invalid.", parent=win)
+        return
+
+    try:
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        dest = BACKUP_DIR / f"{clean}.json"
+        if dest.exists():
+            if not messagebox.askyesno(
+                "Backup", f"A backup named '{clean}' already exists.\nOverwrite it?",
+                icon="warning", parent=win
+            ):
+                return
+        dest.write_bytes(CONFIG_FILE.read_bytes())
+    except Exception as e:
+        messagebox.showerror("Backup", f"Backup failed:\n{e}", parent=win)
+        return
+    refresh_backup_list()
+
+def restore_backup(path):
+    global config, config_dirty, current_command_key, previous_selected_index
+    win = recovery_ui.get("win")
+
+    if not path.exists():
+        messagebox.showwarning("Restore", "This backup file no longer exists.", parent=win)
+        schedule_refresh_backup_list()
+        return
+
+    name = path.stem
+    if not messagebox.askyesno(
+        "Restore Backup",
+        f"Restore backup '{name}'?\nThe current commands_edit.json will be OVERWRITTEN.",
+        icon="warning", parent=win
+    ):
+        return
+
+    try:
+        with open(path, "r") as f:
+            restored = json.load(f)
+        if not isinstance(restored, dict) or not isinstance(restored.get("AutoCommands"), dict):
+            raise ValueError("The 'AutoCommands' section is missing.")
+    except Exception as e:
+        messagebox.showerror(
+            "Restore", f"This backup is invalid or corrupted and was NOT restored:\n{e}", parent=win
+        )
+        return
+
+    try:
+        CONFIG_FILE.write_bytes(path.read_bytes())
+    except Exception as e:
+        messagebox.showerror("Restore", f"Restore failed:\n{e}", parent=win)
+        return
+
+    # keep the in-memory config and the editor in sync with the restored file
+    config = restored
+
+    for widget in rows_frame.winfo_children():
+        widget.destroy()
+    row_widgets.clear()
+    on_frame_configure(None)
+
+    command_listbox.delete(0, "end")
+    for i, key in enumerate(config["AutoCommands"].keys()):
+        command_listbox.insert("end", f"{i+1}. {key.lstrip('/')}")
+        r, g, b = [random.randint(100, 255) for _ in range(3)]
+        command_listbox.itemconfig("end", foreground=f"#{r:02X}{g:02X}{b:02X}")
+
+    for w in command_desc_label.winfo_children():
+        w.destroy()
+
+    current_command_key = None
+    previous_selected_index = None
+    config_dirty = False
+    update_status_no_command()
+
+    messagebox.showinfo("Restore", f"✔️ Backup '{name}' restored successfully!", parent=win)
+
+def delete_backup(path):
+    win = recovery_ui.get("win")
+    if not messagebox.askyesno(
+        "Delete Backup", f"Delete backup '{path.stem}'?\nThis cannot be undone.",
+        icon="warning", parent=win
+    ):
+        return
+    try:
+        path.unlink()
+    except Exception as e:
+        messagebox.showerror("Delete", f"Delete failed:\n{e}", parent=win)
+    schedule_refresh_backup_list()
+
+def open_recovery_window():
+    if root.recovery_win is not None:
+        try:
+            if root.recovery_win.winfo_exists():
+                root.recovery_win.lift()
+                root.recovery_win.focus_force()
+                return
+        except Exception:
+            pass
+
+    win = tk.Toplevel(root)
+    root.recovery_win = win
+    win.title("Recovery - Commands Backups")
+    win.configure(bg="#1E1E1E")
+    try:
+        win.iconbitmap(str(ICON_PATH))
+    except Exception:
+        pass
+
+    sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+    w = min(760, int(sw * 0.9))
+    h = min(540, int(sh * 0.85))
+    x = max(root.winfo_rootx() + (root.winfo_width() - w) // 2, 0)
+    y = max(root.winfo_rooty() + (root.winfo_height() - h) // 2, 0)
+    win.geometry(f"{w}x{h}+{x}+{y}")
+    win.minsize(min(520, w), min(340, h))
+
+    # --- Header: title + Backup button ---
+    header = tk.Frame(win, bg="#2D2D30")
+    header.pack(side="top", fill="x")
+    tk.Label(
+        header, text="🛟 Recovery", bg="#2D2D30", fg="#FFD700",
+        font=("Segoe UI", 19, "bold")
+    ).pack(side="left", padx=15, pady=12)
+    ttk.Button(
+        header, text="➕ Backup", bootstyle="success", command=create_backup
+    ).pack(side="right", padx=15, pady=12)
+
+    # --- Scrollable list (responsive: rows follow the window width) ---
+    body = tk.Frame(win, bg="#1E1E1E")
+    body.pack(side="top", fill="both", expand=True, padx=15, pady=15)
+
+    rvs = tk.Scrollbar(body, orient="vertical")
+    rvs.pack(side="right", fill="y")
+    rc = tk.Canvas(body, bg="#1E1E1E", highlightthickness=0, width=1, height=1)
+    rc.pack(side="left", fill="both", expand=True)
+    rc.configure(yscrollcommand=rvs.set)
+    rvs.configure(command=rc.yview)
+
+    list_frame = tk.Frame(rc, bg="#1E1E1E")
+    list_window = rc.create_window((0, 0), window=list_frame, anchor="nw")
+
+    def on_canvas_configure(event):
+        rc.itemconfigure(list_window, width=event.width)
+        recovery_update_scroll()
+    rc.bind("<Configure>", on_canvas_configure)
+    list_frame.bind("<Configure>", recovery_update_scroll)
+
+    # Scroll only inside this window (do not scroll the main editor behind it)
+    def on_wheel(event):
+        if list_frame.winfo_reqheight() > rc.winfo_height():
+            rc.yview_scroll(int(-1 * (event.delta // 120)), "units")
+        return "break"
+    win.bind("<MouseWheel>", on_wheel)
+
+    recovery_ui.clear()
+    recovery_ui.update({"win": win, "canvas": rc, "vscroll": rvs, "list_frame": list_frame})
+
+    def on_close():
+        root.recovery_win = None
+        recovery_ui.clear()
+        win.destroy()
+    win.protocol("WM_DELETE_WINDOW", on_close)
+
+    refresh_backup_list()        
 
 # --- Buttons ---
 style.configure(
@@ -1014,6 +1366,8 @@ list_btn = ttk.Button(buttons_row, text="📋 List All", bootstyle="info", comma
 list_btn.pack(side="left", padx=20)
 reset_all_btn = ttk.Button(buttons_row, text="❌ Reset All", bootstyle="danger", command=reset_all_autocommands)
 reset_all_btn.pack(side="left", padx=20)
+recovery_btn = ttk.Button(buttons_row, text="🛟 Recovery", bootstyle="primary", command=open_recovery_window)
+recovery_btn.pack(side="left", padx=20)
 update_status_no_command()
 
 # --- Долна линија текст, секогаш видлива ---
@@ -1044,7 +1398,6 @@ if screen_width < 1600:
 # --- Save on Close ---
 def on_close():
     global config_dirty
-
     if config_dirty:
         answer = messagebox.askyesnocancel(
             "Unsaved Changes",
@@ -1058,7 +1411,6 @@ def on_close():
             # Ако има активна команда → зачувај ја во config
             if current_command_key is not None:
                 save_config()
-
             # СЕКОГАШ зачувај го целиот config во JSON
             save_all_config()
 
@@ -1079,4 +1431,4 @@ root.mainloop()
 
 # pyinstaller --noconsole --onefile --windowed --add-data "media;media" --add-data "JSON;JSON" ScriptsEditor.py  - ScriptsEditor.exe
 
-# pyinstaller --noconsole --onefile Camera.py  - Camera.exe
+# pyinstaller --noconsole --onefile FileStorage.py  - FileStorage.exe

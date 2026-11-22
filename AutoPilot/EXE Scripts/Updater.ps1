@@ -79,49 +79,146 @@ function Show-DarkDialog {
         [switch]$YesNo
     )
 
-    $form = New-DarkForm $title 200
-    $label = New-Object System.Windows.Forms.Label
-    $label.Text = $message
-    $label.Size = "380,70"
-    $label.Location = "30,30"
-    $form.Controls.Add($label)
+    $xaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True">
+    <Window.Resources>
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Foreground" Value="#E4E4E7"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#2C3039" Offset="0.0"/>
+                        <GradientStop Color="#22252C" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#3B3F4A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="11">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#1E3A44" Offset="0.0"/>
+                                            <GradientStop Color="#172D35" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D4D4D8"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#D4D4D8" BlurRadius="14" ShadowDepth="0" Opacity="0.45"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#12222A"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#E4E4E7"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BlueButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#0369A1"/>
+            <Setter Property="BorderBrush" Value="#0369A1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="11">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0284C7"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#075985"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Border Background="#FF22252C" CornerRadius="16" Padding="20" BorderBrush="#0369A1" BorderThickness="1">
+        <StackPanel Width="520">
+            <TextBlock x:Name="DialogTitle" FontSize="24" FontWeight="Bold" Foreground="#E4E4E7" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="DialogMessage" TextWrapping="Wrap" FontSize="16" Foreground="#D4D4D8" Margin="0,0,0,20"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button x:Name="btnYes" Content="Yes" Width="100" Height="40" Style="{StaticResource ModernButton}"/>
+                <Button x:Name="btnNo" Content="No" Width="100" Height="40" Style="{StaticResource ModernButton}"/>
+                <Button x:Name="btnOk" Content="OK" Width="120" Height="40" Style="{StaticResource BlueButton}"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
+"@
+    $reader = New-Object System.Xml.XmlNodeReader ([xml]$xaml)
+    $window = [Windows.Markup.XamlReader]::Load($reader)
+    $window.FindName("DialogTitle").Text = $title
+    $window.FindName("DialogMessage").Text = $message
+    $btnYes = $window.FindName("btnYes")
+    $btnNo = $window.FindName("btnNo")
+    $btnOk = $window.FindName("btnOk")
 
     if ($YesNo) {
-        $btnYes = New-Object System.Windows.Forms.Button
-        $btnYes.Text = "Yes"
-        $btnYes.Size = "110,35"
-        $btnYes.Location = "90,110"
-        $btnYes.BackColor = "#2D89EF"
-        $btnYes.FlatStyle = "Flat"
-        $btnYes.DialogResult = [System.Windows.Forms.DialogResult]::Yes
-        $form.Controls.Add($btnYes)
-
-        $btnNo = New-Object System.Windows.Forms.Button
-        $btnNo.Text = "No"
-        $btnNo.Size = "110,35"
-        $btnNo.Location = "230,110"
-        $btnNo.BackColor = "#3A3A3A"
-        $btnNo.FlatStyle = "Flat"
-        $btnNo.DialogResult = [System.Windows.Forms.DialogResult]::No
-        $form.Controls.Add($btnNo)
-
-        $form.AcceptButton = $btnYes
-        $form.CancelButton = $btnNo
-        return $form.ShowDialog()
+        $btnOk.Visibility = "Collapsed"
+        $btnYes.IsDefault = $true
+        $btnYes.Add_Click({ $window.DialogResult = $true })
+        $btnNo.IsCancel = $true
+        $btnNo.Add_Click({ $window.DialogResult = $false })
     }
     else {
-
-        $btnOk = New-Object System.Windows.Forms.Button
-        $btnOk.Text = "OK"
-        $btnOk.Size = "120,35"
-        $btnOk.Location = "160,110"
-        $btnOk.BackColor = "#2D89EF"
-        $btnOk.FlatStyle = "Flat"
-        $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
-        $form.Controls.Add($btnOk)
-        $form.AcceptButton = $btnOk
-        return $form.ShowDialog()
+        $btnYes.Visibility = "Collapsed"
+        $btnNo.Visibility = "Collapsed"
+        $btnOk.IsDefault = $true
+        $btnOk.Add_Click({ $window.DialogResult = $true })
     }
+
+    $dialogResult = $window.ShowDialog()
+    if ($YesNo) {
+        if ($dialogResult -eq $true) { return [System.Windows.Forms.DialogResult]::Yes }
+        if ($dialogResult -eq $false) { return [System.Windows.Forms.DialogResult]::No }
+        return [System.Windows.Forms.DialogResult]::Cancel
+    }
+    if ($dialogResult -eq $true) { return [System.Windows.Forms.DialogResult]::OK }
+    return [System.Windows.Forms.DialogResult]::Cancel
 }
 
 # ==================== ALL FUNCTION ====================
@@ -219,63 +316,177 @@ function Download-File {
     $script:isDownloading = $true
     $script:cancelDownload = $false
 
-    $form = New-DarkForm "Downloading Update" 370
-    $form.ControlBox = $false
-    $form.TopMost = $true
-	
-    $form.Add_FormClosing({
-        if ($script:isDownloading) { $_.Cancel = $true }
-    })
+    $window = New-Object System.Windows.Window
+    $window.Title = "Downloading Update"
+    $window.Width = 500
+    $window.Height = 470
+    $window.WindowStartupLocation = "CenterScreen"
+    $window.ResizeMode = "NoResize"
+    $window.Topmost = $true
+    $window.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(30,33,40))
 
-    $label = New-Object System.Windows.Forms.Label
-    $label.Size = "380,250"
-    $label.Location = "30,30"
-    $form.Controls.Add($label)
+    $buttonStyleXaml = @"
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style x:Key="ModernButton" TargetType="Button">
+        <Setter Property="Foreground" Value="#F1F5F9"/>
+        <Setter Property="Background">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#2C3039" Offset="0.0"/>
+                    <GradientStop Color="#22252C" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="BorderBrush" Value="#3B3F4A"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="11">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background">
+                                <Setter.Value>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#1E3A44" Offset="0.0"/>
+                                        <GradientStop Color="#172D35" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="border" Property="BorderBrush" Value="#D4D4D8"/>
+                            <Setter TargetName="border" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#D4D4D8" BlurRadius="14" ShadowDepth="0" Opacity="0.45"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#12222A"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="#E4E4E7"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
+"@
+    $buttonStyleReader = New-Object System.Xml.XmlNodeReader ([xml]$buttonStyleXaml)
+    $buttonStyle = [System.Windows.Markup.XamlReader]::Load($buttonStyleReader)
+    $window.Resources.MergedDictionaries.Add($buttonStyle)
 
-    # CANCEL BUTTON
-    $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Text = "Cancel"
-    $btnCancel.Size = "120,35"
-    $btnCancel.Location = "160,290"
-    $btnCancel.BackColor = "#AA3333"
-    $btnCancel.FlatStyle = "Flat"
-    $form.Controls.Add($btnCancel)
+    $stack = New-Object System.Windows.Controls.StackPanel
+    $stack.Margin = [System.Windows.Thickness]::new(26)
+
+    $titleLabel = New-Object System.Windows.Controls.TextBlock
+    $titleLabel.Text = "🚀 AutoPilot Update"
+    $titleLabel.FontSize = 23
+    $titleLabel.FontWeight = "Bold"
+    $titleLabel.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(248,250,252))
+    $titleLabel.Margin = [System.Windows.Thickness]::new(0,0,0,4)
+    $stack.Children.Add($titleLabel) | Out-Null
+
+    $subtitleLabel = New-Object System.Windows.Controls.TextBlock
+    $subtitleLabel.Text = "Downloading your update. Please keep this window open."
+    $subtitleLabel.FontSize = 16
+    $subtitleLabel.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(203,213,225))
+    $subtitleLabel.Margin = [System.Windows.Thickness]::new(0,0,0,22)
+    $stack.Children.Add($subtitleLabel) | Out-Null
+
+    $fileCard = New-Object System.Windows.Controls.Border
+    $fileCard.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(38,42,51))
+    $fileCard.CornerRadius = [System.Windows.CornerRadius]::new(10)
+    $fileCard.Padding = [System.Windows.Thickness]::new(16,12,16,12)
+    $fileCard.Margin = [System.Windows.Thickness]::new(0,0,0,24)
+    $fileStack = New-Object System.Windows.Controls.StackPanel
+
+    $fileCaption = New-Object System.Windows.Controls.TextBlock
+    $fileCaption.Text = "📦  UPDATE FILE"
+    $fileCaption.FontSize = 13
+    $fileCaption.FontWeight = "SemiBold"
+    $fileCaption.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(165,180,252))
+    $fileCaption.Margin = [System.Windows.Thickness]::new(0,0,0,6)
+    $fileStack.Children.Add($fileCaption) | Out-Null
+
+    $fileLabel = New-Object System.Windows.Controls.TextBlock
+    $fileLabel.Text = $fileName
+    $fileLabel.TextWrapping = "Wrap"
+    $fileLabel.FontSize = 17
+    $fileLabel.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(248,250,252))
+    $fileStack.Children.Add($fileLabel) | Out-Null
+    $fileCard.Child = $fileStack
+    $stack.Children.Add($fileCard) | Out-Null
+
+    $progressHeader = New-Object System.Windows.Controls.Grid
+    $progressHeader.Margin = [System.Windows.Thickness]::new(0,0,0,8)
+    $progressHeader.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition)) | Out-Null
+    $progressPercent = New-Object System.Windows.Controls.TextBlock
+    $progressPercent.Text = "⏳ Preparing download..."
+    $progressPercent.FontSize = 16
+    $progressPercent.FontWeight = "SemiBold"
+    $progressPercent.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(248,250,252))
+    [System.Windows.Controls.Grid]::SetColumn($progressPercent,0)
+    $progressHeader.Children.Add($progressPercent) | Out-Null
+    $stack.Children.Add($progressHeader) | Out-Null
+
+    $progressBar = New-Object System.Windows.Controls.ProgressBar
+    $progressBar.Height = 10
+    $progressBar.Minimum = 0
+    $progressBar.Maximum = 100
+    $progressBar.IsIndeterminate = $true
+    $progressBar.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(99,102,241))
+    $progressBar.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(71,79,94))
+    $progressBar.BorderThickness = [System.Windows.Thickness]::new(0)
+    $progressBar.Margin = [System.Windows.Thickness]::new(0,0,0,18)
+    $stack.Children.Add($progressBar) | Out-Null
+
+    $downloadStatus = New-Object System.Windows.Controls.TextBlock
+    $downloadStatus.Text = "📥  Downloaded: 0 MB`n⚡  Speed: -- MB/s"
+    $downloadStatus.TextWrapping = "Wrap"
+    $downloadStatus.FontSize = 16
+    $downloadStatus.FontFamily = "Segoe UI"
+    $downloadStatus.LineHeight = 29
+    $downloadStatus.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(226,232,240))
+    $stack.Children.Add($downloadStatus) | Out-Null
+
+    $btnCancel = New-Object System.Windows.Controls.Button
+    $btnCancel.Content = "Stop Download"
+    $btnCancel.Width = 160
+    $btnCancel.Height = 42
+    $btnCancel.HorizontalAlignment = "Center"
+    $btnCancel.Margin = [System.Windows.Thickness]::new(0,22,0,0)
+    $btnCancel.Style = $window.FindResource("ModernButton")
+    $stack.Children.Add($btnCancel) | Out-Null
 
     $btnCancel.Add_Click({
         $script:cancelDownload = $true
-        $btnCancel.Enabled = $false
-        $label.Text += "`n`nCancelling..."
+        $btnCancel.IsEnabled = $false
+        $progressPercent.Text = "⏹  Stopping the download..."
+    })
+    $window.Add_Closing({
+        if ($script:isDownloading) {
+            $_.Cancel = $true
+            $script:cancelDownload = $true
+            $btnCancel.IsEnabled = $false
+            $progressPercent.Text = "⏹  Stopping the download..."
+        }
     })
 
-    $form.Show()
-    $form.Refresh()
-	
-	# Add title label above the download label
-	$titleLabel = New-Object System.Windows.Forms.Label
-	$titleLabel.Text = "AutoPilot Update System"
-	$titleLabel.Size = "380,25"
-	$titleLabel.Location = "30,5"
-	$titleLabel.Font = New-Object System.Drawing.Font("Segoe UI",14,[System.Drawing.FontStyle]::Bold)
-	$titleLabel.ForeColor = "White"
-	$titleLabel.BackColor = [System.Drawing.Color]::FromArgb(28,28,28)
-	# Assign updater icon to label with custom size
-	if ($Global:UpdaterIcon) {
-	# Define custom size
-	$iconWidth = 25
-	$iconHeight = 25
-    # Convert icon to bitmap and resize
-    $bitmap = $Global:UpdaterIcon.ToBitmap().GetThumbnailImage($iconWidth, $iconHeight, $null, [IntPtr]::Zero)
-    $titleLabel.Image = $bitmap
-		$titleLabel.ImageAlign = 'MiddleRight'   # icon on the left of the text
-		$titleLabel.TextAlign =  'MiddleLeft'   # text aligned nicely
-	}
-	$form.Controls.Add($titleLabel)
-
-	# ==================== ADD THIS LINE ====================
-	$label.Text = "`nDownloading: $fileName..."
-	$form.Refresh()
-	[System.Windows.Forms.Application]::DoEvents()
-	# =======================================================
+    $window.Content = $stack
+    $window.Show()
+    [System.Windows.Forms.Application]::DoEvents()
 
     try {
         $request = [System.Net.HttpWebRequest]::Create($url)
@@ -302,22 +513,20 @@ function Download-File {
             $totalRead += $read
             if ($sw.Elapsed.TotalSeconds -ge $lastUpdate + 1) {
 
-                $percent = [math]::Round(($totalRead / $totalBytes) * 100,2)
                 $mbDownloaded = [math]::Round($totalRead / 1MB,2)
                 $mbTotal = [math]::Round($totalBytes / 1MB,2)
                 $speed = [math]::Round(($totalRead / $sw.Elapsed.TotalSeconds) / 1MB,2)
-                $label.Text = @"
-
-File: $fileName				
-Total Size: $mbTotal MB
-
-Downloaded: $mbDownloaded MB
-Progress: $percent %
-
-Speed: $speed MB/s
-"@
+                if ($totalBytes -gt 0) {
+                    $percent = [math]::Round(($totalRead / $totalBytes) * 100,2)
+                    $progressBar.IsIndeterminate = $false
+                    $progressBar.Value = $percent
+                    $progressPercent.Text = "⬇  Downloading  $percent%"
+                    $downloadStatus.Text = "📥  Downloaded: $mbDownloaded / $mbTotal MB`n⚡  Speed: $speed MB/s"
+                }
+                else {
+                    $downloadStatus.Text = "📥  Downloaded: $mbDownloaded MB`n⚡  Speed: $speed MB/s"
+                }
                 $lastUpdate = $sw.Elapsed.TotalSeconds
-                $form.Refresh()
                 [System.Windows.Forms.Application]::DoEvents()
             }
         }
@@ -328,18 +537,18 @@ Speed: $speed MB/s
         if ($script:cancelDownload) {
             if (Test-Path $dest) { Remove-Item $dest -Force }
             $script:isDownloading = $false
-            $form.Close()
+            $window.Close()
             return $false
         }
 		Start-Sleep -Seconds 3
         $script:isDownloading = $false
-        $form.Close()
+        $window.Close()
         return $true
     } catch {
         if (Test-Path $dest) { Remove-Item $dest -Force }
         $script:isDownloading = $false
 		Start-Sleep -Seconds 3
-        $form.Close()
+        $window.Close()
         return $false
     }
 }
@@ -462,8 +671,8 @@ function Check-MajorUpdate {
         }
 
         if (-not (Download-File $realInstallerUrl $installerDownloadPath)) {
-            Show-DarkDialog -title "Update Cancelled" -message "Download Was Cancelled." | Out-Null
-			Add-Content "$AppRoot\AutoPilot_Data\Update_Logs\Updater.log" "$(Get-Date) - Download cancelled for version $remoteVersion."
+            Show-DarkDialog -title "Update Stopped" -message "Download Was Stopped." | Out-Null
+			Add-Content "$AppRoot\AutoPilot_Data\Update_Logs\Updater.log" "$(Get-Date) - Download stopped for version $remoteVersion."
             return
         }
 
@@ -518,6 +727,7 @@ function Check-MajorUpdate {
 # ==================== START ====================
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase
 
 # ==================== Icon Window ====================
 try {

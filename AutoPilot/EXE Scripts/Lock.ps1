@@ -12,8 +12,8 @@ if (-not $AppRoot) {
 $PasswordFile = Join-Path $AppRoot "Autopilot_Data\password.json"
 
 # ===================== REGISTRY RESTORE =====================
-$RegistryPath = "HKCU:\Software\MicrosoftKeySecurity"
-$RegistryValueName = "ProgramValueKey"
+$RegistryPath = "HKCU:\Software\StorageFileValue"
+$RegistryValueName = "ProgramValueFile"
 
 function Restore-PasswordFromRegistry {
     if (-not (Test-Path $PasswordFile) -and (Test-Path $RegistryPath)) {
@@ -65,35 +65,31 @@ function Show-DarkWarning {
         ResizeMode="NoResize"
         Width="520"
         Height="235"
-        Background="#1E1E1E"
+        Background="Transparent"
         Title="$Title"
         WindowStyle="None"
         AllowsTransparency="True"
         ShowInTaskbar="False">
-    <Border Background="#2D2D30"
-            CornerRadius="14"
-            Padding="25"
-            BorderBrush="#3C3C3C"
-            BorderThickness="2">
+        <Border Background="#F222252C" CornerRadius="16" Padding="25" BorderBrush="#444954" BorderThickness="1">
         <StackPanel Width="460">
-            <TextBlock Text="$Title" FontSize="24" FontWeight="Bold" Foreground="#E6E6E6" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-            <TextBlock Text="$Message" TextWrapping="Wrap" FontSize="16" Foreground="#DADADA" Margin="0,0,0,25" TextAlignment="Center"/>
-            <Button Content="OK" Width="140" Height="42" HorizontalAlignment="Center" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+            <TextBlock Text="$Title" FontSize="24" FontWeight="Bold" Foreground="#E4E4E7" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+            <TextBlock Text="$Message" TextWrapping="Wrap" FontSize="16" Foreground="#D4D4D8" Margin="0,0,0,25" TextAlignment="Center"/>
+            <Button Content="OK" Width="140" Height="42" HorizontalAlignment="Center" Foreground="White" FontWeight="SemiBold" FontSize="15" BorderThickness="0" Cursor="Hand">
 				<Button.Template>
-					<ControlTemplate TargetType="Button">
-						<Border x:Name="border" Background="#007ACC" CornerRadius="4">
-							<ContentPresenter HorizontalAlignment="Center"  VerticalAlignment="Center"/>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#3399FF"/>
-							</Trigger>
-							<Trigger Property="IsPressed" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#005999"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Button.Template>
+						<ControlTemplate TargetType="Button">
+							<Border x:Name="border" Background="#0369A1" CornerRadius="10">
+								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							</Border>
+							<ControlTemplate.Triggers>
+								<Trigger Property="IsMouseOver" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#0284C7"/>
+								</Trigger>
+								<Trigger Property="IsPressed" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#075985"/>
+								</Trigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</Button.Template>
 			</Button>
         </StackPanel>
     </Border>
@@ -131,37 +127,73 @@ $window.Width = 400
 $window.Height = 415
 $window.WindowStartupLocation = "CenterScreen"
 $window.ResizeMode = "NoResize"
-$window.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(30,30,30))
+$window.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(38,41,48))
 
 # ===================== XAML Resources =====================
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Window.Resources>
-        <!-- Modern button style -->
+        <!-- ===== Midnight Glass : button style ===== -->
         <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#2D2D30"/>
-            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Foreground" Value="#E4E4E7"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#2C3039" Offset="0.0"/>
+                        <GradientStop Color="#22252C" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Padding" Value="20,12"/>
             <Setter Property="Margin" Value="5"/>
-            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="19"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#444"/>
-            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderBrush" Value="#3B3F4A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                        <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="11"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5" RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- Hover: cyan glow -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#3E3E42"/>
-                                <Setter Property="Foreground" Value="#4EC9B0"/>
+                                <Setter TargetName="border" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#1E3A44" Offset="0.0"/>
+                                            <GradientStop Color="#172D35" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D4D4D8"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#D4D4D8" BlurRadius="14" ShadowDepth="0" Opacity="0.45"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
+                            <!-- Pressed -->
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#565658"/>
+                                <Setter TargetName="border" Property="Background" Value="#12222A"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#E4E4E7"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <!-- Disabled -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -194,7 +226,7 @@ $stack.Children.Add($lblTitle) | Out-Null
 $pwdBox = New-Object System.Windows.Controls.PasswordBox
 $pwdBox.Width = 250
 $pwdBox.FontSize = 18
-$pwdBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(50,50,50))
+$pwdBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(34,37,44))
 $pwdBox.Foreground = [System.Windows.Media.Brushes]::White
 $pwdBox.Margin = [System.Windows.Thickness]::new(0,0,0,10)
 $stack.Children.Add($pwdBox) | Out-Null
@@ -203,7 +235,7 @@ $stack.Children.Add($pwdBox) | Out-Null
 $txtBox = New-Object System.Windows.Controls.TextBox
 $txtBox.Width = 250
 $txtBox.FontSize = 18
-$txtBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(50,50,50))
+$txtBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(48,52,61))
 $txtBox.Foreground = [System.Windows.Media.Brushes]::White
 $txtBox.Margin = [System.Windows.Thickness]::new(0,0,0,10)
 $txtBox.Visibility = "Collapsed"

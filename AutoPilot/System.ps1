@@ -26,35 +26,31 @@ function Show-DarkWarning {
         ResizeMode="NoResize"
         Width="520"
         Height="235"
-        Background="#1E1E1E"
+        Background="Transparent"
         Title="$Title"
         WindowStyle="None"
         AllowsTransparency="True"
         ShowInTaskbar="False">
-    <Border Background="#2D2D30"
-            CornerRadius="14"
-            Padding="25"
-            BorderBrush="#3C3C3C"
-            BorderThickness="2">
+        <Border Background="#F222252C" CornerRadius="16" Padding="25" BorderBrush="#444954" BorderThickness="1">
         <StackPanel Width="460">
-            <TextBlock Text="$Title" FontSize="24" FontWeight="Bold" Foreground="#E6E6E6" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-            <TextBlock Text="$Message" TextWrapping="Wrap" FontSize="16" Foreground="#DADADA" Margin="0,0,0,25" TextAlignment="Center"/>
-            <Button Content="OK" Width="140" Height="42" HorizontalAlignment="Center" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+            <TextBlock Text="$Title" FontSize="24" FontWeight="Bold" Foreground="#E4E4E7" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+            <TextBlock Text="$Message" TextWrapping="Wrap" FontSize="16" Foreground="#D4D4D8" Margin="0,0,0,25" TextAlignment="Center"/>
+            <Button Content="OK" Width="140" Height="42" HorizontalAlignment="Center" Foreground="White" FontWeight="SemiBold" FontSize="15" BorderThickness="0" Cursor="Hand">
 				<Button.Template>
-					<ControlTemplate TargetType="Button">
-						<Border x:Name="border" Background="#007ACC" CornerRadius="4">
-							<ContentPresenter HorizontalAlignment="Center"  VerticalAlignment="Center"/>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#3399FF"/>
-							</Trigger>
-							<Trigger Property="IsPressed" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#005999"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Button.Template>
+						<ControlTemplate TargetType="Button">
+							<Border x:Name="border" Background="#0369A1" CornerRadius="10">
+								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							</Border>
+							<ControlTemplate.Triggers>
+								<Trigger Property="IsMouseOver" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#0284C7"/>
+								</Trigger>
+								<Trigger Property="IsPressed" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#075985"/>
+								</Trigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</Button.Template>
 			</Button>
         </StackPanel>
     </Border>
@@ -65,6 +61,177 @@ function Show-DarkWarning {
     $btn = $win.Content.Child.Children[2]
     $btn.Add_Click({ $win.Close() })
     $win.ShowDialog() | Out-Null
+}
+
+# ===================== ABORT POP UP =====================
+function Show-AbortWarning {
+    param(
+        [string]$Message,
+        [string]$Title = "Warning"
+    )
+$xaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Width="520"
+        Height="235"
+        Background="Transparent"
+        Title="$Title"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ShowInTaskbar="False">
+        <Border Background="#F222252C" CornerRadius="16" Padding="25" BorderBrush="#444954" BorderThickness="1">
+            <Grid>
+                <StackPanel Width="460">
+                    <TextBlock Text="$Title" FontSize="24" FontWeight="Bold" Foreground="#E4E4E7" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+                    <TextBlock Text="$Message" TextWrapping="Wrap" FontSize="16" Foreground="#D4D4D8" Margin="0,0,0,25" TextAlignment="Center"/>
+                    <Button x:Name="btnOK" Content="OK" Width="140" Height="42" HorizontalAlignment="Center" Foreground="White" FontWeight="SemiBold" FontSize="15" BorderThickness="0" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="border" Background="#0369A1" CornerRadius="10">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="border" Property="Background" Value="#0284C7"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="border" Property="Background" Value="#075985"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+                <!-- CLOSE X BUTTON -->
+                <Button x:Name="btnClose"
+                        Content="×"
+                        Width="42"
+                        Height="42"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,-20,-20,0"
+                        Background="Transparent"
+                        Foreground="#F87171"
+                        FontSize="34"
+                        FontWeight="Bold"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        Focusable="False"
+                        ToolTipService.InitialShowDelay="250"
+                        ToolTipService.ShowDuration="6000">
+                    <!-- MODERN DARK TOOLTIP -->
+                    <Button.ToolTip>
+                        <ToolTip Placement="Mouse" HasDropShadow="True" Background="Transparent" Foreground="#E4E4E7" BorderThickness="0" Padding="0">
+                            <ToolTip.Template>
+                                <ControlTemplate TargetType="ToolTip">
+                                    <Border Background="#F222252C" BorderBrush="#444954" BorderThickness="1" CornerRadius="3" Padding="14,10">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" BlurRadius="14" ShadowDepth="3" Opacity="0.45"/>
+                                        </Border.Effect>
+                                        <StackPanel>
+                                            <TextBlock Text="Abort Action" FontSize="15" FontWeight="Bold" Foreground="#F87171" Margin="0,0,0,5"/>
+                                            <TextBlock Text="Click X to Abort." FontSize="13" Foreground="#E4E4E7"/>
+                                            <TextBlock Text="The Restart will Not Be Executed." FontSize="13" Foreground="#A1A1AA" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </ControlTemplate>
+                            </ToolTip.Template>
+                        </ToolTip>
+                    </Button.ToolTip>
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="#2A2D35" BorderBrush="#444954" BorderThickness="1" CornerRadius="10" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <RotateTransform x:Name="rotation" Angle="0"/>
+                                </Border.RenderTransform>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#4A2C32"/>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#7A4A52"/>
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="rotation" Storyboard.TargetProperty="Angle" To="12" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="rotation" Storyboard.TargetProperty="Angle" To="0" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#3A2328"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Border>
+</Window>
+"@
+    $reader = New-Object System.Xml.XmlNodeReader ([xml]$xaml)
+    $win = [Windows.Markup.XamlReader]::Load($reader)
+    # Default: Cancel
+    $win.Tag = $false
+    $btnOK = $win.FindName("btnOK")
+    $btnClose = $win.FindName("btnClose")
+    # OK = Continue
+    $btnOK.Add_Click({
+        $win.Tag = $true
+        $win.Close()
+    })
+    # X = Cancel
+    $btnClose.Add_Click({
+        $win.Tag = $false
+        $win.Close()
+    })
+    $win.ShowDialog() | Out-Null
+    return [bool]$win.Tag
+}
+
+# STOP ALL FFMPEG.EXE PROCESSES
+function Stop-FfmpegExe {
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+	# STOP ALL FFMPEG.EXE PROCESSES
+	$ffmpegStopped = @()
+	$ffmpegErrors  = @()
+	try {
+		$ffmpegProcesses = @(Get-Process -Name "ffmpeg" -ErrorAction SilentlyContinue)
+		foreach ($ff in $ffmpegProcesses) {
+			$ffmpegPID = $ff.Id
+			try {
+				Stop-Process -Id $ffmpegPID -Force -ErrorAction Stop
+				$ffmpegStopped += "🎬 PID $ffmpegPID stopped by AutoPilot."
+			} catch {
+				$ffmpegErrors += "⚠️ PID $ffmpegPID could not be stopped: $($_.Exception.Message)"
+			}
+		}
+	} catch {
+		$ffmpegErrors += "⚠️ FFMPEG process enumeration error: $($_.Exception.Message)"
+	}
+	# LOG FFMPEG.EXE PROCESSES
+	$ffmpegMessageLines = @()
+	if ($ffmpegStopped.Count -gt 0) {
+		$ffmpegMessageLines += "⛔ AutoPilot Stop/Restart: stopped $($ffmpegStopped.Count) ffmpeg.exe process(es)."
+		$ffmpegMessageLines += $ffmpegStopped
+	}
+	if ($ffmpegErrors.Count -gt 0) {
+		$ffmpegMessageLines += $ffmpegErrors
+	}
+	if ($ffmpegMessageLines.Count -gt 0) {
+		foreach ($line in $ffmpegMessageLines) {
+			try { Write-Log $line } catch {}
+		}
+	}
 }
 
 # 💻 Status na sistemot (CPU, RAM, Disk)
@@ -80,10 +247,25 @@ function System-Status {
     $diskInfoString = (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
         ForEach-Object { "$($_.DeviceID) $([math]::Round($_.FreeSpace/1GB,2))GB free of $([math]::Round($_.Size/1GB,2))GB" }
     ) -join "`n"
-    # Network adapters
+    # Network adapters (+ connection type: Wi-Fi SSID / Ethernet / Virtual Machine)
+    $currentSsid = $null
+    try {
+        $ssidLine = netsh wlan show interfaces 2>$null | Select-String 'SSID' | Where-Object { $_ -notmatch 'BSSID' } | Select-Object -First 1
+        if ($ssidLine) { $currentSsid = ($ssidLine.ToString() -split ':', 2)[1].Trim() }
+    } catch {}
     $networkStatsString = (Get-CimInstance Win32_NetworkAdapter |
         Where-Object NetEnabled -eq $true |
-        ForEach-Object { "$($_.Description): Status - $($_.NetConnectionStatus)" }
+        ForEach-Object {
+            $adapterText = "$($_.Name) $($_.NetConnectionID)"
+            $connType = if ($_.PhysicalAdapter -eq $false -or $adapterText -match 'vEthernet|WSL|Hyper-V|Virtual|VMware|VirtualBox|VPN|TAP') {
+                "🖥️ Virtual Machine"
+            } elseif ($adapterText -match 'Wi-?Fi|Wireless|WLAN|802\.11') {
+                if ($_.NetConnectionStatus -eq 2 -and $currentSsid) { "📶 Wi-Fi: $currentSsid" } else { "📶 Wi-Fi: not connected" }
+            } else {
+                "🔌 Ethernet"
+            }
+            "$($_.Description): Status - $($_.NetConnectionStatus) | $connType"
+        }
     ) -join "`n"
     # Uptime
     $uptimeHours = [math]::Round(((Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalHours, 2)
@@ -91,21 +273,86 @@ function System-Status {
     try {
         $gpus = Get-WmiObject Win32_VideoController
         $counter = Get-Counter '\GPU Engine(*)\Utilization Percentage' -ErrorAction Stop
-
         $gpuLoad = ($gpus | ForEach-Object {
             $name = $_.Name
             $sum = ($counter.CounterSamples |
                 Where-Object { $_.InstanceName -like "*$name*" } |
                 Measure-Object CookedValue -Sum).Sum
-
             "$name Load: $([math]::Round(($sum),2))%"
         }) -join "`n"
     } catch {
         $gpuLoad = "ℹ️ GPU Load: Not Available"
     }
+    # AutoPilot Status (all values are read here directly from the JSON files)
+    $sepLine = "-------------------------------------"
+    try {
+        $jsonDir = Join-Path $PSScriptRoot "JSON"
+        $cfg = Get-Content -LiteralPath (Join-Path $jsonDir "settings.json") -Raw -ErrorAction Stop | ConvertFrom-Json
+        $cfgNames = $cfg.PSObject.Properties.Name
+        $st = $null
+        try { $st = Get-Content -LiteralPath (Join-Path $jsonDir "autopilot_state.json") -Raw -ErrorAction Stop | ConvertFrom-Json } catch {}
+        # --- settings.json (same defaults as the script) ---
+        $jsMaxRuns = 1
+        $tmpInt = 0
+        if ($cfgNames -contains "MAX_RUNS" -and [int]::TryParse([string]$cfg.MAX_RUNS, [ref]$tmpInt)) { $jsMaxRuns = $tmpInt }
+        $jsAllowedDays = if ($cfgNames -contains "ALLOWED_DAYS" -and $cfg.ALLOWED_DAYS) { @($cfg.ALLOWED_DAYS) } else { @("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday") }
+        $jsEnableRestart  = if ($cfgNames -contains "ENABLE_RESTART")  { [bool]$cfg.ENABLE_RESTART }  else { $false }
+        $jsEnableShutdown = if ($cfgNames -contains "ENABLE_SHUTDOWN") { [bool]$cfg.ENABLE_SHUTDOWN } else { $false }
+        $jsAutoStartSysMon = if ($cfgNames -contains "AUTO_START_MONITORING")      { [bool]$cfg.AUTO_START_MONITORING }      else { $false }
+        $jsAutoStartTraffic = if ($cfgNames -contains "TRAFFIC_MONITOR_AUTO_START") { [bool]$cfg.TRAFFIC_MONITOR_AUTO_START } else { $false }
+        $jsFixedNoBlock = if ($cfgNames -contains "FIXED_NO_BLOCK_CYCLE") { [bool]$cfg.FIXED_NO_BLOCK_CYCLE } else { $false }
+        # --- autopilot_state.json (current repetition and when it started) ---
+        $apCycle = if ($st -and $null -ne $st.cycle) { $st.cycle } else { "N/A" }
+        $apRepStart = "N/A"
+        if ($st -and $st.reason -eq "ActiveCycle" -and $st.timestamp) {
+            $tsObj = if ($st.timestamp -is [datetime]) { $st.timestamp } else { [datetime]::ParseExact([string]$st.timestamp, "yyyy-MM-dd HH:mm:ss", [System.Globalization.CultureInfo]::InvariantCulture) }
+            $apRepStart = "📆 $($tsObj.ToString('yyyy-MM-dd')) 🕒 $($tsObj.ToString('HH:mm:ss'))"
+        }
+        $apModeText = if ($jsMaxRuns -eq 1) { "Single (1 Repeat)" } elseif ($jsMaxRuns -gt 1) { "Limited ($jsMaxRuns Repetitions)" } else { "Infinite (Loop)" }
+        $apWindowText = if ((Get-Process -Id $PID).MainWindowHandle -eq 0) { "🔴 Hidden" } else { "🟢 Visible" }
+        # Start time of the AutoPilot.ps1 process
+		$apPs1Proc = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+			Where-Object { $_.Name -match '^(powershell|pwsh)\.exe$' -and $_.CommandLine -like "*Autopilot.ps1*" } |
+			Sort-Object CreationDate |
+			Select-Object -First 1
+		$apStartText = if ($apPs1Proc) {
+			$apPs1Proc.CreationDate.ToString("📆 yyyy-MM-dd 🕒 HH:mm:ss")
+		} else {
+			(Get-Process -Id $PID).StartTime.ToString("📆 yyyy-MM-dd 🕒 HH:mm:ss")
+		}
+        $allDayNames = @("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+        $apDayList = @($jsAllowedDays | ForEach-Object { [string]$_ })
+        $apDays = if (@($allDayNames | Where-Object { $apDayList -notcontains $_ }).Count -eq 0) { "All Days" } else { "$($apDayList.Count) days: $($apDayList -join ', ')" }
+        $apRepText = if ($jsMaxRuns -eq 0) { "Loop (run #$apCycle)" } else { "$apCycle of $jsMaxRuns" }
+        $apFixedText = if ($jsFixedNoBlock) { "🟣 Off (Repetition does not wait for 📆 Fixed Commands)" } else { "🟢 In (Repetition waits for 📆 Fixed Commands)" }
+        # Alarm Limits mode from settings.json
+        $apAlarmText = if ($jsEnableRestart -and $jsEnableShutdown) {
+            "🔵 PRO"
+        } elseif (-not $jsEnableRestart -and -not $jsEnableShutdown) {
+            "🟢 TEST"
+        } else {
+            "⚠️ MIXED (Restart: $(if ($jsEnableRestart) { 'true' } else { 'false' }), Shutdown: $(if ($jsEnableShutdown) { 'true' } else { 'false' }))"
+        }
+        $apSysMonText = if ($jsAutoStartSysMon) { "🟢 On" } else { "🔴 Off" }
+        $apTrafficText = if ($jsAutoStartTraffic) { "🟢 On" } else { "🔴 Off" }
+        $apStatus = "🔰 AutoPilot Status:`n$sepLine`n" +
+                    "✅ Started: $apStartText`n" +
+                    "🔢 Mode: $apModeText`n" +
+                    "⚛️ Cmd: $apWindowText`n" +
+                    "📆 Allowed days: $apDays`n`n" +
+                    "🔂 Repetition: $apRepText`n" +
+                    "🏁 Started: $apRepStart`n`n" +
+                    "🔁 Loop: $apFixedText`n`n" +
+                    "📢 Alarm Limits Mode: $apAlarmText`n" +
+                    "📊 AutoStart System Monitor: $apSysMonText`n" +
+                    "🌍 AutoStart Traffic Monitor: $apTrafficText"
+    } catch {
+        $apStatus = "ℹ️ AutoPilot Status: Not Available"
+    }
     # Compose output
     $status = @"
 ⚙️ System Status:
+$sepLine
 🔲 CPU Usage: $cpu %
 💾 RAM: $usedRAM GB / $totalRAM GB ($ramPercent%)
 
@@ -119,6 +366,9 @@ $networkStatsString
 🔁 Processes: $((Get-Process).Count)
 
 🏿 $gpuLoad
+
+
+$apStatus
 "@
     # String 
     return $status.Trim()
@@ -392,6 +642,7 @@ function Traffic-Monitoring-Log  { Open-Folder "$PSScriptRoot\Autopilot_Data\Tra
 function Data-Log                { Open-Folder "$PSScriptRoot\Autopilot_Data\DataFolder_Logs" }
 function Network-Log             { Open-Folder "$PSScriptRoot\Autopilot_Data\Network_Logs" }
 function Update-Log              { Open-Folder "$PSScriptRoot\Autopilot_Data\Update_Logs" }
+function Process-Log             { Open-Folder "$PSScriptRoot\Autopilot_Data\Process_Logs" }
 function Media                   { Open-Folder "$PSScriptRoot\Archive" } 
 function Camera                  { Open-Folder "$PSScriptRoot\Camera" } 
 function Data-Folder             { Open-Folder "$PSScriptRoot\Data" } 
@@ -581,17 +832,17 @@ function Stop-Workers {
                         Stop-Process -Id $proc.ProcessId -Force
                         $msg = "⚙️ Process $($proc.ProcessId) ($worker) successfully ✅ Closed."
                         $result += "$msg`n"
-                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                     } catch {
                         $msg = "ℹ️ Cannot close the process $($proc.ProcessId): $_"
                         $result += "$msg`n"
-                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                     }
                 }
             } else {
                 $msg = "ℹ️ No processes found for $worker"
                 $result += "$msg`n"
-                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
             }
         }
         if ($foundAnyRunning) {
@@ -601,11 +852,11 @@ function Stop-Workers {
         }
         [System.Windows.MessageBox]::Show($msg)
         $result += "$msg`n"
-        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
     } catch {
         $msg = "⚠️ Error executing Stop-Workers: $_"
         $result += "$msg`n"
-        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
     }
     return $result
 }
@@ -631,7 +882,7 @@ function Start-AutoPilot {
         if (-not (Test-Path $AutopilotFolder)) {
             New-Item -ItemType Directory -Path $AutopilotFolder | Out-Null
             $result += "Created Autopilot_Data 📁 folder.`n"
-            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Created Autopilot_Data folder."
+            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Created Autopilot_Data folder." -Encoding UTF8
         }
         $existing = Get-CimInstance Win32_Process | Where-Object {
             $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape($AutoPilotScript)
@@ -639,24 +890,24 @@ function Start-AutoPilot {
         if ($existing) {
             $msg = "⚛️ AutoPilot.ps1 is already Started. The process is ✅ ACTIVE!"
             $result += "$msg`n"
-            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
         } else {
             $shortcutPath = Join-Path $PSScriptRoot "Shortcuts\AutoPilot.lnk"
             if (Test-Path $shortcutPath) {
                 Start-Process $shortcutPath
                 $msg = "⚛️ AutoPilot.ps1 Started successfully. AutoPilot is ✅ RUNNING."
                 $result += "$msg`n"
-                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
             } else {
                 $msg = "Shortcut AutoPilot.lnk ⛔ not found!"
                 $result += "$msg`n"
-                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
             }
         }
     } catch {
         $msg = "⚠️ Error executing Start-AutoPilot: $_"
         $result += "$msg`n"
-        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
     }
     return $result
 }
@@ -665,12 +916,19 @@ function Start-AutoPilot {
 function Stop-AutoPilot {
     $result = ""
 
-    try {
-        $scriptsToStop = @(
-            "$PSScriptRoot\Autopilot.ps1",
-            "$PSScriptRoot\SystemMonitorWorker.ps1",
-            "$PSScriptRoot\TrafficMonitorWorker.ps1"
-        )
+	try {
+		# STOP ALL FFMPEG PROCESSES
+		try {
+			if (Get-Command Stop-FfmpegExe -ErrorAction SilentlyContinue) {
+				Stop-FfmpegExe
+			}
+		} catch {}
+
+		$scriptsToStop = @(
+			"$PSScriptRoot\Autopilot.ps1",
+			"$PSScriptRoot\SystemMonitorWorker.ps1",
+			"$PSScriptRoot\TrafficMonitorWorker.ps1"
+		)
         $foundProcess = $false
         foreach ($script in $scriptsToStop) {
             $existing = Get-CimInstance Win32_Process | Where-Object {
@@ -682,55 +940,55 @@ function Stop-AutoPilot {
                     try {
                         Stop-Process -Id $proc.ProcessId -Force
                         $result += "⚙️ Process $($proc.ProcessId) has been ❌ Closed.`n"
-                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Process $($proc.ProcessId) has been Closed."
+                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Process $($proc.ProcessId) has been Closed." -Encoding UTF8
                         $childProcs = Get-CimInstance Win32_Process -Filter "ParentProcessId=$($proc.ProcessId)" |
                                       Where-Object { $_.Name -eq "powershell.exe" -and $_.CommandLine -like "*.ps1*" }
                         foreach ($child in $childProcs) {
                             try {
                                 Stop-Process -Id $child.ProcessId -Force
                                 $result += "🧩 Child Processs $($child.ProcessId) of parent $($proc.ProcessId) has been ❌ Closed.`n"
-                                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Child Process $($child.ProcessId) of parent $($proc.ProcessId) has been Closed."
+                                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - 🧩 Child Process $($child.ProcessId) of parent $($proc.ProcessId) has been ❌ Closed." -Encoding UTF8
                             } catch {
                                 $msg = "ℹ️ Cannot close the child process $($child.ProcessId): $_"
                                 $result += "$msg`n"
-                                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                             }
                         }
                     } catch {
                         $msg = "ℹ️ Cannot close the child process $($proc.ProcessId): $_"
                         $result += "$msg`n"
-                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                     }
                 }
             }
         }
-        # === STOP Camera.exe (ako postoi vo istiot folder) ===
-        $cameraExePath = Join-Path $PSScriptRoot "Camera.exe"
+        # === STOP File.exe (ako postoi vo istiot folder) ===
+        $cameraExePath = Join-Path $PSScriptRoot "FileStorage.exe"
         if (Test-Path $cameraExePath) {
-            $cameraProcs = Get-Process -Name "Camera" -ErrorAction SilentlyContinue |
+            $cameraProcs = Get-Process -Name "FileStorage" -ErrorAction SilentlyContinue |
                 Where-Object { $_.Path -eq $cameraExePath }
             foreach ($cam in $cameraProcs) {
                 try {
                     Stop-Process -Id $cam.Id -Force
                     $foundProcess = $true
-                    $result += "📸 Camera.exe process $($cam.Id) has been ❌ Closed.`n"
-                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - Camera.exe process $($cam.Id) has been Closed."
+                    $result += "📸 FileStorage.exe process $($cam.Id) has been ❌ Closed.`n"
+                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - FileStorage.exe process $($cam.Id) has been Closed." -Encoding UTF8
                 } catch {
-                    $msg = "ℹ️ Cannot close the Camera.exe process $($cam.Id): $_"
+                    $msg = "ℹ️ Cannot close the FileStorage.exe process $($cam.Id): $_"
                     $result += "$msg`n"
-                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                 }
             }
         }
         if (-not $foundProcess) {
             $msg = "⚛️ AutoPilot and 📈 Monitoring are already ⏹️ STOPPED!"
             $result += "$msg`n"
-            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
         }
     } catch {
         $msg = "⚠️ Error executing Stop-AutoPilot: $_"
         $result += "$msg`n"
-        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
     }
     return $result
 }
@@ -740,12 +998,19 @@ function Restart-AutoPilotWithLog {
     param ()
     $result = ""
 
-    try {
-        $scriptsToStop = @(
-            "$PSScriptRoot\Autopilot.ps1",
-            "$PSScriptRoot\SystemMonitorWorker.ps1",
-            "$PSScriptRoot\TrafficMonitorWorker.ps1"
-        )
+	try {
+		# STOP ALL FFMPEG PROCESSES
+		try {
+			if (Get-Command Stop-FfmpegExe -ErrorAction SilentlyContinue) {
+				Stop-FfmpegExe
+			}
+		} catch {}
+
+		$scriptsToStop = @(
+			"$PSScriptRoot\Autopilot.ps1",
+			"$PSScriptRoot\SystemMonitorWorker.ps1",
+			"$PSScriptRoot\TrafficMonitorWorker.ps1"
+		)
         $foundProcess = $false
         $killedProcesses = @()
         foreach ($script in $scriptsToStop) {
@@ -759,32 +1024,32 @@ function Restart-AutoPilotWithLog {
                         Stop-Process -Id $proc.ProcessId -Force
                         $msg = "⚙️ Process $($proc.ProcessId) ($script) has been ❌ Closed."
                         $result += "$msg`n"
-                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                         $killedProcesses += $msg
                     } catch {
                         $msg = "ℹ️ Cannot close the process $($proc.ProcessId) ($script): $_"
                         $result += "$msg`n"
-                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                     }
                 }
             }
         }
-        # === STOP Camera.exe (ako e startuvan, NE se startuva povtorno) ===
-        $cameraExePath = Join-Path $PSScriptRoot "Camera.exe"
+        # === STOP File.exe (ako e startuvan, NE se startuva povtorno) ===
+        $cameraExePath = Join-Path $PSScriptRoot "FileStorage.exe"
         if (Test-Path $cameraExePath) {
-            $cameraProcs = Get-Process -Name "Camera" -ErrorAction SilentlyContinue |
+            $cameraProcs = Get-Process -Name "FileStorage" -ErrorAction SilentlyContinue |
                 Where-Object { $_.Path -eq $cameraExePath }
             foreach ($cam in $cameraProcs) {
                 try {
                     Stop-Process -Id $cam.Id -Force
                     $foundProcess = $true
-                    $msg = "📸 Camera.exe process $($cam.Id) has been ❌ Closed."
+                    $msg = "📸 FileStorage.exe process $($cam.Id) has been ❌ Closed."
                     $result += "$msg`n"
-                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                 } catch {
-                    $msg = "ℹ️ Cannot close the Camera.exe process $($cam.Id): $_"
+                    $msg = "ℹ️ Cannot close the FileStorage.exe process $($cam.Id): $_"
                     $result += "$msg`n"
-                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                    Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
                 }
             }
         }
@@ -793,28 +1058,28 @@ function Restart-AutoPilotWithLog {
                 New-Item -ItemType Directory -Path $AutopilotFolder | Out-Null
                 $msg = "Create Autopilot_Data 📁 folder."
                 $result += "$msg`n"
-                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
             }
             $autoPilotLnk = Join-Path $PSScriptRoot "Shortcuts\AutoPilot.lnk"
             if (Test-Path $autoPilotLnk) {
                 Start-Process $autoPilotLnk
                 $msg = "⚛️ AutoPilot Started ✅ Successfully."
                 $result += "$msg`n"
-                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
             } else {
                 $msg = "Shortcut AutoPilot.lnk ⛔ not found!"
                 $result += "$msg`n"
-                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+                Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
             }
         } else {
             $msg = "⚛ AutoPilot and 📈 Monitoring are already ⏹️ STOPPED!"
             $result += "$msg`n"
-            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+            Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
         }
     } catch {
         $msg = "⚠️ Error executing Restart-AutoPilotWithLog: $_"
         $result += "$msg`n"
-        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg"
+        Add-Content -Path $Global:logPath -Value "$((Get-Date).ToString('HH:mm:ss')) - $msg" -Encoding UTF8
     }
     return $result
 }
@@ -862,7 +1127,7 @@ function Task-Add {
             "➡️ TaskName is empty or null",
             "=============================="
         )
-        $result -join "`n" | Add-Content -Path $Global:logPath
+        $result -join "`n" | Add-Content -Path $Global:logPath -Encoding UTF8
         return $result -join "`n"
     }
     if (-not (Test-Path $VbsPath)) {
@@ -873,7 +1138,7 @@ function Task-Add {
             "📑 VBS file does not exist: $VbsPath",
             "=============================="
         )
-        $result -join "`n" | Add-Content -Path $Global:logPath
+        $result -join "`n" | Add-Content -Path $Global:logPath -Encoding UTF8
         return $result -join "`n"
     }
     if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
@@ -885,7 +1150,7 @@ function Task-Add {
             "✅ Auto-Start is already ENABLED",
             "=============================="
         )
-        $result -join "`n" | Add-Content -Path $Global:logPath
+        $result -join "`n" | Add-Content -Path $Global:logPath -Encoding UTF8
         return $result -join "`n"
     }
     try {
@@ -918,7 +1183,7 @@ function Task-Add {
             "=============================="
         )
     }
-    $result -join "`n" | Add-Content -Path $Global:logPath
+    $result -join "`n" | Add-Content -Path $Global:logPath -Encoding UTF8
     return $result -join "`n"
 }
 
@@ -961,7 +1226,7 @@ function Task-Del {
             "=============================="
         )
     }
-    $result -join "`n" | Add-Content -Path $Global:logPath
+    $result -join "`n" | Add-Content -Path $Global:logPath -Encoding UTF8
     return $result -join "`n"
 }
 
@@ -991,7 +1256,7 @@ function Task-Show {
             "=============================="
         )
     }
-    $result -join "`n" | Add-Content -Path $Global:logPath
+    $result -join "`n" | Add-Content -Path $Global:logPath -Encoding UTF8
     return $result -join "`n"
 }
 
@@ -1199,16 +1464,34 @@ function Commands-ListAll {
 				if ($null -ne $state -and $null -ne $state.total) {
 					$stateTotal = ([string]$state.total).Trim()
 				}
-				# FINITE LOOP: prikazi oznaka samo pred posledniot ciklus.
+				# Is this FIXED command inside the current 24h cycle window? (start = JSON timestamp)
+				$fixedInWindow = $false
+				try {
+					if ($null -ne $state -and $null -ne $state.timestamp) {
+						$cycleStartState = if ($state.timestamp -is [datetime]) {
+							$state.timestamp
+						} else {
+							[datetime]::ParseExact(
+								[string]$state.timestamp, "yyyy-MM-dd HH:mm:ss",
+								[System.Globalization.CultureInfo]::InvariantCulture
+							)
+						}
+						$fixedInWindow = ($dt -lt $cycleStartState.AddHours(24).AddSeconds(15))
+					}
+				}
+				catch { $fixedInWindow = $false }
+				# FINITE LOOP: prikazi oznaka samo ako FIXED ne e vo tekovniot 24h cycle.
 				if ($stateTotal -match '^\d+$' -and [int]$stateTotal -gt 0) {
 					$totalR = [int]$stateTotal
-					if ($currentR -lt $totalR) {
+					if (-not $fixedInWindow) {
 						$outOfLoopText = "  <<< ⚠️ Out of Loop (Rep:$currentR/$totalR)"
 					}
 				}
-				# BESKONECEN LOOP: FIXED se preskoknuvaat neograniceno.
+				# BESKONECEN LOOP: oznaka samo ako FIXED ne e vo tekovniot 24h cycle.
 				elseif ($stateTotal -ieq "LOOP") {
-					$outOfLoopText = "  <<< ⚠️ Out of Loop (Rep:$currentR/Loop)"
+					if (-not $fixedInWindow) {
+						$outOfLoopText = "  <<< ⚠️ Out of Loop (Rep:$currentR/Loop)"
+					}
 				}
 				# Ako sostojbata ne e dostapna, zadrzi ja starata oznaka.
 				else {
@@ -1364,9 +1647,13 @@ function Show-CMDWindow {
         (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).MainWindowHandle 
     } | Where-Object { $_ -ne 0 } | Measure-Object | Select-Object -ExpandProperty Count
     if ($isHidden -gt 0) {
-        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is already in *VISIBLE* mode."
+        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is already in 🔄 Visible Mode."
     } else {
-        Show-DarkWarning -Title "⚛️ AutoPilot Restart" -Message "Restarting AP Terminal in *VISIBLE* mode..."
+        if (-not (Show-AbortWarning -Title "⚛️ AutoPilot Restart" -Message "Restarting AP Terminal in 🔄 Visible Mode...")) {
+			return
+		}
+		# STOP FFMPEG
+        Stop-FfmpegExe
         # === STOP ALL RELEVANT SCRIPTS / PROCESSES ===
         $scriptsToStop = @(
             "$PSScriptRoot\Autopilot.ps1",
@@ -1379,10 +1666,10 @@ function Show-CMDWindow {
             }
             $existing | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
         }
-        # Stop Camera.exe if running
-        $cameraExePath = Join-Path $PSScriptRoot "Camera.exe"
+        # Stop File.exe if running
+        $cameraExePath = Join-Path $PSScriptRoot "FileStorage.exe"
         if (Test-Path $cameraExePath) {
-            $cameraProcs = Get-Process -Name "Camera" -ErrorAction SilentlyContinue |
+            $cameraProcs = Get-Process -Name "FileStorage" -ErrorAction SilentlyContinue |
                 Where-Object { $_.Path -eq $cameraExePath }
             $cameraProcs | ForEach-Object { Stop-Process -Id $_.Id -Force }
         }
@@ -1412,9 +1699,13 @@ function Hide-CMDWindow {
         (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).MainWindowHandle 
     } | Where-Object { $_ -ne 0 } | Measure-Object | Select-Object -ExpandProperty Count
     if ($isHidden -eq 0) {
-        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is already in *HIDDEN* mode."
+        Show-DarkWarning -Title "ℹ️ Info" -Message "AP Terminal is already in 🔄 Hidden Mode."
     } else {
-        Show-DarkWarning -Title "⚛️ AutoPilot Restart" -Message "Restarting AP Terminal in *HIDDEN* mode..."
+        if (-not (Show-AbortWarning -Title "⚛️ AutoPilot Restart" -Message "Restarting AP Terminal in 🔄 Hidden Mode...")) {
+			return
+		}
+		# STOP FFMPEG
+        Stop-FfmpegExe
         # === STOP ALL RELEVANT SCRIPTS / PROCESSES ===
         $scriptsToStop = @(
             "$PSScriptRoot\Autopilot.ps1",
@@ -1427,10 +1718,10 @@ function Hide-CMDWindow {
             }
             $existing | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
         }
-        # Stop Camera.exe if running
-        $cameraExePath = Join-Path $PSScriptRoot "Camera.exe"
+        # Stop File.exe if running
+        $cameraExePath = Join-Path $PSScriptRoot "FileStorage.exe"
         if (Test-Path $cameraExePath) {
-            $cameraProcs = Get-Process -Name "Camera" -ErrorAction SilentlyContinue |
+            $cameraProcs = Get-Process -Name "FileStorage" -ErrorAction SilentlyContinue |
                 Where-Object { $_.Path -eq $cameraExePath }
             $cameraProcs | ForEach-Object { Stop-Process -Id $_.Id -Force }
         }
@@ -1470,20 +1761,599 @@ function Dashboard-Open {
 
 # === DASHBOARD EXIT (AUTOPILOT) ===
 function Dashboard-Stop {
+    $scriptPath = Join-Path $PSScriptRoot "AutoPilot.exe"
     $running = Get-CimInstance Win32_Process |
                Where-Object { $_.CommandLine -like "*AutoPilot.exe*" }
     if ($running) {
-		$msg = "❌ Exit from  👩🏾‍💻 Dashboard..."
+        $msg = "❌ Exit from  👩🏾‍💻 Dashboard..."
         Write-Host "Exit from Dashboard..." -ForegroundColor Cyan
+        foreach ($p in $running) {
+            $hwnd = (Get-Process -Id $p.ProcessId).MainWindowHandle
+            if ($hwnd -ne 0) {
+                Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class WindowCloser {
+    [DllImport("user32.dll")]
+    public static extern bool PostMessage(
+        IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam
+    );
+}
+"@ -ErrorAction SilentlyContinue
+                [WindowCloser]::PostMessage(
+                    $hwnd, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero
+                ) | Out-Null
+            }
+        }
+    }
+    else {
+        $msg = "👩🏾‍💻 Dashboard is already ❌ EXIT!"
+        Write-Host "Dashboard is already EXIT!" -ForegroundColor Yellow
+    }
+    Send-TelegramMessage -message $msg
+}
+
+# === PROCESS MANAGER Start (AUTOPILOT) ===
+function Process-Start {
+    $scriptPath = Join-Path $PSScriptRoot "ProcessManager.exe"
+    $jsonFolder = Join-Path $PSScriptRoot "JSON"
+    $jsonPath = Join-Path $jsonFolder "AutoStart.json"
+    # === CHECK AUTOSTART JSON ===
+    if (-not (Test-Path -LiteralPath $jsonFolder -PathType Container)) {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n📂 JSON folder not found!"
+        Write-Host "JSON folder not found!" -ForegroundColor Red
+        Send-TelegramMessage -message $msg
+        return
+    }
+    if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf)) {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n📄 AutoStart.json not found!"
+        Write-Host "AutoStart.json not found!" -ForegroundColor Red
+        Send-TelegramMessage -message $msg
+        return
+    }
+    try {
+        $config = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 |
+                  ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n⚠️ AutoStart.json is invalid!"
+        Write-Host "AutoStart.json is invalid!" -ForegroundColor Red
+        Send-TelegramMessage -message $msg
+        return
+    }
+    # === MONITOR & PANEL TIME SETTINGS ===
+    $monitorTime = "{0:D2}:{1:D2}:{2:D2}" -f `
+        $config.MonitorHours,
+        $config.MonitorMinutes,
+        $config.MonitorSeconds
+    $panelTime = "{0:D2}:{1:D2}:{2:D2}" -f `
+        $config.PanelHours,
+        $config.PanelMinutes,
+        $config.PanelSeconds
+    if ($config.Enabled -isnot [bool] -or $config.Enabled -ne $true) {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n⚙️ AutoStart is disabled!"
+        Write-Host "Process Manager AutoStart is disabled!" -ForegroundColor Yellow
+        Send-TelegramMessage -message $msg
+        return
+    }
+    # === CHECK IF PROCESS MANAGER IS ALREADY RUNNING ===
+    $isRunning = Get-CimInstance Win32_Process |
+                 Where-Object {
+                     $_.Name -ieq "ProcessManager.exe"
+                 }
+
+    if ($isRunning) {
+        $msg = "🛡️ Process Manager is already Open. The process is ✅ ACTIVE!"
+        Write-Host "Process Manager is already Open. The process is ACTIVE!" -ForegroundColor Yellow
+        Send-TelegramMessage -message $msg
+        return
+    }
+    # === START PROCESS MANAGER ===
+    if (Test-Path -LiteralPath $scriptPath -PathType Leaf) {
+        $msg = "🛡️ Starting Process Manager...`n" +
+               "⚛️ Monitor Time: ⏳ $monitorTime`n" +
+               "📱 Panel Time: ⏳ $panelTime"
+        Write-Host "Starting Process Manager..." -ForegroundColor Cyan
+        Start-Process -FilePath $scriptPath -WindowStyle Hidden
+    }
+    else {
+        $msg = "🛡️ ProcessManger.exe ⛔ not found!`n📂 Path: $scriptPath"
+        Write-Host "ProcessManger.exe not found!" -ForegroundColor Red
+    }
+    Send-TelegramMessage -message $msg
+}
+
+# === PROCESS MANAGER Stop (AUTOPILOT) ===
+function Process-Stop {
+    $running = Get-CimInstance Win32_Process |
+               Where-Object { $_.Name -ieq "ProcessManager.exe" }
+    if ($running) {
+        $msg = "❌ Exit from 🛡️ Process Manager..."
+        Write-Host "Exit from Process Manager..." -ForegroundColor Cyan
         foreach ($p in $running) {
             Stop-Process -Id $p.ProcessId -Force
         }
     }
     else {
-		$msg = "👩🏾‍💻 Dashboard is already ❌ EXIT!"
-        Write-Host "Dashboard is already EXIT!" -ForegroundColor Yellow
+        $msg = "🛡️ Process Manager is already ❌ EXIT!"
+        Write-Host "Process Manager is already EXIT!" -ForegroundColor Yellow
     }
-	Send-TelegramMessage -message $msg
+    Send-TelegramMessage -message $msg
+}
+
+# === PROCESS MANAGER STATUS (AUTOPILOT) ===
+function Process-Status {
+    $scriptPath = Join-Path $PSScriptRoot "ProcessManager.exe"
+    $jsonFolder = Join-Path $PSScriptRoot "JSON"
+    $jsonPath = Join-Path $jsonFolder "AutoStart.json"
+	$rulesPath = Join-Path $jsonFolder "Rules.json"
+    $taskName = "AutoPilot-ProcessControlCenter"
+    $status = @()
+    $status += "🛡️ PROCESS MANAGER STATUS"
+    $status += "━━━━━━━━━━━━━━━━━━━━"
+    # === CHECK EXE FILE ===
+    if (Test-Path -LiteralPath $scriptPath -PathType Leaf) {
+        $status += "📦 EXE File: ✅ EXISTS"
+    }
+    else {
+        $status += "📦 EXE File: ❌ NOT FOUND"
+    }
+    # === CHECK JSON FOLDER ===
+    if (Test-Path -LiteralPath $jsonFolder -PathType Container) {
+        $status += "📂 JSON Folder: ✅ EXISTS"
+    }
+    else {
+        $status += "📂 JSON Folder: ❌ NOT FOUND"
+    }
+    # === CHECK JSON FILE AND AUTOSTART ===
+    $autoStartEnabled = $false
+    $jsonValid = $false
+    if (Test-Path -LiteralPath $jsonPath -PathType Leaf) {
+        try {
+            $config = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 |
+                      ConvertFrom-Json -ErrorAction Stop
+            if ($config.Enabled -is [bool]) {
+                $jsonValid = $true
+                $autoStartEnabled = $config.Enabled
+                $status += "📄 AutoStart.json: ✅ EXISTS"
+                $status += "⚙️ JSON AutoStart: $(if ($autoStartEnabled) { '🟢 ENABLED' } else { '🔴 DISABLED' })"
+                # === MONITOR & PANEL TIME SETTINGS ===
+                $monitorTime = $null
+                $panelTime = $null
+                $monitorValues = @(
+                    $config.MonitorHours,
+                    $config.MonitorMinutes,
+                    $config.MonitorSeconds
+                )
+                $panelValues = @(
+                    $config.PanelHours,
+                    $config.PanelMinutes,
+                    $config.PanelSeconds
+                )
+                if (
+                    $null -notin $monitorValues -and
+                    $monitorValues[0] -is [int] -and $monitorValues[0] -ge 0 -and $monitorValues[0] -le 99 -and
+                    $monitorValues[1] -is [int] -and $monitorValues[1] -ge 0 -and $monitorValues[1] -le 59 -and
+                    $monitorValues[2] -is [int] -and $monitorValues[2] -ge 0 -and $monitorValues[2] -le 59
+                ) {
+                    $monitorTime = "{0:D2}:{1:D2}:{2:D2}" -f `
+                        $config.MonitorHours,
+                        $config.MonitorMinutes,
+                        $config.MonitorSeconds
+                    $status += "⚛️ Monitor Time: ⏳ $monitorTime"
+                }
+                else {
+                    $status += "⚛️ Monitor Time: ❌ NOT SET"
+                }
+                if (
+                    $null -notin $panelValues -and
+                    $panelValues[0] -is [int] -and $panelValues[0] -ge 0 -and $panelValues[0] -le 99 -and
+                    $panelValues[1] -is [int] -and $panelValues[1] -ge 0 -and $panelValues[1] -le 59 -and
+                    $panelValues[2] -is [int] -and $panelValues[2] -ge 0 -and $panelValues[2] -le 59
+                ) {
+                    $panelTime = "{0:D2}:{1:D2}:{2:D2}" -f `
+                        $config.PanelHours,
+                        $config.PanelMinutes,
+                        $config.PanelSeconds
+                    $status += "📱 Panel Time: ⏳ $panelTime"
+                }
+                else {
+                    $status += "📱 Panel Time: ❌ NOT SET"
+                }
+            }
+            else {
+                $status += "📄 AutoStart.json: ⚠️ INVALID CONFIGURATION"
+                $status += "⚙️ JSON AutoStart: ❓ UNKNOWN"
+            }
+        }
+        catch {
+            $status += "📄 AutoStart.json: ❌ INVALID JSON"
+            $status += "⚙️ JSON AutoStart: ❓ UNKNOWN"
+        }
+    }
+    else {
+        $status += "📄 AutoStart.json: ❌ NOT FOUND"
+        $status += "⚙️ JSON AutoStart: ❌ UNAVAILABLE"
+    }
+    # === CHECK EXE PROCESS ===
+    $running = @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ieq "ProcessManager.exe" }
+    )
+    if ($running.Count -gt 0) {
+        $status += "🖥️ Process: 🟢 OPEN / RUNNING"
+    }
+    else {
+        $status += "🖥️ Process: 🔴 CLOSED / NOT RUNNING"
+    }
+    # === MONITOR & PANEL SESSION TIMES (FROM JSON) ===
+    if ($jsonValid) {
+        $parseStamp = {
+            param($value)
+            if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value)) { return $null }
+            if ($value -is [datetime]) { return $value }
+            $parsed = [datetime]::MinValue
+            if ([datetime]::TryParseExact(
+                    [string]$value,
+                    'yyyy-MM-dd HH:mm:ss',
+                    [Globalization.CultureInfo]::InvariantCulture,
+                    [Globalization.DateTimeStyles]::None,
+                    [ref]$parsed)) {
+                return $parsed
+            }
+            return $null
+        }
+        $formatLeft = {
+            param($seconds)
+            if ($seconds -lt 0) { $seconds = 0 }
+            $ts = [TimeSpan]::FromSeconds([math]::Floor($seconds))
+            return ('{0:00}:{1:00}:{2:00}' -f [math]::Floor($ts.TotalHours), $ts.Minutes, $ts.Seconds)
+        }
+		# === CHECK RULES.JSON (ALLOWED / BLOCKED) ===
+		$status += "━━━━━━━━━━━━━━━━━━━━"
+		$status += "📜 RULES"
+		if (Test-Path -LiteralPath $rulesPath -PathType Leaf) {
+			try {
+				$rules = Get-Content -LiteralPath $rulesPath -Raw -Encoding UTF8 |
+						 ConvertFrom-Json -ErrorAction Stop
+				$status += "📝 Rules.json: ✅ EXISTS"
+				$hasAnyRule = $false
+				$ruleGroups = [ordered]@{
+					'PS'    = '🟦 Power Shell'
+					'Other' = '🟨 PC Other'
+				}
+				$firstGroup = $true
+				foreach ($key in $ruleGroups.Keys) {
+					$group = $ruleGroups[$key]
+					$groupData = $rules.$key
+					if (-not $firstGroup) { $status += "" }
+					$firstGroup = $false
+					$allowedList = @()
+					$blockedList = @()
+					if ($null -ne $groupData) {
+						$allowedList = @($groupData.Allowed | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+						$blockedList = @($groupData.Blocked | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+					}
+					if ($allowedList.Count -gt 0) {
+						$hasAnyRule = $true
+						$status += "$group 🟢 Allowed ($($allowedList.Count)):"
+						foreach ($item in $allowedList) { $status += " ✅ $item" }
+					}
+					else {
+						$status += "$group 🟢 Allowed: None"
+					}
+					if ($blockedList.Count -gt 0) {
+						$hasAnyRule = $true
+						$status += "$group 🔴 Blocked ($($blockedList.Count)):"
+						foreach ($item in $blockedList) { $status += " ⛔ $item" }
+					}
+					else {
+						$status += "$group 🔴 Blocked: None"
+					}
+				}
+				if (-not $hasAnyRule) {
+					$status += "ℹ️ Rules.json exists, but no rules are set"
+				}
+			}
+			catch {
+				$status += "📝 Rules.json: ❌ INVALID JSON"
+			}
+		}
+		else {
+			$status += "📝 Rules.json: ❌ NOT FOUND"
+			$status += "⚠️ No rules are set"
+		}
+        $monitorStart = & $parseStamp $config.MonitorStartTime
+        $monitorStop  = & $parseStamp $config.MonitorStopTime
+        $panelStart   = & $parseStamp $config.PanelStartTime
+        $panelStop    = & $parseStamp $config.PanelStopTime
+        # Total configured duration in seconds (used only to calculate the remaining time)
+        $monitorTotalSeconds = $null
+        $panelTotalSeconds = $null
+        try {
+            $monitorTotalSeconds = ([int]$config.MonitorHours * 3600) + ([int]$config.MonitorMinutes * 60) + [int]$config.MonitorSeconds
+        }
+        catch { $monitorTotalSeconds = $null }
+        try {
+            $panelTotalSeconds = ([int]$config.PanelHours * 3600) + ([int]$config.PanelMinutes * 60) + [int]$config.PanelSeconds
+        }
+        catch { $panelTotalSeconds = $null }
+        $now = Get-Date
+        # --- Monitor remaining ---
+        $monitorLeftText = ' None'
+        if ($monitorStart -and $monitorStop) {
+            $monitorLeftText = '(Monitor ⏹️ Stopped)'
+        }
+        elseif ($monitorStart) {
+            if ($running.Count -eq 0) {
+                $monitorLeftText = '⚠️ UNKNOWN (process not running)'
+            }
+            elseif ($null -eq $monitorTotalSeconds -or $monitorTotalSeconds -le 0) {
+                $monitorLeftText = '❓ UNKNOWN'
+            }
+            else {
+                $monitorLeft = ($monitorStart.AddSeconds($monitorTotalSeconds) - $now).TotalSeconds
+                if ($monitorLeft -le 0) { $monitorLeftText = '00:00:00 (expired)' }
+                else { $monitorLeftText = & $formatLeft $monitorLeft }
+            }
+        }
+        # --- Panel remaining ---
+        $panelLeftText = ' None'
+        if ($panelStart -and $panelStop) {
+            $panelLeftText = '(Panel ⛔ Closed)'
+        }
+        elseif ($panelStart) {
+            if ($running.Count -eq 0) {
+                $panelLeftText = '⚠️ UNKNOWN (process not running)'
+            }
+            elseif ($null -eq $panelTotalSeconds -or $panelTotalSeconds -le 0) {
+                $panelLeftText = '❓ UNKNOWN'
+            }
+            else {
+                $panelLeft = ($panelStart.AddSeconds($panelTotalSeconds) - $now).TotalSeconds
+                if ($panelLeft -le 0) { $panelLeftText = '00:00:00 (expired)' }
+                else { $panelLeftText = & $formatLeft $panelLeft }
+            }
+        }
+        $status += "━━━━━━━━━━━━━━━━━━━━"
+        $status += "♻️ SESSION"
+        $status += "🟢 Monitor Start: 🕓 $(if ($monitorStart) { $monitorStart.ToString('yyyy-MM-dd HH:mm:ss') } else { ' Not Recorder' })"
+        $status += "🔴 Monitor Stop: 🕙 $(if ($monitorStop) { $monitorStop.ToString('yyyy-MM-dd HH:mm:ss') } else { ' None' })"
+        $status += "🟢 Panel Start: 🕓 $(if ($panelStart) { $panelStart.ToString('yyyy-MM-dd HH:mm:ss') } else { ' Not Recorder' })"
+        $status += "🔴️ Panel Closed: 🕙 $(if ($panelStop) { $panelStop.ToString('yyyy-MM-dd HH:mm:ss') } else { ' None' })"
+        $status += "🔵 Monitor Remaining: ⏳ $monitorLeftText"
+        $status += "🟣 Panel Remaining: ⏳ $panelLeftText"
+    }
+    # === CHECK WINDOWS TASK SCHEDULER ===
+    $task = $null
+    $taskAvailable = $false
+    try {
+        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+        $taskAvailable = $true
+        $status += "━━━━━━━━━━━━━━━━━━━━"
+        $status += "📋 WINDOWS STARTUP TASK"
+        $status += "🚩 Task Name: $taskName"
+        $status += "📋 Task Exists: ✅ YES"
+        if ($task.State -eq 'Disabled') {
+            $status += "⚙️ Task Status: 🔴 DISABLED"
+        }
+        else {
+            $status += "⚙️ Task Status: 🟢 ENABLED"
+        }
+        # Check whether a trigger starts at Windows boot or user logon
+        $startupTriggers = @(
+            $task.Triggers | Where-Object {
+                $_.CimClass.CimClassName -in @(
+                    'MSFT_TaskBootTrigger',
+                    'MSFT_TaskLogonTrigger'
+                )
+            }
+        )
+        if ($startupTriggers.Count -gt 0) {
+            if ($task.State -eq 'Disabled') {
+                $status += "🚀 Windows Auto-Start: ⚠️ CONFIGURED, BUT TASK DISABLED"
+            }
+            else {
+                $status += "🚀 Windows Auto-Start: ✅ CONFIGURED"
+            }
+        }
+        else {
+            $status += "🚀 Windows Auto-Start: ❌ NO BOOT/LOGON TRIGGER"
+        }
+    }
+    catch {
+        $status += "━━━━━━━━━━━━━━━━━━━━"
+        $status += "📋 WINDOWS STARTUP TASK"
+        $status += "🚩 Task Name: $taskName"
+        $status += "📋 Task Exists: ❌ NO"
+        $status += "🚀 Windows Auto-Start: ❌ NOT CONFIGURED"
+    }
+    # === OVERALL RESULT ===
+    $status += "━━━━━━━━━━━━━━━━━━━━"
+    if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+        $status += "⚠️ RESULT: EXE FILE MISSING"
+    }
+    elseif (-not $jsonValid) {
+        $status += "⚠️ RESULT: JSON CONFIGURATION UNAVAILABLE"
+    }
+    elseif (-not $autoStartEnabled) {
+        $status += "⛔ RESULT: JSON AUTOSTART DISABLED"
+    }
+    elseif ($running.Count -eq 0) {
+        $status += "🟡 RESULT: PROCESS NOT RUNNING"
+    }
+    else {
+        $status += "✅ RESULT: PROCESS ACTIVE"
+    }
+    $message = $status -join "`n"
+    Write-Host $message
+    Send-TelegramMessage -message $message
+}
+
+# === PROCESS MANAGER START (AUTOMATION COMMAND) ===
+function ProcessManager-Start {
+    $scriptPath = Join-Path $PSScriptRoot "ProcessManager.exe"
+    $jsonFolder = Join-Path $PSScriptRoot "JSON"
+    $jsonPath = Join-Path $jsonFolder "AutoStart.json"
+	# === AUTOMATIC COMMAND INFORMATION ===
+    $autoStart = "`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+    # === LOCAL AUDIT LOG FUNCTION ===
+    $logFile = Join-Path $Global:processManagerLogsFolder (
+        "ProcessLog_{0}.log" -f (Get-Date -Format 'yyyy-MM-dd')
+    )
+    function Write-ProcessManagerAutomationLog {
+        param([string]$Message)
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $logEntry = "[$timestamp] [ProcessManager-Start] $Message"
+        try {
+            if (-not (Test-Path -LiteralPath $Global:processManagerLogsFolder -PathType Container)) {
+                New-Item -Path $Global:processManagerLogsFolder -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            }
+            Add-Content -LiteralPath $logFile -Value $logEntry -Encoding UTF8 -ErrorAction Stop
+        }
+        catch {
+            Write-Host "Failed to write Process Manager log: $($_.Exception.Message)$autoStart" -ForegroundColor Red
+        }
+    }
+    # === CHECK AUTOSTART JSON ===
+    if (-not (Test-Path -LiteralPath $jsonFolder -PathType Container)) {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n📂 JSON folder not found!$autoStart"
+        Write-Host "JSON folder not found!$autoStart" -ForegroundColor Red
+        Write-ProcessManagerAutomationLog "START FAILED - JSON folder not found: $jsonFolder$autoStart"
+        Send-TelegramMessage -message $msg
+        return
+    }
+    if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf)) {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n📄 AutoStart.json not found!$autoStart"
+        Write-Host "AutoStart.json not found!$autoStart" -ForegroundColor Red
+        Write-ProcessManagerAutomationLog "START FAILED - AutoStart.json not found: $jsonPath$autoStart"
+        Send-TelegramMessage -message $msg
+        return
+    }
+    try {
+        $config = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 |
+                  ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n⚠️ AutoStart.json is invalid!$autoInfo$autoStart"
+        Write-Host "AutoStart.json is invalid!$autoStart" -ForegroundColor Red
+        Write-ProcessManagerAutomationLog "START FAILED - Invalid AutoStart.json. Error: $($_.Exception.Message)$autoStart"
+        Send-TelegramMessage -message $msg
+        return
+    }
+    if ($config.Enabled -isnot [bool] -or $config.Enabled -ne $true) {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n⚙️ AutoStart is disabled!$autoStart"
+        Write-Host "Process Manager AutoStart is disabled!$autoStart" -ForegroundColor Yellow
+        Write-ProcessManagerAutomationLog "START BLOCKED - AutoStart is disabled or Enabled is not a Boolean true.$autoStart"
+        Send-TelegramMessage -message $msg
+        return
+    }
+    # === CHECK IF PROCESS MANAGER IS ALREADY RUNNING ===
+    try {
+        $isRunning = @(
+            Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object { $_.Name -ieq "ProcessManager.exe" }
+        )
+    }
+    catch {
+        $msg = "🛡️ Process Manager ⛔ NOT STARTED!`n⚠️ Could not check running processes.$autoStart"
+        Write-Host "Could not check running processes!$autoStart" -ForegroundColor Red
+        Write-ProcessManagerAutomationLog "START FAILED - Could not check running processes. Error: $($_.Exception.Message)$autoStart"
+        Send-TelegramMessage -message $msg
+        return
+    }
+    if ($isRunning.Count -gt 0) {
+        $msg = "🛡️ Process Manager is already Open. The process is ✅ ACTIVE!$autoStart"
+        Write-Host "Process Manager is already Open. The process is ACTIVE!$autoStart" -ForegroundColor Yellow
+        Write-ProcessManagerAutomationLog "START SKIPPED - ProcessManager.exe is already running. PID(s): $($isRunning.ProcessId -join ', ')$autoStart"
+        Send-TelegramMessage -message $msg
+        return
+    }
+    # === START PROCESS MANAGER ===
+    if (Test-Path -LiteralPath $scriptPath -PathType Leaf) {
+        try {
+            Write-Host "Starting Process Manager...$autoStart" -ForegroundColor Cyan
+            Start-Process -FilePath $scriptPath -WindowStyle Hidden -ErrorAction Stop
+            $msg = "🛡️ Starting Process Manager...$autoStart"
+            Write-ProcessManagerAutomationLog "START REQUEST SENT - Executable: $scriptPath$autoStart"
+        }
+        catch {
+            $msg = "🛡️ Process Manager ⛔ FAILED TO START!`n⚠️ $($_.Exception.Message)$autoStart"
+            Write-Host "Failed to start Process Manager!$autoStart" -ForegroundColor Red
+            Write-ProcessManagerAutomationLog "START FAILED - Error: $($_.Exception.Message)$autoStart"
+        }
+    }
+    else {
+        $msg = "🛡️ ProcessManager.exe ⛔ not found!`n📂 Path: $scriptPath$autoStart"
+        Write-Host "ProcessManager.exe not found!$autoStart" -ForegroundColor Red
+        Write-ProcessManagerAutomationLog "START FAILED - Executable not found: $scriptPath$autoStart"
+    }
+    Send-TelegramMessage -message $msg
+}
+
+# === PROCESS MANAGER STOP (AUTOMATION COMMAND) ===
+function ProcessManager-Stop {
+	# === AUTOMATIC COMMAND INFORMATION ===
+    $autoStop = "`n`n🤖 Automatic command: $commandKey`n🕒 Time: $((Get-Date).ToString('dd.MM.yyyy - HH:mm:ss'))"
+    $logFile = Join-Path $Global:processManagerLogsFolder (
+        "ProcessLog_{0}.log" -f (Get-Date -Format 'yyyy-MM-dd')
+    )
+    function Write-ProcessManagerAutomationLog {
+        param([string]$Message)
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $logEntry = "[$timestamp] [ProcessManager-Stop] $Message"
+        try {
+            if (-not (Test-Path -LiteralPath $Global:processManagerLogsFolder -PathType Container)) {
+                New-Item -Path $Global:processManagerLogsFolder -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            }
+            Add-Content -LiteralPath $logFile -Value $logEntry -Encoding UTF8 -ErrorAction Stop
+        }
+        catch {
+            Write-Host "Failed to write Process Manager log: $($_.Exception.Message)$autoStop" -ForegroundColor Red
+        }
+    }
+    # === CHECK AND STOP PROCESS MANAGER ===
+    try {
+        $running = @(
+            Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object { $_.Name -ieq "ProcessManager.exe" }
+        )
+    }
+    catch {
+        $msg = "🛡️ Process Manager ⚠️ Could not check running processes.$autoStop"
+        Write-Host "Could not check running processes!$autoStop" -ForegroundColor Red
+        Write-ProcessManagerAutomationLog "STOP FAILED - Could not check running processes. Error: $($_.Exception.Message)$autoStop"
+        Send-TelegramMessage -message $msg
+        return
+    }
+    if ($running.Count -gt 0) {
+        $msg = "❌ Exit from 🛡️ Process Manager...$autoStop"
+        Write-Host "Exit from Process Manager...$autoStop" -ForegroundColor Cyan
+        $stoppedCount = 0
+        foreach ($p in $running) {
+            try {
+                Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop
+                $stoppedCount++
+                Write-ProcessManagerAutomationLog "STOP REQUEST SENT - PID: $($p.ProcessId)$autoStop"
+            }
+            catch {
+                Write-ProcessManagerAutomationLog "STOP FAILED - PID: $($p.ProcessId). Error: $($_.Exception.Message)$autoStop"
+            }
+        }
+        if ($stoppedCount -eq 0) {
+            $msg = "🛡️ Process Manager ⚠️ FAILED TO STOP!$autoStop"
+            Write-Host "Failed to stop Process Manager!$autoStop" -ForegroundColor Red
+        }
+        else {
+            Write-ProcessManagerAutomationLog "STOP COMPLETED - Stop request sent for $stoppedCount process(es).$autoStop"
+        }
+    }
+    else {
+        $msg = "🛡️ Process Manager is already ❌ EXIT!$autoStop"
+        Write-Host "Process Manager is already EXIT!$autoStop" -ForegroundColor Yellow
+        Write-ProcessManagerAutomationLog "STOP SKIPPED - ProcessManager.exe is not running.$autoStop"
+    }
+    Send-TelegramMessage -message $msg
 }
 
 # ===================== VLC PLAYER =====================

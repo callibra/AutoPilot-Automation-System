@@ -60,6 +60,87 @@ if (-not (Test-Path $CsvPath)) {
     "Date,Download_Bytes/Upload_Bytes/Total_Bytes,Interface" | Out-File -FilePath $CsvPath -Encoding utf8
 }
 
+# --- Startup CSV backup protection (does not change monitoring logic) ---
+$CsvBackupPath = "$CsvPath.bak"
+
+function Get-CsvTotalInternetBytes {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    [int64]$sum = 0
+    if (-not (Test-Path -LiteralPath $Path)) { return [int64]0 }
+
+    $csvLines = Get-Content -LiteralPath $Path -ErrorAction Stop
+    if ($csvLines.Count -le 1) { return [int64]0 }
+
+    foreach ($csvLine in $csvLines | Select-Object -Skip 1) {
+        if ([string]::IsNullOrWhiteSpace($csvLine)) { continue }
+        $columns = $csvLine -split ',', 3
+        if ($columns.Count -lt 3) { continue }
+        $values = $columns[1] -split '/', 3
+        if ($values.Count -lt 3) { continue }
+
+        [int64]$rowTotal = 0
+        if ([int64]::TryParse($values[2], [ref]$rowTotal)) {
+            $sum += $rowTotal
+        }
+    }
+
+    return [int64]$sum
+}
+
+try {
+    $csvTotal = Get-CsvTotalInternetBytes -Path $CsvPath
+
+    # Keep the normal .bak and also consider every saved damaged CSV candidate.
+    $recoveryCandidates = @()
+    if (Test-Path -LiteralPath $CsvBackupPath) {
+        $recoveryCandidates += Get-Item -LiteralPath $CsvBackupPath -ErrorAction Stop
+    }
+
+    $damagedPattern = [System.IO.Path]::GetFileName($CsvPath) + '.damaged*'
+    $csvDirectory = Split-Path -Parent $CsvPath
+    if ([string]::IsNullOrWhiteSpace($csvDirectory)) { $csvDirectory = $PSScriptRoot }
+    $recoveryCandidates += @(Get-ChildItem -LiteralPath $csvDirectory -Filter $damagedPattern -File -ErrorAction SilentlyContinue)
+
+    $bestCandidate = $null
+    [int64]$bestCandidateTotal = -1
+    foreach ($candidate in $recoveryCandidates) {
+        try {
+            $candidateTotal = Get-CsvTotalInternetBytes -Path $candidate.FullName
+            if ($candidateTotal -gt $bestCandidateTotal) {
+                $bestCandidateTotal = $candidateTotal
+                $bestCandidate = $candidate
+            }
+        }
+        catch {
+            Write-TrafficLog "Skipping unreadable recovery candidate '$($candidate.FullName)': $($_.Exception.Message)" -Color Yellow
+        }
+    }
+
+    if ($null -ne $bestCandidate -and $bestCandidateTotal -gt $csvTotal) {
+        # Restore through a temporary file so the original is not partially overwritten.
+        $restoreTempPath = "$CsvPath.restore.tmp"
+        Copy-Item -LiteralPath $bestCandidate.FullName -Destination $restoreTempPath -Force -ErrorAction Stop
+        Move-Item -LiteralPath $restoreTempPath -Destination $CsvPath -Force -ErrorAction Stop
+        Write-TrafficLog "CSV recovery: original total ($csvTotal bytes) was lower than candidate '$($bestCandidate.Name)' total ($bestCandidateTotal bytes). Restored CSV from that candidate." -Color Yellow
+    }
+    elseif ($null -ne $bestCandidate) {
+        Write-TrafficLog "CSV startup check passed. Original total: $csvTotal bytes; highest recovery candidate '$($bestCandidate.Name)' total: $bestCandidateTotal bytes." -Color Green
+    }
+    else {
+        Write-TrafficLog "No backup or damaged CSV recovery candidates found. Creating the initial backup." -Color Yellow
+    }
+
+    # Preserve existing behavior: refresh .bak from the selected/current CSV after comparison.
+    $backupTempPath = "$CsvBackupPath.tmp"
+    Copy-Item -LiteralPath $CsvPath -Destination $backupTempPath -Force -ErrorAction Stop
+    Move-Item -LiteralPath $backupTempPath -Destination $CsvBackupPath -Force -ErrorAction Stop
+}
+catch {
+    Write-TrafficLog "CSV backup protection ERROR: $($_.Exception.Message). Monitoring startup will stop to avoid overwriting CSV data." -Color Red
+    throw
+}
+
 # Отстрани стар stop flag ако постои
 if (Test-Path $StopFlagFile) { Remove-Item $StopFlagFile -Force }
 

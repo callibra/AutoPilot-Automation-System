@@ -1,4 +1,4 @@
-# ================= APP ROOT =================
+﻿# ================= APP ROOT =================
 if (-not $AppRoot) {
     if ($PSCommandPath) {
         $AppRoot = Split-Path -Parent $PSCommandPath
@@ -59,44 +59,44 @@ function Build-Line($date,$disk,$load,$temp,$traffic) {
     $r = $traffic | Where-Object { ([datetime]$_.Date).Date -eq ([datetime]$date).Date }
     if (-not $d -and -not $l -and -not $t -and -not $r) { return $null }
     # ================= DISK SAFE =================
-    $diskText = "Disk:`r`n"
+    $diskText = "Disk: 💽`r`n"
     if ($d) {
         foreach ($p in $d.PSObject.Properties) {
             if ($p.Name -ne "Date") {
-                $val = if ([string]::IsNullOrWhiteSpace($p.Value)) { "Not available" } else { $p.Value }
+                $val = if ([string]::IsNullOrWhiteSpace($p.Value)) { "⚠️ Not available" } else { $p.Value }
                 $diskText += "$($p.Name): $val`r`n"
             }
         }
     } else {
-        $diskText += "No disk data`r`n"
+        $diskText += "💽 No disk data`r`n"
     }
     # ================= LOAD SAFE =================
-    $loadText = "Load:`r`n"
+    $loadText = "Load: 📊`r`n"
     if ($l) {
         foreach ($p in $l.PSObject.Properties) {
             if ($p.Name -ne "Date") {
-                $val = if ([string]::IsNullOrWhiteSpace($p.Value)) { "Not available" } else { $p.Value }
+                $val = if ([string]::IsNullOrWhiteSpace($p.Value)) { "⚠️ Not available" } else { $p.Value }
                 $loadText += "$($p.Name): $val`r`n"
             }
         }
     } else {
-        $loadText += "No load data`r`n"
+        $loadText += "📊 No load data`r`n"
     }
     # ================= TEMP SAFE =================
-    $tempText = "Temperatures:`r`n"
+    $tempText = "Temperatures: 🌡️`r`n"
     if ($t) {
         foreach ($p in $t.PSObject.Properties) {
             if ($p.Name -ne "Date") {
                 $val = $p.Value
                 if ([string]::IsNullOrWhiteSpace($val)) {
-                    $tempText += "$($p.Name): Not measured`r`n"
+                    $tempText += "$($p.Name): ⚠️ Not measured`r`n"
                 } else {
                     $tempText += "$($p.Name): $val`r`n"
                 }
             }
         }
     } else {
-        $tempText += "No temperature data`r`n"
+        $tempText += "🌡️ No temperature data`r`n"
     }
     # ================= TRAFFIC =================
     $trafficText = ""
@@ -110,10 +110,10 @@ function Build-Line($date,$disk,$load,$temp,$traffic) {
                 $parts = $row.'Download_Bytes/Upload_Bytes/Total_Bytes' -split "/"
                 $trafficText += @"
        
-Traffic [$($g.Name)]
-Download: $(Convert-Bytes $parts[0])
-Upload:   $(Convert-Bytes $parts[1])
-Total:    $(Convert-Bytes $parts[2])
+Traffic [$($g.Name)] 📶
+🔽 Download: $(Convert-Bytes $parts[0])
+🔼 Upload:   $(Convert-Bytes $parts[1])
+🗃️ Total:    $(Convert-Bytes $parts[2])
 
 "@
             }
@@ -136,10 +136,10 @@ Total:    $(Convert-Bytes $parts[2])
             }
             $trafficText += @"
 
-Global Traffic (All Interfaces)
-Download: $(Convert-Bytes $totalDownload)
-Upload:   $(Convert-Bytes $totalUpload)
-Total:    $(Convert-Bytes $totalTotal)
+Global Traffic (All Interfaces) 🌍
+🔽 Download: $(Convert-Bytes $totalDownload)
+🔼 Upload:   $(Convert-Bytes $totalUpload)
+🗃️ Total:    $(Convert-Bytes $totalTotal)
 "@
         }
     }
@@ -147,12 +147,12 @@ Total:    $(Convert-Bytes $totalTotal)
 @"
 
 Date: $date
--Hardware Data:
+• 🖥️ Hardware Data:
 
 $diskText
 $loadText
 $tempText
--Network Data:
+• 🌐 Network Data:
 $trafficText
 "@
 }
@@ -173,10 +173,10 @@ function Build-Line-Range($start,$end,$disk,$load,$temp,$traffic) {
         ([datetime]$_.Date) -ge $start -and ([datetime]$_.Date) -le $end
     }
     if (-not $diskFiltered -and -not $loadFiltered -and -not $tempFiltered -and -not $trafficFiltered) {
-        return "No data in selected range"
+        return "🚫 No data in selected range"
     }
     # ================= DISK (PRECISION AVG) =================
-    $diskText = "Disk:`r`n"
+    $diskText = "Disk: 💽`r`n"
     if ($diskFiltered) {
         $props = $diskFiltered[0].PSObject.Properties | Where-Object { $_.Name -ne "Date" }
         foreach ($p in $props) {
@@ -193,15 +193,15 @@ function Build-Line-Range($start,$end,$disk,$load,$temp,$traffic) {
                 $diskText += "$($p.Name): {0:N2}`r`n" -f $avg
             }
             else {
-                $diskText += "$($p.Name): Not available`r`n"
+                $diskText += "$($p.Name): ⚠️ Not available`r`n"
             }
         }
     }
     else {
-        $diskText += "No disk data`r`n"
+        $diskText += "💽 No disk data`r`n"
     }
     # ================= LOAD (PRECISION AVG) =================
-    $loadText = "Load:`r`n"
+    $loadText = "Load: 📊`r`n"
     if ($loadFiltered) {
         $props = $loadFiltered[0].PSObject.Properties | Where-Object { $_.Name -ne "Date" }
         foreach ($p in $props) {
@@ -218,15 +218,15 @@ function Build-Line-Range($start,$end,$disk,$load,$temp,$traffic) {
                 $loadText += "$($p.Name): {0:N2}`r`n" -f $avg
             }
             else {
-                $loadText += "$($p.Name): Not available`r`n"
+                $loadText += "$($p.Name): ⚠️ Not available`r`n"
             }
         }
     }
     else {
-        $loadText += "No load data`r`n"
+        $loadText += "📊 No load data`r`n"
     }
     # ================= TEMPERATURE (ALREADY OK, CLEANED) =================
-    $tempText = "Temperatures:`r`n"
+    $tempText = "Temperatures: 🌡️`r`n"
     if ($tempFiltered) {
         $props = $tempFiltered[0].PSObject.Properties | Where-Object { $_.Name -ne "Date" }
         foreach ($p in $props) {
@@ -243,12 +243,12 @@ function Build-Line-Range($start,$end,$disk,$load,$temp,$traffic) {
                 $tempText += "$($p.Name): {0:N2}`r`n" -f $avg
             }
             else {
-                $tempText += "$($p.Name): Not measured`r`n"
+                $tempText += "$($p.Name): ⚠️ Not measured`r`n"
             }
         }
     }
     else {
-        $tempText += "No temperature data`r`n"
+        $tempText += "🌡️ No temperature data`r`n"
     }
     # ================= TRAFFIC (FIXED PRECISION SUM) =================
     $trafficText = ""
@@ -268,10 +268,10 @@ function Build-Line-Range($start,$end,$disk,$load,$temp,$traffic) {
             }
             $trafficText += @"
 
-Traffic [$($g.Name)]
-Download: $(Convert-Bytes $totalDownload)
-Upload:   $(Convert-Bytes $totalUpload)
-Total:    $(Convert-Bytes $totalTotal)
+Traffic [$($g.Name)] 📶
+🔽 Download: $(Convert-Bytes $totalDownload)
+🔼 Upload:   $(Convert-Bytes $totalUpload)
+🗃️ Total:    $(Convert-Bytes $totalTotal)
 
 "@
         }
@@ -289,22 +289,22 @@ Total:    $(Convert-Bytes $totalTotal)
         }
         $trafficText += @"
 
-Global Traffic (All Interfaces)
-Download: $(Convert-Bytes $gDownload)
-Upload:   $(Convert-Bytes $gUpload)
-Total:    $(Convert-Bytes $gTotal)
+Global Traffic (All Interfaces) 🌍
+🔽 Download: $(Convert-Bytes $gDownload)
+🔼 Upload:   $(Convert-Bytes $gUpload)
+🗃️ Total:    $(Convert-Bytes $gTotal)
 "@
     }
     # ================= FINAL =================
 @"
 
 Date: $($start.ToString("dddd, dd MMMM yyyy")) - $($end.ToString("dddd, dd MMMM yyyy"))
--Hardware Data:
+• 🖥️ Hardware Data:
 
 $diskText
 $loadText
 $tempText
--Network Data:
+• 🌐 Network Data:
 $trafficText
 "@
 }
@@ -345,15 +345,15 @@ function Show-AllData($container, $text) {
 	$box.Dock = "Fill"
 	$form.Controls.Add($box)
 	$form.ResumeLayout()
-    $box.BackColor = [Drawing.Color]::FromArgb(45,45,45)
+    $box.BackColor = [Drawing.Color]::FromArgb(43,46,54)
     $box.ForeColor = "White"
     $box.BorderStyle = "None"
-    $box.Font = New-Object Drawing.Font("Segoe UI",12)
+    $box.Font = New-Object Drawing.Font("Segoe UI Emoji",12)
 	# ================= TITLE INSIDE TEXT (CENTERED) =================
 	$box.SelectionAlignment = [System.Windows.Forms.HorizontalAlignment]::Center
 	$box.SelectionColor = [Drawing.Color]::FromArgb(0,200,255)
-	$box.SelectionFont = New-Object Drawing.Font("Segoe UI",20,[Drawing.FontStyle]::Bold)
-	$box.AppendText("All System Data`r")
+	$box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",20,[Drawing.FontStyle]::Bold)
+	$box.AppendText("📊 All System Data`r")
 	# reset back to left alignment for normal text
 	$box.SelectionAlignment = [System.Windows.Forms.HorizontalAlignment]::Left
     $lines = $text -split "`r?`n"
@@ -362,32 +362,32 @@ function Show-AllData($container, $text) {
         if ($line -match "^Disk:") {
             $currentColor = [Drawing.Color]::FromArgb(0,200,255)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Load:") {
             $currentColor = [Drawing.Color]::FromArgb(0,255,150)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Temperatures:") {
             $currentColor = [Drawing.Color]::FromArgb(255,180,0)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Traffic") {
             $currentColor = [Drawing.Color]::FromArgb(103, 240, 101)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
 		elseif ($line -match "^Global Traffic") {
             $currentColor = [Drawing.Color]::FromArgb(66, 189, 189)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
 		elseif ($line -match "^Status") {
             $currentColor = [Drawing.Color]::FromArgb(39, 176, 245)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Date:") {
             $parts = $line.Split(":",2)
@@ -398,8 +398,8 @@ function Show-AllData($container, $text) {
                 $formatted = $parts[1].Trim()
             }
             $box.SelectionColor = [Drawing.Color]::White
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",18,[Drawing.FontStyle]::Bold)
-            $box.AppendText("Date: ")
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",18,[Drawing.FontStyle]::Bold)
+            $box.AppendText("📅 Date: ")
 
             $box.SelectionColor = [Drawing.Color]::Yellow
             $box.AppendText($formatted + "`r`n`r`n")
@@ -407,7 +407,7 @@ function Show-AllData($container, $text) {
         }
         elseif ($line -match ":") {
             $parts = $line.Split(":",2)
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",13,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",13,[Drawing.FontStyle]::Bold)
             $box.AppendText($parts[0] + ": ")
             $box.SelectionColor = $currentColor
             $box.AppendText($parts[1] + "`r`n")
@@ -423,7 +423,7 @@ function Show-AllData($container, $text) {
     $footer.BackColor = [Drawing.Color]::FromArgb(30,30,30)
     # ================= GRAPH BUTTON =================
     $btnGraph = New-Object Windows.Forms.Button
-	$btnGraph.Text = "Graphs"
+	$btnGraph.Text = "📊 Graphs"
 	$btnGraph.Width = 120
 	$btnGraph.Height = 35
 	$btnGraph.Left = 20
@@ -434,34 +434,34 @@ function Show-AllData($container, $text) {
 	$btnGraph.FlatAppearance.BorderSize = 0
 	$btnGraph.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(60,200,255)
 	$btnGraph.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(20,140,200)
-	$btnGraph.Font = New-Object Drawing.Font("Segoe UI",10,[Drawing.FontStyle]::Bold)
+	$btnGraph.Font = New-Object Drawing.Font("Segoe UI Emoji",10,[Drawing.FontStyle]::Bold)
 	$btnGraph.Cursor = [System.Windows.Forms.Cursors]::Hand
     # ================= BACK BUTTON =================
     $btnBack = New-Object Windows.Forms.Button
-	$btnBack.Text = "Back"
+	$btnBack.Text = "⬅️ Back"
 	$btnBack.Width = 120
 	$btnBack.Height = 35
 	$btnBack.Left = 160
 	$btnBack.Top = 10
-	$btnBack.BackColor = [Drawing.Color]::FromArgb(80,80,80)
+	$btnBack.BackColor = [Drawing.Color]::FromArgb(80,150,100)
 	$btnBack.ForeColor = "White"
 	$btnBack.FlatStyle = "Flat"
 	$btnBack.FlatAppearance.BorderSize = 0
-	$btnBack.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(110,110,110)
-	$btnBack.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(50,50,50)
-	$btnBack.Font = New-Object Drawing.Font("Segoe UI",10,[Drawing.FontStyle]::Bold)
+	$btnBack.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(100,180,120)
+	$btnBack.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(60,120,80)
+	$btnBack.Font = New-Object Drawing.Font("Segoe UI Emoji",10,[Drawing.FontStyle]::Bold)
 	$btnBack.Cursor = [System.Windows.Forms.Cursors]::Hand
 	# ================= GRAPH MODE (ONLY _all) =================
 	$btnGraph.Add_Click({
     # ================= LOAD ONLY _ALL PNG =================
 	$archivePath = "$AppRoot\Charts"
 	if (-not (Test-Path $archivePath)) {
-		[System.Windows.Forms.MessageBox]::Show("Graphs folder not found")
+		[System.Windows.Forms.MessageBox]::Show("🚫 Graphs folder not found")
 		return
 	}
 	$allFiles = Get-ChildItem $archivePath -Filter "*_Alld*.png"
 	if (-not $allFiles -or $allFiles.Count -eq 0) {
-		[System.Windows.Forms.MessageBox]::Show("No graphs found")
+		[System.Windows.Forms.MessageBox]::Show("🚫 No graphs found")
 		return
 	}
 	# ================= GET LATEST MODIFICATION DATE (GLOBAL) =================
@@ -470,7 +470,7 @@ function Show-AllData($container, $text) {
 		Sort-Object -Descending |
 		Select-Object -First 1
 	if (-not $latestDate) {
-		[System.Windows.Forms.MessageBox]::Show("No valid modification dates in files")
+		[System.Windows.Forms.MessageBox]::Show("⚠️ No valid modification dates in files")
 		return
 	}
 	$dateString = $latestDate.ToString("yyyy-MM-dd")
@@ -479,7 +479,7 @@ function Show-AllData($container, $text) {
 		$_.Name -like "*_Alld*" -and $_.LastWriteTime.ToString("yyyy-MM-dd") -eq $dateString
 	}
 	if (-not $files -or $files.Count -eq 0) {
-		[System.Windows.Forms.MessageBox]::Show("No latest _All graphs found")
+		[System.Windows.Forms.MessageBox]::Show("🚫 No latest _All graphs found")
 		return
 	}
     if ($script:graphPanel) {
@@ -489,7 +489,7 @@ function Show-AllData($container, $text) {
     }
     # ================= SCROLL PANEL =================
     $scroll = New-Object Windows.Forms.Panel
-    $scroll.BackColor = [Drawing.Color]::FromArgb(45,45,45)
+    $scroll.BackColor = [Drawing.Color]::FromArgb(43,46,54)
     $scroll.AutoScroll = $true
     # 🔥 CRITICAL FIX: prevent footer overlap
     $scroll.Dock = "Fill"
@@ -502,16 +502,16 @@ function Show-AllData($container, $text) {
 	$header.BackColor = [Drawing.Color]::FromArgb(30,30,30)
 	# TITLE
 	$title = New-Object Windows.Forms.Label
-	$title.Text = "Graphs - ALL DATA"
-	$title.Font = New-Object Drawing.Font("Segoe UI",18,[Drawing.FontStyle]::Bold)
-	$title.ForeColor = [Drawing.Color]::FromArgb(0,200,255)   # 🔵 боја
+	$title.Text = "📊 Graphs - ALL DATA"
+	$title.Font = New-Object Drawing.Font("Segoe UI Emoji",18,[Drawing.FontStyle]::Bold)
+	$title.ForeColor = [Drawing.Color]::FromArgb(0,200,255)
 	$title.AutoSize = $true
 	$title.Left = 20
 	$title.Top = 10
 	# SUBTITLE
 	$subtitle = New-Object Windows.Forms.Label
-	$subtitle.Text = "Graphs from: $latestYear $dateString"
-	$subtitle.Font = New-Object Drawing.Font("Segoe UI",12,[Drawing.FontStyle]::Italic)
+	$subtitle.Text = "🕒 Graphs from: $latestYear $dateString"
+	$subtitle.Font = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Italic)
 	$subtitle.ForeColor = [Drawing.Color]::FromArgb(180,180,180)
 	$subtitle.AutoSize = $true
 	$subtitle.Left = 20
@@ -544,7 +544,7 @@ function Show-AllData($container, $text) {
 		elseif ($name -match "temp") { $type = "Temperatures" }
 		elseif ($name -match "table") { $type = "Network" }
 		else { $type = "Unknown" }
-		$tooltip.SetToolTip($pic, "Type: $type`nFile: $($file.Name)")
+		$tooltip.SetToolTip($pic, "🏷️ Type: $type`n📄 File: $($file.Name)")
         # OPEN IMAGE
         $pic.Add_Click({ Start-Process $this.Tag })
         # HOVER ZOOM
@@ -600,15 +600,15 @@ function Show-InlineView($container, $text) {
 	$box.Dock = "Fill"
 	$form.Controls.Add($box)
 	$form.ResumeLayout()
-    $box.BackColor = [Drawing.Color]::FromArgb(45,45,45)
+    $box.BackColor = [Drawing.Color]::FromArgb(43,46,54)
     $box.ForeColor = "White"
     $box.BorderStyle = "None"
-    $box.Font = New-Object Drawing.Font("Segoe UI",12)
+    $box.Font = New-Object Drawing.Font("Segoe UI Emoji",12)
 	# ================= TITLE INSIDE TEXT (CENTERED) =================
 	$box.SelectionAlignment = [System.Windows.Forms.HorizontalAlignment]::Center
 	$box.SelectionColor = [Drawing.Color]::FromArgb(0,200,255)
-	$box.SelectionFont = New-Object Drawing.Font("Segoe UI",20,[Drawing.FontStyle]::Bold)
-	$box.AppendText("System Data Status`r")
+	$box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",20,[Drawing.FontStyle]::Bold)
+	$box.AppendText("📈 System Data Status`r")
 	# reset back to left alignment for normal text
 	$box.SelectionAlignment = [System.Windows.Forms.HorizontalAlignment]::Left
     # 👉 SAME POPUP LOGIC (no UI splitting)
@@ -618,21 +618,21 @@ function Show-InlineView($container, $text) {
         if ($line -match "^Disk:") {
             $currentColor = [Drawing.Color]::FromArgb(0,200,255)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Graphs Folder Status") {
             $currentColor = [Drawing.Color]::FromArgb(66, 214, 147)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
 		elseif ($line -match "^Status") {
             $currentColor = [Drawing.Color]::FromArgb(39, 176, 245)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match ":") {
             $parts = $line.Split(":",2)
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",13,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",13,[Drawing.FontStyle]::Bold)
 			$box.AppendText($parts[0] + ": ")
             $box.SelectionColor = $currentColor
             $box.AppendText($parts[1] + "`r`n")
@@ -648,7 +648,7 @@ function Show-InlineView($container, $text) {
 		$footer.BackColor = [Drawing.Color]::FromArgb(30,30,30)
 		# ================= DELETE BUTTON =================
 		$btnDelete = New-Object Windows.Forms.Button
-		$btnDelete.Text = "Delete"
+		$btnDelete.Text = "🗑️ Delete"
 		$btnDelete.Width = 120
 		$btnDelete.Height = 35
 		$btnDelete.Left = 20
@@ -659,13 +659,13 @@ function Show-InlineView($container, $text) {
 		$btnDelete.FlatAppearance.BorderSize = 0
 		$btnDelete.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(245, 73, 73)
 		$btnDelete.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(222, 42, 42)
-		$btnDelete.Font = New-Object Drawing.Font("Segoe UI",10,[Drawing.FontStyle]::Bold)
+		$btnDelete.Font = New-Object Drawing.Font("Segoe UI Emoji",10,[Drawing.FontStyle]::Bold)
 		$btnDelete.Cursor = [System.Windows.Forms.Cursors]::Hand
 		# ================= CONFIRMATION =================
 		$btnDelete.Add_Click({
 			$res = [System.Windows.Forms.MessageBox]::Show(
-			    "This will delete ALL data in folder Charts !`n`nAre you sure you want to delete ALL data ?",
-				"Confirm Delete",
+			    "🗑️ This will delete ALL data in folder Charts !`n`n❓ Are you sure you want to delete ALL data ?",
+				"⚠️ Confirm Delete",
 				[System.Windows.Forms.MessageBoxButtons]::YesNo,
 				[System.Windows.Forms.MessageBoxIcon]::Warning
 			)
@@ -673,10 +673,10 @@ function Show-InlineView($container, $text) {
 				$path = "$AppRoot\Charts"
 				try {
 					Get-ChildItem $path -File -ErrorAction Stop | Remove-Item -Force
-					[System.Windows.Forms.MessageBox]::Show("Deleted successfully")
+					[System.Windows.Forms.MessageBox]::Show("✅ Deleted successfully")
 				}
 				catch {
-					[System.Windows.Forms.MessageBox]::Show("Delete failed: $($_.Exception.Message)")
+					[System.Windows.Forms.MessageBox]::Show("❌ Delete failed: $($_.Exception.Message)")
 				}
 			}
 		})
@@ -715,10 +715,10 @@ function Show-Popup($text, $period, $startDate, $endDate) {
 	$box = New-Object Windows.Forms.RichTextBox
 	$box.ReadOnly = $true
 	$box.Dock = "Fill"
-	$box.BackColor = [Drawing.Color]::FromArgb(45,45,45)
+	$box.BackColor = [Drawing.Color]::FromArgb(43,46,54)
 	$box.ForeColor = "White"
 	$box.BorderStyle = "None"
-	$box.Font = New-Object Drawing.Font("Segoe UI",12)
+	$box.Font = New-Object Drawing.Font("Segoe UI Emoji",12)
 	$box.ScrollBars = "Vertical"
 	$box.HideSelection = $true
 	$box.TabStop = $false
@@ -733,27 +733,27 @@ function Show-Popup($text, $period, $startDate, $endDate) {
         if ($line -match "^Disk:") {
             $currentColor = [Drawing.Color]::FromArgb(0,200,255)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Load:") {
             $currentColor = [Drawing.Color]::FromArgb(0,255,150)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Temperatures:") {
             $currentColor = [Drawing.Color]::FromArgb(255,180,0)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Traffic") {
             $currentColor = [Drawing.Color]::FromArgb(103, 240, 101)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Global Traffic") {
             $currentColor = [Drawing.Color]::FromArgb(66,189,189)
             $box.SelectionColor = $currentColor
-            $box.SelectionFont = New-Object Drawing.Font("Segoe UI",16,[Drawing.FontStyle]::Bold)
+            $box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",16,[Drawing.FontStyle]::Bold)
         }
         elseif ($line -match "^Date:") {
 			$parts = $line.Split(":",2)
@@ -764,8 +764,8 @@ function Show-Popup($text, $period, $startDate, $endDate) {
 				$formatted = $parts[1].Trim()
 			}
 			$box.SelectionColor = [Drawing.Color]::White
-			$box.SelectionFont = New-Object Drawing.Font("Segoe UI",18,[Drawing.FontStyle]::Bold)
-			$box.AppendText("Date: ")
+			$box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",18,[Drawing.FontStyle]::Bold)
+			$box.AppendText("📅 Date: ")
 			$box.SelectionColor = [Drawing.Color]::Yellow
 			$box.AppendText($formatted + "`r`n`r`n")
 			continue
@@ -773,7 +773,7 @@ function Show-Popup($text, $period, $startDate, $endDate) {
         elseif ($line -match ":") {
             $parts = $line.Split(":",2)
 			$box.SelectionColor = [Drawing.Color]::White
-			$box.SelectionFont = New-Object Drawing.Font("Segoe UI",13,[Drawing.FontStyle]::Bold)
+			$box.SelectionFont = New-Object Drawing.Font("Segoe UI Emoji",13,[Drawing.FontStyle]::Bold)
 			$box.AppendText($parts[0] + ": ")
             $box.SelectionColor = $currentColor
             $box.AppendText($parts[1] + "`r`n")
@@ -828,7 +828,7 @@ function Get-MetricsData {
 	}
 	# ================= GRAPH BUTTON =================
 	$btnGraph = New-Object Windows.Forms.Button
-	$btnGraph.Text = "Graphs"
+	$btnGraph.Text = "📊 Graphs"
 	$btnGraph.Width = 120
 	$btnGraph.Height = 35
 	$btnGraph.Left = 20
@@ -839,13 +839,13 @@ function Get-MetricsData {
 	$btnGraph.FlatAppearance.BorderSize = 0
 	$btnGraph.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(60,200,255)
 	$btnGraph.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(20,140,200)
-	$btnGraph.Font = New-Object Drawing.Font("Segoe UI",10,[Drawing.FontStyle]::Bold)
+	$btnGraph.Font = New-Object Drawing.Font("Segoe UI Emoji",10,[Drawing.FontStyle]::Bold)
 	$btnGraph.Cursor = [System.Windows.Forms.Cursors]::Hand
 	# ================= CLICK =================
 	$btnGraph.Add_Click({
 		$meta = $popup.Tag
 		if (-not $meta) {
-			[System.Windows.Forms.MessageBox]::Show("No calendar context found")
+			[System.Windows.Forms.MessageBox]::Show("⚠️ No calendar context found")
 			return
 		}
 		$localPeriod = $meta.Period
@@ -862,7 +862,7 @@ function Get-MetricsData {
     # ================= ARCHIVE =================
     $archivePath = "$AppRoot\Charts"
     if (-not (Test-Path $archivePath)) {
-        [System.Windows.Forms.MessageBox]::Show("Graphs folder not found")
+        [System.Windows.Forms.MessageBox]::Show("🚫 Graphs folder not found")
         return
     }
     $allFiles = Get-ChildItem $archivePath -Filter "*.png"
@@ -874,7 +874,7 @@ function Get-MetricsData {
         "YEAR"  = "_365d_"
     }
     if (-not $periodMap.ContainsKey($localPeriod)) {
-        [System.Windows.Forms.MessageBox]::Show("Invalid period")
+        [System.Windows.Forms.MessageBox]::Show("⚠️ Invalid period")
         return
     }
     $token = $periodMap[$localPeriod]
@@ -890,12 +890,12 @@ function Get-MetricsData {
 					$anchorDate = $dt.ToString("yyyy-MM-dd")
 				}
 				catch {
-					[System.Windows.Forms.MessageBox]::Show("Invalid DAY date format")
+					[System.Windows.Forms.MessageBox]::Show("⚠️ Invalid DAY date format")
 					return
 				}
 			}
 			else {
-				[System.Windows.Forms.MessageBox]::Show("Date not found in text")
+				[System.Windows.Forms.MessageBox]::Show("⚠️ Date not found in text")
 				return
 			}
 		}
@@ -921,7 +921,7 @@ function Get-MetricsData {
         $_.Name -like "*$token*$anchorDate*"
     }
     if (-not $files -or $files.Count -eq 0) {
-        [System.Windows.Forms.MessageBox]::Show("No graphs found")
+        [System.Windows.Forms.MessageBox]::Show("🚫 No graphs found")
         return
     }
     # ================= UI RESET =================
@@ -937,7 +937,7 @@ function Get-MetricsData {
 	$scroll = New-Object Windows.Forms.Panel
 	$scroll.Dock = "Fill"
 	$scroll.AutoScroll = $true
-	$scroll.BackColor = [Drawing.Color]::FromArgb(45,45,45)
+	$scroll.BackColor = [Drawing.Color]::FromArgb(43,46,54)
 	$script:graphPanel = $scroll
 	$popup.Controls.Add($scroll)
 	$popup.Controls.SetChildIndex($scroll,0)
@@ -962,16 +962,16 @@ function Get-MetricsData {
 	$header.BackColor = [Drawing.Color]::FromArgb(30,30,30)
 	# TITLE
 	$title = New-Object Windows.Forms.Label
-	$title.Text = "Graphs - $localPeriod"
-	$title.Font = New-Object Drawing.Font("Segoe UI",18,[Drawing.FontStyle]::Bold)
+	$title.Text = "📊 Graphs - $localPeriod"
+	$title.Font = New-Object Drawing.Font("Segoe UI Emoji",18,[Drawing.FontStyle]::Bold)
 	$title.ForeColor = [Drawing.Color]::FromArgb(0,200,255)   # 🔵 боја
 	$title.AutoSize = $true
 	$title.Left = 20
 	$title.Top = 10
 	# DATE
 	$dateLabel = New-Object Windows.Forms.Label
-	$dateLabel.Text = $displayDate
-	$dateLabel.Font = New-Object Drawing.Font("Segoe UI",12,[Drawing.FontStyle]::Italic)
+	$dateLabel.Text = "📅 $displayDate"
+	$dateLabel.Font = New-Object Drawing.Font("Segoe UI Emoji",12,[Drawing.FontStyle]::Italic)
 	$dateLabel.ForeColor = [Drawing.Color]::FromArgb(180,180,180)
 	$dateLabel.AutoSize = $true
 	$dateLabel.Left = 22
@@ -1006,7 +1006,7 @@ function Get-MetricsData {
 		elseif ($name -match "temp") { $type = "Temperatures" }
 		elseif ($name -match "table") { $type = "Network" }
 		else { $type = "Unknown" }
-		$tooltip.SetToolTip($pic, "Type: $type`nFile: $($file.Name)")
+		$tooltip.SetToolTip($pic, "🏷️ Type: $type`n📄 File: $($file.Name)")
     # ================= CLICK =================
     $pic.Add_Click({
         Start-Process $this.Tag
@@ -1035,18 +1035,18 @@ function Get-MetricsData {
 	})
 	# ================= BACK BUTTON =================
 	$btnExtra = New-Object Windows.Forms.Button
-	$btnExtra.Text = "Back"
+	$btnExtra.Text = "⬅️ Back"
 	$btnExtra.Width = 120
 	$btnExtra.Height = 35
 	$btnExtra.Left = 160
 	$btnExtra.Top = 10
-	$btnExtra.BackColor = [Drawing.Color]::FromArgb(80,80,80)
+	$btnExtra.BackColor = [Drawing.Color]::FromArgb(80,150,100)
 	$btnExtra.ForeColor = "White"
 	$btnExtra.FlatStyle = "Flat"
 	$btnExtra.FlatAppearance.BorderSize = 0
-	$btnExtra.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(110,110,110)
-	$btnExtra.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(50,50,50)
-	$btnExtra.Font = New-Object Drawing.Font("Segoe UI",10,[Drawing.FontStyle]::Bold)
+	$btnExtra.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(100,180,120)
+	$btnExtra.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(60,120,80)
+	$btnExtra.Font = New-Object Drawing.Font("Segoe UI Emoji",10,[Drawing.FontStyle]::Bold)
 	$btnExtra.Cursor = [System.Windows.Forms.Cursors]::Hand
 	$btnExtra.Add_Click({
 		if ($script:graphPanel) {
@@ -1059,8 +1059,27 @@ function Get-MetricsData {
 			$popup.Controls.SetChildIndex($script:mainTextBox,0)
 		}
 	})
+	# ================= CLOSE BUTTON =================
+	$btnClose = New-Object Windows.Forms.Button
+	$btnClose.Text = "❌ Close"
+	$btnClose.Width = 120
+	$btnClose.Height = 35
+	$btnClose.Left = 300
+	$btnClose.Top = 10
+	$btnClose.BackColor = [Drawing.Color]::FromArgb(190,75,75)
+	$btnClose.ForeColor = "White"
+	$btnClose.FlatStyle = "Flat"
+	$btnClose.FlatAppearance.BorderSize = 0
+	$btnClose.FlatAppearance.MouseOverBackColor = [Drawing.Color]::FromArgb(215,90,90)
+	$btnClose.FlatAppearance.MouseDownBackColor = [Drawing.Color]::FromArgb(155,55,55)
+	$btnClose.Font = New-Object Drawing.Font("Segoe UI Emoji",10,[Drawing.FontStyle]::Bold)
+	$btnClose.Cursor = [System.Windows.Forms.Cursors]::Hand
+	$btnClose.Add_Click({
+		$popup.Close()
+	})
 	$footer.Controls.Add($btnGraph)
 	$footer.Controls.Add($btnExtra)
+	$footer.Controls.Add($btnClose)
 	$popup.Controls.Add($footer)
 	
 	[void]$popup.ShowDialog()
@@ -1213,16 +1232,16 @@ function Show-Dashboard {
 	)
 	$statusMessage = ""
 	if ($missingFiles.Count -gt 0) {
-		$statusMessage = "Missing files:  " + ($missingFiles -join ",  ")
+		$statusMessage = "⚠️ Missing files:  " + ($missingFiles -join ",  ")
 	}
 	elseif ($isEmpty) {
-		$statusMessage = "Status: All CSV files are empty"
+		$statusMessage = "⚠️ Status: All CSV files are empty"
 	}
     $form = New-Object Windows.Forms.Form
     $form.Text = "AutoPilot Data System"
     $form.Size = New-Object Drawing.Size(1100,700)
     $form.StartPosition = "CenterScreen"
-    $form.BackColor = [Drawing.Color]::FromArgb(45,45,45)
+    $form.BackColor = [Drawing.Color]::FromArgb(43,46,54)
 	# ================= ICON =================
 	$iconPath = "$AppRoot\media\data.ico"
 	if (Test-Path $iconPath) {
@@ -1307,12 +1326,12 @@ function Show-Dashboard {
 					Sort-Object -Unique
 
 				if (-not $validDates -or $validDates.Count -eq 0) {
-					[System.Windows.Forms.MessageBox]::Show("No available dates in CSV")
+					[System.Windows.Forms.MessageBox]::Show("🚫 No available dates in CSV")
 					return
 				}
 				# ================= CALENDAR FORM (MODERN DARK) =================
 				$calForm = New-Object Windows.Forms.Form
-				$calForm.Text = "Select Date"
+				$calForm.Text = "📅 Select Date"
 				$calForm.Size = New-Object Drawing.Size(355,288)   # 🔥 bigger
 				$calForm.StartPosition = "CenterScreen"
 				$calForm.BackColor = [Drawing.Color]::FromArgb(28,28,28)
@@ -1322,11 +1341,11 @@ function Show-Dashboard {
 				$calForm.Padding = New-Object Windows.Forms.Padding(10)
 				# ================= HEADER =================
 				$header = New-Object Windows.Forms.Label
-				$header.Text = "Select a Date"
+				$header.Text = "📅 Select a Date"
 				$header.Dock = "Top"
 				$header.Height = 40
 				$header.TextAlign = "MiddleCenter"
-				$header.Font = New-Object Drawing.Font("Segoe UI",14,[Drawing.FontStyle]::Bold)
+				$header.Font = New-Object Drawing.Font("Segoe UI Emoji",14,[Drawing.FontStyle]::Bold)
 				$header.ForeColor = [Drawing.Color]::FromArgb(0,200,255)
 				$calForm.Controls.Add($header)
 				# ================= CONTAINER =================
@@ -1358,7 +1377,7 @@ function Show-Dashboard {
 					$selectedDate = $calendar.SelectionStart
 					$selectedStr  = $selectedDate.ToString("yyyy-MM-dd")
 					if ($validDates.Date -notcontains $selectedDate.Date) {
-						[System.Windows.Forms.MessageBox]::Show("No data for selected date")
+						[System.Windows.Forms.MessageBox]::Show("🚫 No data for selected date")
 						return
 					}
 					$result = Build-Line $selectedStr $diskData $loadData $tempData $trafficData
@@ -1366,7 +1385,7 @@ function Show-Dashboard {
 						Show-Popup $result "DAY" $selectedDate $selectedDate
 					}
 					else {
-						[System.Windows.Forms.MessageBox]::Show("No data found for selected date")
+						[System.Windows.Forms.MessageBox]::Show("🚫 No data found for selected date")
 					}
 				})
 				$panelCal.Controls.Add($calendar)
@@ -1420,18 +1439,18 @@ function Show-Dashboard {
 			})
 			# ================= TITLE =================
 			$titleLabel = New-Object Windows.Forms.Label
-			$titleLabel.Text = $period
+			$titleLabel.Text = "📅 $period"
 			$titleLabel.ForeColor = "White"
-			$titleLabel.Font = New-Object Drawing.Font("Segoe UI",20,[Drawing.FontStyle]::Bold)
+			$titleLabel.Font = New-Object Drawing.Font("Segoe UI Emoji",20,[Drawing.FontStyle]::Bold)
 			$titleLabel.AutoSize = $true
 			$titleLabel.Location = New-Object Drawing.Point(10,15)
 			# ================= COUNT =================
 			$countLabel = New-Object Windows.Forms.Label
 			$countLabel.ForeColor = [Drawing.Color]::FromArgb(255, 255, 255)
-			$countLabel.Font = New-Object Drawing.Font("Segoe UI",18,[Drawing.FontStyle]::Bold)
+			$countLabel.Font = New-Object Drawing.Font("Segoe UI Emoji",18,[Drawing.FontStyle]::Bold)
 			$countLabel.AutoSize = $true
 			$countLabel.Location = New-Object Drawing.Point(788,18)
-			$countLabel.Text = "Count: $(@($items).Count)"
+			$countLabel.Text = "🔢 Count: $(@($items).Count)"
 			$titleLabel.BackColor = [System.Drawing.Color]::Transparent
 			$countLabel.BackColor = [System.Drawing.Color]::Transparent
 			$titleLabel.Parent = $titlePanel
@@ -1523,19 +1542,19 @@ function Show-Dashboard {
 						}
 						# ================= STATUS + HEALTH =================
 						if (-not $exists) {
-							$status = "MISSING"
+							$status = "❌ MISSING"
 							$health = 0
 						}
 						elseif ($rows -eq 0) {
-							$status = "EMPTY"
+							$status = "⚠️ EMPTY"
 							$health = 10
 						}
 						elseif ($rows -lt 5) {
-							$status = "LOW DATA"
+							$status = "🔽 LOW DATA"
 							$health = 40
 						}
 						else {
-							$status = "ACTIVE"
+							$status = "✅ ACTIVE"
 							$health = 70
 							# boost rows
 							if ($rows -ge 50) { $health += 15 }
@@ -1552,7 +1571,7 @@ function Show-Dashboard {
 						if ($health -lt 0) { $health = 0 }
 						if ($health -gt 100) { $health = 100 }
 						# ================= FINAL LINE =================
-						$fileStatus += "$($f.Name): $status  |  Rows: $rows  |  Last Update: $lastDate  |  Age: $daysOld days  |  Health: $health/100"
+						$fileStatus += "📄 $($f.Name): $status  |  🧾 Rows: $rows  |  🕒 Last Update: $lastDate  |  ⏳ Age: $daysOld days  |  💚 Health: $health/100"
 					}
 					$fileStatusText = ($fileStatus -join "`r`n")
 					# ================= FINAL RESULT =================
@@ -1567,34 +1586,34 @@ function Show-Dashboard {
 							"$($_.Name): $($_.Count)"
 						}
 						$folderInfoText = @"
-Graphs Folder Status
+Graphs Folder Status 🗂️
 
--Graphs Folder:
+• 🗂️ Graphs Folder:
 
-Path: $archiveFolder
-Items: $count
-Size: $sizeMB MB
+📂 Path: $archiveFolder
+🧮 Items: $count
+💾 Size: $sizeMB MB
 
-Types:
+🏷️ Types:
 $($byType -join "`r`n")
 
 "@
 						}
 						else {
-							$folderInfoText = "Graphs folder not found: $archiveFolder"
+							$folderInfoText = "🚫 Graphs folder not found: $archiveFolder"
 						}
 						$result = @"
 
-Status
+Status 📈
 
--Data:
+• 📊 Data:
 
-Total Days: $totalDays
-Total Weeks: $totalWeeks
-Total Months: $totalMonths
-Total Years: $totalYears
+📅 Total Days: $totalDays
+🗓️ Total Weeks: $totalWeeks
+📆 Total Months: $totalMonths
+📆 Total Years: $totalYears
 
--Csv File:
+• 📄 Csv File:
 
 $fileStatusText
 
@@ -1647,7 +1666,7 @@ $folderInfoText
 				}
 				# LABEL
 				$lbl = New-Object Windows.Forms.Label
-				$lbl.Text = $label
+				$lbl.Text = "» $label"
 				$lbl.Dock = "Fill"
 				$lbl.Font = New-Object Drawing.Font("Segoe UI",15,[Drawing.FontStyle]::Bold)
 				$lbl.ForeColor = "#000000"
@@ -1657,16 +1676,16 @@ $folderInfoText
 				$startYear = $startDate.Year
 				$endYear   = $endDate.Year
 				if ($period -eq "DAY") {
-					$right.Text = $startDate.ToString("dd MMM yyyy")
+					$right.Text = $startDate.ToString("• dd MMM yyyy")
 				}
 				else {
 					if ($startYear -eq $endYear) {
 						# same year → show once
-						$right.Text = "$($startDate.ToString('dd MMM')) - $($endDate.ToString('dd MMM yyyy'))"
+						$right.Text = "• $($startDate.ToString('dd MMM')) - $($endDate.ToString('dd MMM yyyy'))"
 					}
 					else {
 						# different years → show both
-						$right.Text = "$($startDate.ToString('dd MMM yyyy')) - $($endDate.ToString('dd MMM yyyy'))"
+						$right.Text = "• $($startDate.ToString('dd MMM yyyy')) - $($endDate.ToString('dd MMM yyyy'))"
 					}
 				}
 				$right.Dock = "Right"
@@ -1746,7 +1765,7 @@ $folderInfoText
 	$container.AutoScroll = $true
 	$container.BackColor = $form.BackColor
 	# ================= BACKGROUND IMAGE =================
-	$bgPath = "$AppRoot\media\data.ico"   # смени по потреба
+	$bgPath = "$AppRoot\media\data.ico"
 	$bgImage = $null
 	if (Test-Path $bgPath) {
 		$bgImage = [System.Drawing.Image]::FromFile($bgPath)
@@ -1837,14 +1856,14 @@ $folderInfoText
 	$labelText = New-Object Windows.Forms.Label
 	$labelText.Text = "Data for:"
 	$labelText.ForeColor = [Drawing.Color]::FromArgb(212, 212, 212)
-	$labelText.Font = New-Object Drawing.Font("Segoe UI",11,[Drawing.FontStyle]::Bold)
+	$labelText.Font = New-Object Drawing.Font("Segoe UI Emoji",11,[Drawing.FontStyle]::Bold)
 	$labelText.AutoSize = $true
 	$labelText.Location = New-Object Drawing.Point(10,10)
 	# number label (RED)
 	$labelValue = New-Object Windows.Forms.Label
-	$labelValue.Text = "$uniqueDays days"
+	$labelValue.Text = "$uniqueDays days 📅"
 	$labelValue.ForeColor = [Drawing.Color]::FromArgb(39, 176, 245)
-	$labelValue.Font = New-Object Drawing.Font("Segoe UI",11,[Drawing.FontStyle]::Bold)
+	$labelValue.Font = New-Object Drawing.Font("Segoe UI Emoji",11,[Drawing.FontStyle]::Bold)
 	$labelValue.AutoSize = $true
 	$labelValue.Location = New-Object Drawing.Point(78,10)
 	$dynamicPanel.Controls.Add($labelText)
@@ -1857,7 +1876,7 @@ $folderInfoText
 		$status.Dock = "Top"
 		$status.Height = 35
 		$status.TextAlign = "MiddleCenter"
-		$status.Font = New-Object Drawing.Font("Segoe UI",15,[Drawing.FontStyle]::Bold)
+		$status.Font = New-Object Drawing.Font("Segoe UI Emoji",15,[Drawing.FontStyle]::Bold)
 		$status.ForeColor = "White"
 		$status.BackColor = [Drawing.Color]::FromArgb(200, 80, 20)
 		$form.Controls.Add($status)

@@ -1,4 +1,12 @@
 ﻿Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+# ===================== SINGLE INSTANCE =====================
+$createdNew = $false
+$script:InstanceLock = [System.Threading.Mutex]::new(
+    $false,
+    'Local\AutoPilotDashboard-6d2b7e14-9a3f-4c58-b1e0-2f7a8c4d5e93',
+    [ref]$createdNew
+)
+if (-not $createdNew) { exit 0 }
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase
 # APP ROOT
 if (-not $AppRoot) {
@@ -33,35 +41,31 @@ function Show-DarkWarning {
         ResizeMode="NoResize"
         Width="520"
         Height="235"
-        Background="#1E1E1E"
+        Background="Transparent"
         Title="$Title"
         WindowStyle="None"
         AllowsTransparency="True"
         ShowInTaskbar="False">
-    <Border Background="#2D2D30"
-            CornerRadius="14"
-            Padding="25"
-            BorderBrush="#3C3C3C"
-            BorderThickness="2">
+        <Border Background="#F222252C" CornerRadius="16" Padding="25" BorderBrush="#444954" BorderThickness="1">
         <StackPanel Width="460">
-            <TextBlock Text="$Title" FontSize="24" FontWeight="Bold" Foreground="#E6E6E6" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-            <TextBlock Text="$Message" TextWrapping="Wrap" FontSize="16" Foreground="#DADADA" Margin="0,0,0,25" TextAlignment="Center"/>
-            <Button Content="OK" Width="140" Height="42" HorizontalAlignment="Center" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+            <TextBlock Text="$Title" FontSize="24" FontWeight="Bold" Foreground="#E4E4E7" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+            <TextBlock Text="$Message" TextWrapping="Wrap" FontSize="16" Foreground="#D4D4D8" Margin="0,0,0,25" TextAlignment="Center"/>
+            <Button Content="OK" Width="140" Height="42" HorizontalAlignment="Center" Foreground="White" FontWeight="SemiBold" FontSize="15" BorderThickness="0" Cursor="Hand">
 				<Button.Template>
-					<ControlTemplate TargetType="Button">
-						<Border x:Name="border" Background="#007ACC" CornerRadius="4">
-							<ContentPresenter HorizontalAlignment="Center"  VerticalAlignment="Center"/>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#3399FF"/>
-							</Trigger>
-							<Trigger Property="IsPressed" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#005999"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Button.Template>
+						<ControlTemplate TargetType="Button">
+							<Border x:Name="border" Background="#0369A1" CornerRadius="10">
+								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							</Border>
+							<ControlTemplate.Triggers>
+								<Trigger Property="IsMouseOver" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#0284C7"/>
+								</Trigger>
+								<Trigger Property="IsPressed" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#075985"/>
+								</Trigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</Button.Template>
 			</Button>
         </StackPanel>
     </Border>
@@ -78,8 +82,8 @@ function Show-DarkWarning {
 $PasswordFile = Join-Path $AppRoot "Autopilot_Data\password.json"
 
 # ===================== REGISTRY BACKUP/RESTORE =====================
-$RegistryPath = "HKCU:\Software\MicrosoftKeySecurity"
-$RegistryValueName = "ProgramValueKey"
+$RegistryPath = "HKCU:\Software\StorageFileValue"
+$RegistryValueName = "ProgramValueFile"
 
 function Backup-PasswordToRegistry {
     if (Test-Path $PasswordFile) {
@@ -227,7 +231,12 @@ function Write-Log {
 
 # Start updater once after 10 seconds
 if (Test-Path $UpdaterPath) {
-    Start-Process "powershell.exe" -WindowStyle Hidden -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Start-Sleep -Seconds 10; Start-Process -FilePath '$UpdaterPath'`""
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = "powershell.exe"
+    $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"Start-Sleep -Seconds 10; Start-Process -FilePath '$UpdaterPath'`""
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    [System.Diagnostics.Process]::Start($psi) | Out-Null
     Write-Log "Updater scheduled to start after 10 seconds."
 } else {
     Write-Log "Updater.exe not found at path: $UpdaterPath"
@@ -299,6 +308,7 @@ $ManualCommands = @{
     "/data_log"           = @{ Cmd = "Data-Log" }
     "/network_log"        = @{ Cmd = "Network-Log" }
 	"/update_log"         = @{ Cmd = "Update-Log" }
+	"/process_log"        = @{ Cmd = "Process-Log" }
 	# System Monitoring commands
 	"/monitoring_start"   = @{ Cmd = "Start-Monitoring" }
     "/monitoring_stop"    = @{ Cmd = "Stop-Monitoring" }
@@ -410,26 +420,12 @@ function Show-LoadingPopup {
         ResizeMode="NoResize"
         WindowStyle="None"
         AllowsTransparency="True">
-    <Border CornerRadius="12"
-            Padding="15"
-            BorderThickness="1"
-            BorderBrush="#555">
-        <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#FF1E1E1E" Offset="0"/>
-                <GradientStop Color="#FF2D2D30" Offset="1"/>
-            </LinearGradientBrush>
-        </Border.Background>
+        <Border CornerRadius="16" Padding="15" BorderThickness="1" BorderBrush="#444954" Background="#F222252C">
         <Grid>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <!-- PNG image -->
                 <Image Name="imgLoading" Width="80" Height="80" Margin="0,0,0,10"/>
-                <TextBlock Text="$Message"
-                           Foreground="#E0E0E0"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
+                <TextBlock Text="$Message" Foreground="#E4E4E7" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </StackPanel>
         </Grid>
     </Border>
@@ -466,56 +462,100 @@ function Show-StatusPopup {
         SizeToContent="Height"
         MaxHeight="$($Global:statusMaxHeight)"
         WindowStartupLocation="CenterScreen"
-        Background="#2D2D30"
+        Background="#1A1C22"
         FontFamily="Segoe UI"
         ResizeMode="NoResize"
         WindowStyle="SingleBorderWindow">
+    <Window.Resources>
+        <Style x:Key="ScrollThumbStyle" TargetType="Thumb">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border CornerRadius="4" Background="#474C58" Margin="2,0"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ScrollPageStyle" TargetType="RepeatButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Border Background="#33000000" CornerRadius="6">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageUpCommand"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageDownCommand"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid Margin="10">
-        <Border CornerRadius="10" Background="#1E1E1E" BorderBrush="#444" BorderThickness="2" Padding="15">
+        <Border CornerRadius="16" Background="#262930" BorderBrush="#363A44" BorderThickness="1" Padding="15">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="60"/>
                 </Grid.RowDefinitions>
                 <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <TextBlock Name="txtMessage" TextWrapping="Wrap" Foreground="White" FontSize="18"/>
+                    <TextBlock Name="txtMessage" TextWrapping="Wrap" Foreground="#E4E4E7" FontSize="18"/>
                 </ScrollViewer>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
-					<Button Name="btnSave" Content="Save" Width="80" Height="30" Margin="0,0,10,0" Foreground="White" FontWeight="Bold">
-					<Button.Template>
-						<ControlTemplate TargetType="Button">
-							<Border x:Name="border" Background="#7938F2" CornerRadius="3">
-								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-							</Border>
-							<ControlTemplate.Triggers>
-								<Trigger Property="IsMouseOver" Value="True">
-									<Setter TargetName="border" Property="Background" Value="#A260F7"/>
-								</Trigger>
-								<Trigger Property="IsPressed" Value="True">
-									<Setter TargetName="border" Property="Background" Value="#7030C0"/>
-								</Trigger>
-							</ControlTemplate.Triggers>
-						</ControlTemplate>
-					</Button.Template>
-					</Button>
-					<Button Name="btnOk" Content="OK" Width="80" Height="30" Foreground="White" FontWeight="Bold">
-					<Button.Template>
-					<ControlTemplate TargetType="Button">
-						<Border x:Name="border" Background="#007ACC" CornerRadius="3">
-							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#3399FF"/>
-							</Trigger>
-							<Trigger Property="IsPressed" Value="True">
-								<Setter TargetName="border" Property="Background" Value="#005999"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-					</Button.Template>
-					</Button>
-                </StackPanel>
+				<Border Grid.Row="1" Background="#1E2026" BorderBrush="#363A44" BorderThickness="1" CornerRadius="10" Margin="0,10,0,0">
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+						<Button Name="btnSave" Content="Save" Width="80" Height="30" Margin="0,0,10,0" Foreground="White" FontWeight="SemiBold" FontSize="14">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border x:Name="border" Background="#7C3AED" CornerRadius="10">
+										<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#8B5CF6"/>
+										</Trigger>
+										<Trigger Property="IsPressed" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#6D28D9"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
+						<Button Name="btnOk" Content="OK" Width="80" Height="30" Foreground="White" FontWeight="SemiBold" FontSize="14">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border x:Name="border" Background="#0369A1" CornerRadius="10">
+										<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#0284C7"/>
+										</Trigger>
+										<Trigger Property="IsPressed" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#075985"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
+					</StackPanel>
+				</Border>
             </Grid>
         </Border>
     </Grid>
@@ -575,11 +615,53 @@ function Show-ImagePopup {
         SizeToContent="Height"
         MaxHeight="$($Global:popupMaxHeight)"
         WindowStartupLocation="CenterScreen"
-        Background="#2D2D30"
+        Background="#1A1C22"
         FontFamily="Segoe UI"
         ResizeMode="NoResize"
         WindowStyle="SingleBorderWindow">
-    <Border Margin="10" CornerRadius="10" Background="#1E1E1E" BorderBrush="#444" BorderThickness="2" Padding="10">
+    <Window.Resources>
+        <Style x:Key="ScrollThumbStyle" TargetType="Thumb">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border CornerRadius="4" Background="#474C58" Margin="2,0"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ScrollPageStyle" TargetType="RepeatButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Border Background="#33000000" CornerRadius="6">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageUpCommand"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageDownCommand"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Border Margin="10" CornerRadius="16" Background="#262930" BorderBrush="#363A44" BorderThickness="1" Padding="10">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
             <Grid>
                 <Grid.RowDefinitions>
@@ -587,42 +669,44 @@ function Show-ImagePopup {
                     <RowDefinition Height="60"/>
                 </Grid.RowDefinitions>
                 <Image Name="imgControl" Stretch="None" Margin="0,0,0,10"/>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
-				<Button Name="btnSave" Content="Save" Width="80" Height="30" Margin="0,0,10,0" Foreground="White" FontWeight="Bold">
-					<Button.Template>
-						<ControlTemplate TargetType="Button">
-							<Border x:Name="border" Background="#7938F2" CornerRadius="3">
-								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-							</Border>
-							<ControlTemplate.Triggers>
-								<Trigger Property="IsMouseOver" Value="True">
-									<Setter TargetName="border" Property="Background" Value="#A260F7"/>
-								</Trigger>
-								<Trigger Property="IsPressed" Value="True">
-									<Setter TargetName="border" Property="Background" Value="#7030C0"/>
-								</Trigger>
-							</ControlTemplate.Triggers>
-						</ControlTemplate>
-					</Button.Template>
-				</Button>
-				<Button Name="btnOk" Content="OK" Width="80" Height="30" Foreground="White" FontWeight="Bold">
-					<Button.Template>
-						<ControlTemplate TargetType="Button">
-							<Border x:Name="border" Background="#007ACC" CornerRadius="3">
-								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-							</Border>
-							<ControlTemplate.Triggers>
-								<Trigger Property="IsMouseOver" Value="True">
-									<Setter TargetName="border" Property="Background" Value="#3399FF"/>
-								</Trigger>
-								<Trigger Property="IsPressed" Value="True">
-									<Setter TargetName="border" Property="Background" Value="#005999"/>
-								</Trigger>
-							</ControlTemplate.Triggers>
-						</ControlTemplate>
-					</Button.Template>
-				</Button>
-                </StackPanel>
+				<Border Grid.Row="1" Background="#1E2026" BorderBrush="#363A44" BorderThickness="1" CornerRadius="10" Margin="0,0,0,10">
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+						<Button Name="btnSave" Content="Save" Width="80" Height="30" Margin="0,0,10,0" Foreground="White" FontWeight="SemiBold" FontSize="14">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border x:Name="border" Background="#7C3AED" CornerRadius="10">
+										<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#8B5CF6"/>
+										</Trigger>
+										<Trigger Property="IsPressed" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#6D28D9"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
+						<Button Name="btnOk" Content="OK" Width="80" Height="30" Foreground="White" FontWeight="SemiBold" FontSize="14">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border x:Name="border" Background="#0369A1" CornerRadius="10">
+										<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#0284C7"/>
+										</Trigger>
+										<Trigger Property="IsPressed" Value="True">
+											<Setter TargetName="border" Property="Background" Value="#075985"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
+					</StackPanel>
+				</Border>
             </Grid>
         </ScrollViewer>
     </Border>
@@ -707,43 +791,43 @@ function Show-DarkConfirm {
         WindowStartupLocation='CenterScreen'
         ResizeMode='NoResize'
         SizeToContent='WidthAndHeight'
-        Background='#1E1E1E'
+        Background='Transparent'
         WindowStyle='None'
         AllowsTransparency='True'>
-    <Border Background='#2D2D30' CornerRadius='12' Padding='20'>
+        <Border Background='#F222252C' CornerRadius='16' Padding='20' BorderBrush='#D16969' BorderThickness='1'>
         <StackPanel Width="520">
-            <TextBlock Text='$Title' FontSize="24" FontWeight='Bold' Foreground='White' Margin='0,0,0,10' HorizontalAlignment='Center'/>
-            <TextBlock Text='$Message' TextWrapping='Wrap' FontSize="16" Foreground='White' Margin='0,0,0,20'/>
+            <TextBlock Text='$Title' FontSize="24" FontWeight='Bold' Foreground='#E4E4E7' Margin='0,0,0,10' HorizontalAlignment='Center'/>
+            <TextBlock Text='$Message' TextWrapping='Wrap' FontSize="16" Foreground='#D4D4D8' Margin='0,0,0,20'/>
             <StackPanel Orientation='Horizontal' HorizontalAlignment='Center'>
-                <Button Name='btnYes' Content='Yes' Width='100' Height='35' Margin='5' Foreground='White'>
+                <Button Name='btnYes' Content='Yes' Width='100' Height='35' Margin='5' Foreground='White' FontWeight='SemiBold' FontSize='15'>
 					<Button.Template>
-						<ControlTemplate TargetType='Button'>
-							<Border x:Name='border' Background='Green' CornerRadius='3'>
-								<ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/>
+						<ControlTemplate TargetType="Button">
+							<Border x:Name="border" Background="#059669" CornerRadius="10">
+								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
 							</Border>
 							<ControlTemplate.Triggers>
-								<Trigger Property='IsMouseOver' Value='True'>
-									<Setter TargetName='border' Property='Background' Value='#00CC00'/>
+								<Trigger Property="IsMouseOver" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#10A37A"/>
 								</Trigger>
-								<Trigger Property='IsPressed' Value='True'>
-									<Setter TargetName='border' Property='Background' Value='#009900'/>
+								<Trigger Property="IsPressed" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#047857"/>
 								</Trigger>
 							</ControlTemplate.Triggers>
 						</ControlTemplate>
 					</Button.Template>
 				</Button>
-				<Button Name='btnNo' Content='No' Width='100' Height='35' Margin='5' Foreground='White'>
+				<Button Name='btnNo' Content='No' Width='100' Height='35' Margin='5' Foreground='White' FontWeight='SemiBold' FontSize='15'>
 					<Button.Template>
-						<ControlTemplate TargetType='Button'>
-							<Border x:Name='border' Background='Red' CornerRadius='3'>
-								<ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/>
+						<ControlTemplate TargetType="Button">
+							<Border x:Name="border" Background="#DC3C4E" CornerRadius="10">
+								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
 							</Border>
 							<ControlTemplate.Triggers>
-								<Trigger Property='IsMouseOver' Value='True'>
-									<Setter TargetName='border' Property='Background' Value='#FF3333'/>
+								<Trigger Property="IsMouseOver" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#E8586A"/>
 								</Trigger>
-								<Trigger Property='IsPressed' Value='True'>
-									<Setter TargetName='border' Property='Background' Value='#CC0000'/>
+								<Trigger Property="IsPressed" Value="True">
+									<Setter TargetName="border" Property="Background" Value="#BE2D3F"/>
 								</Trigger>
 							</ControlTemplate.Triggers>
 						</ControlTemplate>
@@ -846,7 +930,7 @@ $xaml = @"
 			<VisualBrush.Visual>
 				<Grid Width="1700" Height="900">
 					<!-- COLOR BACKGROUND -->
-					<Rectangle Fill="#0F0F0F"/>
+					<Rectangle Fill="#1A1C22"/>
 					<!-- IMAGE OVER COLOR -->
 					<Rectangle Opacity="0.38">
 						<Rectangle.Fill>
@@ -862,43 +946,130 @@ $xaml = @"
 			</VisualBrush.Visual>
 		</VisualBrush>
 	</Window.Background>
-    <Window.Resources>
-        <!-- Modern button style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#2D2D30"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="5"/>
-            <Setter Property="FontSize" Value="20"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#444"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#3E3E42"/>
-                                <Setter Property="Foreground" Value="#4EC9B0"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#565658"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
+	<Window.Resources>
+		<!-- ===== Midnight Glass : button style ===== -->
+		<Style x:Key="ModernButton" TargetType="Button">
+			<Setter Property="Foreground" Value="#E4E4E7"/>
+			<Setter Property="Background">
+				<Setter.Value>
+					<LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+						<GradientStop Color="#2C3039" Offset="0.0"/>
+						<GradientStop Color="#22252C" Offset="1.0"/>
+					</LinearGradientBrush>
+				</Setter.Value>
+			</Setter>
+			<Setter Property="Padding" Value="20,12"/>
+			<Setter Property="Margin" Value="5"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
+			<Setter Property="FontSize" Value="19"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="BorderBrush" Value="#3B3F4A"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="SnapsToDevicePixels" Value="True"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="Button">
+						<Border x:Name="border"
+							Background="{TemplateBinding Background}"
+							BorderBrush="{TemplateBinding BorderBrush}"
+							BorderThickness="{TemplateBinding BorderThickness}"
+							CornerRadius="11"
+							SnapsToDevicePixels="True">
+						<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5" RecognizesAccessKey="True"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<!-- Hover: cyan glow -->
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="border" Property="Background">
+									<Setter.Value>
+										<LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+											<GradientStop Color="#1E3A44" Offset="0.0"/>
+											<GradientStop Color="#172D35" Offset="1.0"/>
+										</LinearGradientBrush>
+									</Setter.Value>
+								</Setter>
+								<Setter TargetName="border" Property="BorderBrush" Value="#D4D4D8"/>
+								<Setter TargetName="border" Property="Effect">
+									<Setter.Value>
+										<DropShadowEffect Color="#D4D4D8" BlurRadius="14" ShadowDepth="0" Opacity="0.45"/>
+									</Setter.Value>
+								</Setter>
+								<Setter Property="Foreground" Value="#FFFFFF"/>
+							</Trigger>
+							<!-- Pressed -->
+							<Trigger Property="IsPressed" Value="True">
+								<Setter TargetName="border" Property="Background" Value="#12222A"/>
+								<Setter TargetName="border" Property="BorderBrush" Value="#E4E4E7"/>
+								<Setter Property="Foreground" Value="#FFFFFF"/>
+							</Trigger>
+							<!-- Disabled -->
+							<Trigger Property="IsEnabled" Value="False">
+								<Setter TargetName="border" Property="Opacity" Value="0.4"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<!-- ===== Card (glass panel) ===== -->
+		<Style x:Key="Card" TargetType="Border">
+			<Setter Property="Background" Value="#CC22252C"/>
+			<Setter Property="BorderBrush" Value="#363A44"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="16"/>
+			<Setter Property="Padding" Value="16,12,16,14"/>
+			<Setter Property="Margin" Value="0,0,0,12"/>
+		</Style>
+		<!-- ===== Dark thin scrollbar ===== -->
+		<Style x:Key="ScrollThumbStyle" TargetType="Thumb">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="Thumb">
+						<Border CornerRadius="4" Background="#474C58" Margin="2,0"/>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<Style x:Key="ScrollPageStyle" TargetType="RepeatButton">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="RepeatButton">
+						<Border Background="Transparent"/>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<Style TargetType="ScrollBar">
+			<Setter Property="Width" Value="12"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="ScrollBar">
+						<Border Background="#33000000" CornerRadius="6">
+							<Track x:Name="PART_Track" IsDirectionReversed="True">
+								<Track.DecreaseRepeatButton>
+									<RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageUpCommand"/>
+								</Track.DecreaseRepeatButton>
+								<Track.Thumb>
+									<Thumb Style="{StaticResource ScrollThumbStyle}"/>
+								</Track.Thumb>
+								<Track.IncreaseRepeatButton>
+									<RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageDownCommand"/>
+								</Track.IncreaseRepeatButton>
+							</Track>
+						</Border>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</Window.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
 	<StackPanel Margin="15">
     
 	<!-- AUTO PILOT HEADER -->
-	<Grid Margin="0,0,0,20">
+	<Border Style="{StaticResource Card}" Padding="16,10" Margin="0,0,0,14">
+	<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="*"/>       <!-- Logo + Title -->
 			<ColumnDefinition Width="Auto"/>    <!-- Buttons -->
@@ -907,222 +1078,258 @@ $xaml = @"
 		<!-- Left: Logo + Dashboard Title -->
 		<StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
 			<Image Source="$AppRoot\media\autopilot.ico" Width="50" Height="50" VerticalAlignment="Center"/>
-			<TextBlock Text="AutoPilot" FontSize="25" FontWeight="Bold" Foreground="#F0F0F0" VerticalAlignment="Center" Margin="5,0,0,0"/>
+			<StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="8,0,0,0">
+				<TextBlock Text="AutoPilot" FontSize="25" FontWeight="Bold" Foreground="#FAFAFA"/>
+				<TextBlock Text="Automation System" FontSize="11" Foreground="#22D3EE" Margin="1,-2,0,0" HorizontalAlignment="Center"/>
+			</StackPanel>
 		</StackPanel>
-		<!-- Center: Start/Stop/Refresh Buttons -->
+		<!-- Center: Start/Stop/Refresh/Pause Buttons -->
 		<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-			<!-- Start Button -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Button x:Name="btnStartAutoPilot" Content="Start ▶️" Style="{StaticResource ModernButton}" Width="100" Height="45" FontSize="16"/>
-				<TextBlock Text="Start AutoPilot" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<Button x:Name="btnStartAutoPilot" Content="Start ▶️" Style="{StaticResource ModernButton}" Width="100" Height="45" FontSize="16" BorderBrush="#2E9E73"/>
+				<TextBlock Text="Start AutoPilot" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- Stop Button -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Button x:Name="btnStopAutoPilot" Content="Stop ⏹️" Style="{StaticResource ModernButton}" Width="100" Height="45" FontSize="16"/>
-				<TextBlock Text="Stop AutoPilot" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<Button x:Name="btnStopAutoPilot" Content="Stop ⏹️" Style="{StaticResource ModernButton}" Width="100" Height="45" FontSize="16" BorderBrush="#B84A58"/>
+				<TextBlock Text="Stop AutoPilot" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- Refresh Button -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Button x:Name="btnRefresh" Content="Refresh 🔄" Style="{StaticResource ModernButton}" Width="100" Height="45" FontSize="16"/>
-				<TextBlock Text="Refresh AutoPilot" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<Button x:Name="btnRefresh" Content="Refresh 🔄" Style="{StaticResource ModernButton}" Width="100" Height="45" FontSize="16" BorderBrush="#D9B44A"/>
+				<TextBlock Text="Refresh AutoPilot" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
 			<!-- Pause Button -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                <Button x:Name="btnPauseAutoPilot" Style="{StaticResource ModernButton}" Width="100" Height="45">
-                <TextBlock x:Name="txtPauseButton" Text="Pause ⏸️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
-			<!-- STATUS TEXT with COLOR -->
-			<TextBlock x:Name="txtPauseStatus" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0">
-				<Run Text="Status: " Foreground="White"/>
-				<Run x:Name="txtPauseState" Text="RUNNING" Foreground="LightGreen"/>
-			</TextBlock>
-		</StackPanel>
+				<Button x:Name="btnPauseAutoPilot" Style="{StaticResource ModernButton}" Width="100" Height="45">
+				<TextBlock x:Name="txtPauseButton" Text="Pause ⏸️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				</Button>
+				<!-- STATUS TEXT with COLOR -->
+				<TextBlock x:Name="txtPauseStatus" FontSize="10" HorizontalAlignment="Center" Margin="0,3,0,0">
+					<Run Text="Status: " Foreground="#A1A1AA"/>
+					<Run x:Name="txtPauseState" Text="RUNNING" Foreground="LightGreen"/>
+				</TextBlock>
+			</StackPanel>
 		</StackPanel>
 		<!-- Right: Panels + Clock -->
 		<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-			<!-- AutoPilot Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderAutoPilotStatus" CornerRadius="10" Height="45" Width="100" Background="Gray" Padding="5" Margin="0,0,8,0">
+				<Border x:Name="borderAutoPilotStatus" CornerRadius="10" Height="45" Width="100" Background="#4A4A52" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,8,0">
 					<TextBlock x:Name="txtAutoPilotStatus" Text="Loading" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
-				<TextBlock Text="AutoPilot Status" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<TextBlock Text="AutoPilot Status" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- System Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderSystemStatus" CornerRadius="10" Height="45" Width="100" Background="Gray" Padding="5" Margin="0,0,8,0">
+				<Border x:Name="borderSystemStatus" CornerRadius="10" Height="45" Width="100" Background="#4A4A52" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,8,0">
 					<TextBlock x:Name="txtSystemStatus" Text="Loading" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
-				<TextBlock Text="System Monitoring" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<TextBlock Text="System Monitoring" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- Traffic Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderTrafficStatus" CornerRadius="10" Height="45" Width="100" Background="Gray" Padding="5" Margin="0,0,8,0">
+				<Border x:Name="borderTrafficStatus" CornerRadius="10" Height="45" Width="100" Background="#4A4A52" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,8,0">
 					<TextBlock x:Name="txtTrafficStatus" Text="Loading" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
-				<TextBlock Text="Traffic Monitoring" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<TextBlock Text="Traffic Monitoring" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- AutoPilot Bot Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderAutoPilotBot" CornerRadius="10" Height="45" Width="100" Background="Gray" Padding="5" Margin="0,0,8,0">
+				<Border x:Name="borderAutoPilotBot" CornerRadius="10" Height="45" Width="100" Background="#4A4A52" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,8,0">
 					<TextBlock x:Name="txtAutoPilotBot" Text="Loading" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
-				<TextBlock Text="AutoPilot Bot" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<TextBlock Text="AutoPilot Bot" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- Media Bot Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderMediaBot" CornerRadius="10" Height="45" Width="100" Background="Gray" Padding="5" Margin="0,0,8,0">
+				<Border x:Name="borderMediaBot" CornerRadius="10" Height="45" Width="100" Background="#4A4A52" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,8,0">
 					<TextBlock x:Name="txtMediaBot" Text="Loading" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
-				<TextBlock Text="Media Bot" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<TextBlock Text="Media Bot" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- Limits Mode Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderMode" CornerRadius="10" Height="45" Width="100" Background="Gray" Padding="5" Margin="0,0,8,0">
+				<Border x:Name="borderMode" CornerRadius="10" Height="45" Width="100" Background="#4A4A52" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,8,0">
 					<TextBlock x:Name="txtMode" Text="Loading" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
-				<TextBlock Text="AutoPilot Mode" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<TextBlock Text="AutoPilot Mode" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
-			<!-- Internet Connection Panel -->
-            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                <Border x:Name="borderInternet" CornerRadius="10" Height="45" Width="110"  Background="#BE3737" Padding="5" Margin="0,0,8,0">
-                <TextBlock x:Name="txtInternet" Text="🚫 Disconnected" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                </Border>
-                <TextBlock Text="Network" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-            </StackPanel>
-			<!-- Uptime Panel -->
 			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-				<Border x:Name="borderUptime" CornerRadius="10" Height="45" Width="120" Background="#0D73BA" Padding="5" Margin="0,0,20,0">
+				<Border x:Name="borderInternet" CornerRadius="10" Height="45" Width="110" Background="#BE3737" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,8,0">
+					<TextBlock x:Name="txtInternet" Text="🚫 Disconnected" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+				</Border>
+				<TextBlock Text="Network" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+			</StackPanel>
+			<StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+				<Border x:Name="borderUptime" CornerRadius="10" Height="45" Width="120" Background="#1D4ED8" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="5" Margin="0,0,20,0">
 					<TextBlock x:Name="txtUptime" Text="Start..." FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 				</Border>
-				<TextBlock Text="Uptime" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+				<TextBlock Text="Uptime" FontSize="10" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 			</StackPanel>
 			<!-- Clock -->
-			<StackPanel x:Name="rightClockContainer" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="10,0,0,0">
-            <StackPanel x:Name="clockElement" Orientation="Horizontal">
-                <Image Source="$AppRoot\media\clock.png" Width="28" Height="28" Margin="0,0,6,0"/>
-                <TextBlock x:Name="txtClock" FontSize="20" FontWeight="Bold" Foreground="#00FF00"/>
-            </StackPanel>
-			</StackPanel>
+			<!-- MaxWidth makes the text wrap into two lines (date / time) only here; in the display (modes 2-5) it stays one line -->
+			<Grid x:Name="rightClockContainer" MaxWidth="288" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="10,0,0,0">
+			<Grid x:Name="clockElement">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
+				<Image Grid.Column="0" Source="$AppRoot\media\clock.png" Width="25" Height="25" Margin="0,1,6,0" VerticalAlignment="Top"/>
+				<TextBlock x:Name="txtClock" Grid.Column="1" FontSize="18" FontWeight="Bold" Foreground="#65BF96" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
+			</Grid>
+			</Grid>
 		</StackPanel>
 	</Grid>
-	
-	<!-- LIVE TIMELINE -->
-    <Border Background="#AA2D2D30" CornerRadius="15" Padding="10" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,5">
-    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
-       <!-- TITLE -->
-        <Grid Margin="0,0,0,5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />     <!-- Title -->
-                <ColumnDefinition Width="Auto" />  <!-- Sound button -->
-                <ColumnDefinition Width="Auto" />  <!-- Refresh button -->
-				<ColumnDefinition Width="Auto" />  <!-- Theme button -->
-            </Grid.ColumnDefinitions>
-            <!-- LEFT: TITLE -->
-            <TextBlock Grid.Column="0" FontSize="23" FontWeight="SemiBold" Foreground="#4BD6DE" VerticalAlignment="Center">
-                Commands Timeline
-                <InlineUIContainer BaselineAlignment="Center">
-                    <Image Source="$AppRoot\media\list.png" Width="20" Height="20" Margin="0,5,0,0"/>
-                </InlineUIContainer>
-            </TextBlock>
-            <!-- MIDDLE: SOUND TOGGLE BUTTON -->
-            <Button x:Name="btnRefreshTimeline" Grid.Column="1" Content=" ⭮ " Style="{StaticResource ModernButton}" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="10,4">
-                <!-- ToolTip Notification -->
-                <Button.ToolTip>
-                    <ToolTip Background="#FF2D2D30" Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
-                        <TextBlock Text="Refresh Timeline" TextWrapping="Wrap" FontSize="17"/>
-                    </ToolTip>
-                </Button.ToolTip>
-            </Button>
-            <!-- RIGHT: REFRESH BUTTON -->
-			<Button x:Name="btnSound" Content="🔕" Style="{StaticResource ModernButton}" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4"/>
-			<!-- RIGHT: THEME COLOR BUTTON -->
-            <Button x:Name="btnThemeColor" Grid.Column="3" Content="🎨" Style="{StaticResource ModernButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4">
-                <!-- ToolTip -->
-				<Button.ToolTip>
-					<ToolTip Background="#FF2D2D30" Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
+	</Border>
+
+	<!-- LIVE TIMELINE : MONITOR -->
+	<StackPanel Margin="0,0,0,10">
+	<!-- BEZEL -->
+	<Border CornerRadius="22" Padding="14,14,14,4" BorderThickness="1.5">
+		<Border.BorderBrush>
+			<LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+				<GradientStop Color="#5C5C66" Offset="0.0"/>
+				<GradientStop Color="#26262C" Offset="1.0"/>
+			</LinearGradientBrush>
+		</Border.BorderBrush>
+		<Border.Background>
+			<LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+				<GradientStop Color="#B33A3A42" Offset="0.0"/>
+				<GradientStop Color="#B32A2A30" Offset="0.5"/>
+				<GradientStop Color="#B3222226" Offset="1.0"/>
+			</LinearGradientBrush>
+		</Border.Background>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+			<!-- SCREEN -->
+			<Border Grid.Row="0" CornerRadius="10" BorderThickness="3" BorderBrush="#0B0B0D">
+				<Border.Background>
+					<LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+						<GradientStop Color="#9E101014" Offset="0.0"/>
+						<GradientStop Color="#9E17181D" Offset="1.0"/>
+					</LinearGradientBrush>
+				</Border.Background>
+				<Grid>
+				<!-- SCREEN CONTENT -->
+				<StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="16,10,16,10">
+				<!-- TITLE -->
+				<Grid Margin="0,0,0,5">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />     <!-- Title -->
+						<ColumnDefinition Width="Auto" />  <!-- Sound button -->
+						<ColumnDefinition Width="Auto" />  <!-- Refresh button -->
+						<ColumnDefinition Width="Auto" />  <!-- Theme button -->
+					</Grid.ColumnDefinitions>
+					<!-- LEFT: TITLE -->
+					<StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+						<TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#99DEED" VerticalAlignment="Center">
+							Commands Timeline ⫶☰
+						</TextBlock>
+					</StackPanel>
+					<!-- MIDDLE: SOUND TOGGLE BUTTON -->
+					<Button x:Name="btnRefreshTimeline" Grid.Column="1" Content=" ⭮ " Style="{StaticResource ModernButton}" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="10,4">
+						<!-- ToolTip Notification -->
+						<Button.ToolTip>
+					<ToolTip Background="#FF20232A" Foreground="#F4F4F5" BorderBrush="#FF22D3EE" Padding="13" Placement="Top" HasDropShadow="True">
+						<TextBlock Text="Refresh Timeline" TextWrapping="Wrap" FontSize="17"/>
+					</ToolTip>
+				</Button.ToolTip>
+					</Button>
+					<!-- RIGHT: REFRESH BUTTON -->
+					<Button x:Name="btnSound" Content="🔕" Style="{StaticResource ModernButton}" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4"/>
+					<!-- RIGHT: THEME COLOR BUTTON -->
+					<Button x:Name="btnThemeColor" Grid.Column="3" Content="🎨" Style="{StaticResource ModernButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4">
+						<!-- ToolTip -->
+						<Button.ToolTip>
+					<ToolTip Background="#FF20232A" Foreground="#F4F4F5" BorderBrush="#FF22D3EE" Padding="13" Placement="Top" HasDropShadow="True">
 						<TextBlock Text="Change Background Color" TextWrapping="Wrap" FontSize="17"/>
 					</ToolTip>
 				</Button.ToolTip>
-			</Button>
-        </Grid>
-		<!-- Center Clock Placeholder -->
-        <StackPanel x:Name="centerClockContainer" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,15"/>
-        <!-- Timeline Grid -->
-        <Grid x:Name="headerGrid" Margin="0,0,0,5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <!-- LIVE TIMELINE COMMANDS -->
-            <StackPanel x:Name="liveTimelineStack" Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
-                <!-- PREV -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
-                    <TextBlock Text="⏮️ Prev  " FontWeight="SemiBold" Foreground="#9E9E9E" FontSize="17" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="txtPrev" Foreground="#D6A8ED" FontSize="17" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-                <!-- CURRENT -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
-                    <TextBlock Text="🔁 Last  " FontWeight="SemiBold" Foreground="#9E9E9E" FontSize="18" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="txtCurrent" Foreground="#00FF00" FontSize="18" FontWeight="Bold" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-                <!-- NEXT -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
-                    <TextBlock Text="⏭ Next  " FontWeight="SemiBold" Foreground="#9E9E9E" FontSize="17" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="txtNext" Foreground="#3399FF" FontSize="17" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-				<TextBlock x:Name="txtStats" FontSize="20" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
-            </StackPanel>
-            <!-- STATUS MESSAGE -->
-            <TextBlock x:Name="txtLiveTimelineMessage" Visibility="Collapsed" Foreground="Gray" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="27"/>
-        </Grid>
-       <!-- Bottom Row -->
-       <Grid Margin="0,5,0,0" VerticalAlignment="Center">
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="*" />     <!-- Countdown (left stretch) -->
-			<ColumnDefinition Width="Auto" />  <!-- Status Image (center) -->
-			<ColumnDefinition Width="*" />     <!-- Spacer to push button right -->
-			<ColumnDefinition Width="Auto" />  <!-- Button (right) -->
-		</Grid.ColumnDefinitions>
-		<!-- COUNTDOWN IMAGE + TEXT -->
-		<StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-		<!-- CUSTOM IMAGE -->
-		<Image x:Name="imgAutoPilotStatus" Width="25" Height="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,5,0"/>
-		<!-- COUNTDOWN TEXT -->
-		<TextBlock x:Name="txtCountdown" Foreground="#FFD700" FontSize="17" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-		</StackPanel>
-		<!-- MODERN TEXT WATERMARK -->
-		<TextBlock Grid.Column="1" Text="©️ 𝘼𝙪𝙩𝙤𝙋𝙞𝙡𝙤𝙩 𝘼𝙪𝙩𝙤𝙢𝙖𝙩𝙞𝙤𝙣 𝙎𝙮𝙨𝙩𝙚𝙢" FontSize="30" FontWeight="Bold" Foreground="#33FFFFFF"   VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" Opacity="0.3"/>            
-		<!-- BUTTON RIGHT -->
-		<Button x:Name="btnTimelineList" Grid.Column="2" Content="📜 List" Style="{StaticResource ModernButton}" VerticalAlignment="Center" HorizontalAlignment="Right">
-		    <!-- ToolTip Notification -->
-			<Button.ToolTip>
-				<ToolTip Background="#FF2D2D30"  Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
-					<TextBlock Text="Timeline Commands (All Commands)" TextWrapping="Wrap" FontSize="17"/>
-				</ToolTip>
-			</Button.ToolTip>
-		</Button>
-		<Button x:Name="btnAction" Content="❶ Mod" Style="{StaticResource ModernButton}" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4">
-			<!-- ToolTip Notification -->
-			<Button.ToolTip>
-				<ToolTip Background="#FF2D2D30"  Foreground="White" Padding="13" Placement="Top" HasDropShadow="True">
-					<TextBlock Text="Use Mod 2 to 5 for Smallers Display" TextWrapping="Wrap" FontSize="17"/>
-				</ToolTip>
-			</Button.ToolTip>
-		</Button>
+					</Button>
+				</Grid>
+				<Border Height="1" Background="#444954" Margin="0,2,0,6"/>
+				<!-- Center Clock Placeholder -->
+				<StackPanel x:Name="centerClockContainer" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,15"/>
+				<!-- Timeline Grid -->
+				<Grid x:Name="headerGrid" Margin="0,0,0,5">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="Auto" />
+					</Grid.ColumnDefinitions>
+					<!-- LIVE TIMELINE COMMANDS -->
+					<StackPanel x:Name="liveTimelineStack" Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
+						<!-- PREV -->
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
+							<TextBlock Text="⏮️ Prev  " FontWeight="SemiBold" Foreground="#71717A" FontSize="17" VerticalAlignment="Center"/>
+							<TextBlock x:Name="txtPrev" Foreground="#C4B5FD" FontSize="17" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
+						</StackPanel>
+						<!-- CURRENT -->
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
+							<TextBlock Text="🔁 Last  " FontWeight="SemiBold" Foreground="#71717A" FontSize="18" VerticalAlignment="Center"/>
+							<TextBlock x:Name="txtCurrent" Foreground="#4ADE80" FontSize="18" FontWeight="Bold" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
+						</StackPanel>
+						<!-- NEXT -->
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
+							<TextBlock Text="⏭ Next  " FontWeight="SemiBold" Foreground="#71717A" FontSize="17" VerticalAlignment="Center"/>
+							<TextBlock x:Name="txtNext" Foreground="#60A5FA" FontSize="17" Margin="0,0,10,0" TextTrimming="CharacterEllipsis"/>
+						</StackPanel>
+						<TextBlock x:Name="txtStats" FontSize="20" Margin="0,10,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+					</StackPanel>
+					<!-- STATUS MESSAGE -->
+					<TextBlock x:Name="txtLiveTimelineMessage" Visibility="Collapsed" Foreground="Gray" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="27"/>
+				</Grid>
+				<Border Height="1" Background="#444954" Margin="0,4,0,6"/>
+				<!-- Bottom Row -->
+				<Grid Margin="0,0,0,0" VerticalAlignment="Center">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />     <!-- Countdown (left stretch) -->
+						<ColumnDefinition Width="Auto" />  <!-- Status Image (center) -->
+						<ColumnDefinition Width="*" />     <!-- Spacer to push button right -->
+						<ColumnDefinition Width="Auto" />  <!-- Button (right) -->
+					</Grid.ColumnDefinitions>
+					<!-- COUNTDOWN IMAGE + TEXT -->
+					<StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+					<!-- CUSTOM IMAGE -->
+					<Image x:Name="imgAutoPilotStatus" Width="25" Height="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,5,0"/>
+					<!-- COUNTDOWN TEXT -->
+					<TextBlock x:Name="txtCountdown" Foreground="#FBBF24" FontSize="17" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+					</StackPanel>
+					<!-- MODERN TEXT WATERMARK -->
+					<TextBlock Grid.Column="1" Text="©️ 𝘼𝙪𝙩𝙤𝙋𝙞𝙡𝙤𝙩 𝘼𝙪𝙩𝙤𝙢𝙖𝙩𝙞𝙤𝙣 𝙎𝙮𝙨𝙩𝙚𝙢" FontSize="30" FontWeight="Bold" Foreground="#33FFFFFF"   VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" Opacity="0.3"/>
+					<!-- BUTTON RIGHT -->
+					<Button x:Name="btnTimelineList" Grid.Column="2" Content="📜 List" Style="{StaticResource ModernButton}" VerticalAlignment="Center" HorizontalAlignment="Right">
+						<!-- ToolTip Notification -->
+						<Button.ToolTip>
+					<ToolTip Background="#FF20232A" Foreground="#F4F4F5" BorderBrush="#FF22D3EE" Padding="13" Placement="Top" HasDropShadow="True">
+						<TextBlock Text="Timeline Commands (All Commands)" TextWrapping="Wrap" FontSize="17"/>
+					</ToolTip>
+				</Button.ToolTip>
+					</Button>
+					<Button x:Name="btnAction" Content="❶ Mod" Style="{StaticResource ModernButton}" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Padding="10,4">
+						<!-- ToolTip Notification -->
+						<Button.ToolTip>
+					<ToolTip Background="#FF20232A" Foreground="#F4F4F5" BorderBrush="#FF22D3EE" Padding="13" Placement="Top" HasDropShadow="True">
+						<TextBlock Text="Use Mod 2 to 5 for Smallers Display" TextWrapping="Wrap" FontSize="17"/>
+					</ToolTip>
+				</Button.ToolTip>
+					</Button>
+				</Grid>
+				</StackPanel>
+				</Grid>
+			</Border>
+			<!-- BEZEL CHIN: brand + power LED -->
+			<Grid Grid.Row="1" Height="26" Margin="8,0">
+				<TextBlock Text="Dashboard Monitor" FontSize="12" FontWeight="Bold" Foreground="#71717A" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+				<Ellipse Width="10" Height="10" Fill="#34D399" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"/>
+			</Grid>
 		</Grid>
-			</StackPanel>
 		</Border>
+		</StackPanel>
 
         <!-- SCRIPT LAUNCHER -->
-		<Border Background="#AA2D2D30" CornerRadius="15" Padding="10" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,5">
-			<StackPanel>
-				<TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#FFD700" Margin="0,0,0,5">
-					 Script Launcher
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\power.png" Width="20" Height="20" Margin="0,6,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
-				<WrapPanel x:Name="wpDashboard" Orientation="Horizontal" HorizontalAlignment="Center" ItemWidth="180" ItemHeight="70">
+		<Border Style="{StaticResource Card}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#C4E4A2" VerticalAlignment="Center">Script Launcher 🔰</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
+                <WrapPanel x:Name="wpDashboard" Orientation="Horizontal" HorizontalAlignment="Center" ItemWidth="180" ItemHeight="70">
 					<Button x:Name="btnS1" Content="🛡️ Defender" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnS2" Content="🛠️ Pi" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnS3" Content="⚙️ Docker" Style="{StaticResource ModernButton}"/>
@@ -1132,18 +1339,16 @@ $xaml = @"
 					<Button x:Name="btnS7" Content="⚙️ SetDocker" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnS8" Content="⚡ PowerPlan" Style="{StaticResource ModernButton}"/>
 				</WrapPanel>
-			</StackPanel>
-		</Border>
+            </StackPanel>
+        </Border>
 
         <!-- SYSTEM COMMANDS -->
-        <Border Background="#AA2D2D30" CornerRadius="15" Padding="15" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,15">
+        <Border Style="{StaticResource Card}">
             <StackPanel>
-                <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#4EC9B0" Margin="0,0,0,5">
-					 System Unit
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\system.png" Width="20" Height="20" Margin="0,3,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#E4BCC8" VerticalAlignment="Center">System Unit ⚙️</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="btnSys" Content="💻 System Status" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnPing" Content="📶 Network Status" Style="{StaticResource ModernButton}"/>
@@ -1166,6 +1371,7 @@ $xaml = @"
 					<Button x:Name="btnSettingsScripts" Content="⚙️ Scripts Settings" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnHideCmd" Content="⛔ Hide Cmd" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnShowCmd" Content="🗔 Show Cmd" Style="{StaticResource ModernButton}" />
+					<Button x:Name="btnProcessManager" Content="🛡️ Process Manager" Style="{StaticResource ModernButton}" />
 					<Button x:Name="btnVlc" Content="🎵 Vlc List" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnLock" Content="🔒 Lock Dashboard" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnOpenFolder" Content="🖱️ SetUp" Style="{StaticResource ModernButton}" />
@@ -1175,14 +1381,12 @@ $xaml = @"
         </Border>
 
         <!-- GRAPH LOAD COMMANDS -->
-        <Border Background="#AA2D2D30" CornerRadius="15" Padding="15" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,15">
+        <Border Style="{StaticResource Card}">
             <StackPanel>
-                <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#FFD700" Margin="0,0,0,5">
-			         Graph Load Unit
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\graph.png" Width="20" Height="20" Margin="0,1,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#A8E2C6" VerticalAlignment="Center">Graph Load Unit 📈</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="btnLoadDay" Content="📉 Load Day" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnLoadWeek" Content="📉 Load Week" Style="{StaticResource ModernButton}"/>
@@ -1195,14 +1399,12 @@ $xaml = @"
         </Border>
 
         <!-- GRAPH TEMP COMMANDS -->
-        <Border Background="#AA2D2D30" CornerRadius="15" Padding="15" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,15">
+        <Border Style="{StaticResource Card}">
             <StackPanel>
-                <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#FF6F61" Margin="0,0,0,5">
-					 Graph Temperature Unit
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\graph.png" Width="20" Height="20" Margin="0,1,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#D2C4F0" VerticalAlignment="Center">Graph Temperature Unit 📈</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="btnTempDay" Content="🌡️ Temp Day" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnTempWeek" Content="🌡️ Temp Week" Style="{StaticResource ModernButton}"/>
@@ -1215,14 +1417,12 @@ $xaml = @"
         </Border>
 
         <!-- GRAPH DISK COMMANDS -->
-       <Border Background="#AA2D2D30" CornerRadius="15" Padding="15" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,15">
+       <Border Style="{StaticResource Card}">
             <StackPanel>
-                <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#4FC1FF" Margin="0,0,0,5">
-					 Graph Disk Unit
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\graph.png" Width="20" Height="20" Margin="0,1,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#E4D497" VerticalAlignment="Center">Graph Disk Unit 📈</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="btnDiskDay" Content="💾 Disk Day" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnDiskWeek" Content="💾 Disk Week" Style="{StaticResource ModernButton}"/>
@@ -1235,14 +1435,12 @@ $xaml = @"
         </Border>
 
         <!-- TABLE NET TRAFFIC COMMANDS -->
-        <Border Background="#AA2D2D30" CornerRadius="15" Padding="15" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,15">
+        <Border Style="{StaticResource Card}">
             <StackPanel>
-               <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#6A5ACD" Margin="0,0,0,5">
-					 Net Traffic Unit
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\net.png" Width="20" Height="20" Margin="0,3,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#E2BEDA" VerticalAlignment="Center">Net Traffic Unit 📊</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="btnTableDay" Content="📆 Table Day" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnTableWeek" Content="📆 Table Week" Style="{StaticResource ModernButton}"/>
@@ -1255,14 +1453,12 @@ $xaml = @"
         </Border>
 		
 		<!-- LOG FILE COMMANDS -->
-        <Border Background="#AA2D2D30" CornerRadius="15" Padding="15" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,15">
+        <Border Style="{StaticResource Card}">
             <StackPanel>
-               <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#3DFFB2" Margin="0,0,0,5">
-					 Log File Unit
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\log.png" Width="20" Height="20" Margin="0,3,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#94E0DA" VerticalAlignment="Center">Log File Unit 🗂️</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="btnAutoPilot_Log" Content="🗃️ AutoPilot Log" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnMonitoring_Log" Content="🗃️ System Monitoring Log" Style="{StaticResource ModernButton}"/>
@@ -1270,19 +1466,18 @@ $xaml = @"
                     <Button x:Name="btnData_Log" Content="🗃️ Data Log" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnNetwork_Log" Content="🗃️ Net Log" Style="{StaticResource ModernButton}"/>
 					<Button x:Name="btnUpdate_Log" Content="🗃️ Update Log" Style="{StaticResource ModernButton}"/>
+					<Button x:Name="btnProcess_Log" Content="🗃️ Process Log" Style="{StaticResource ModernButton}"/>
                 </WrapPanel>
             </StackPanel>
         </Border>
 		
 		<!-- MONITORING COMMANDS -->
-        <Border Background="#AA2D2D30" CornerRadius="15" Padding="15" BorderBrush="#444" BorderThickness="2" Margin="0,0,0,15">
+        <Border Style="{StaticResource Card}">
             <StackPanel>
-               <TextBlock FontSize="23" FontWeight="SemiBold" Foreground="#E8511A" Margin="0,0,0,5">
-					 Monitoring Unit
-					<InlineUIContainer BaselineAlignment="Center">
-						<Image Source="$AppRoot\media\monitoring.png" Width="20" Height="20" Margin="0,3,0,0"/>
-					</InlineUIContainer>
-				</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="#E4BDC3" VerticalAlignment="Center">Monitoring Unit 🖥️</TextBlock>
+                </StackPanel>
+                <Border Height="1" Background="#444954" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="btnSysMon_Start" Content="💻 System Monitoring Start" Style="{StaticResource ModernButton}"/>
                     <Button x:Name="btnSysMon_Stop" Content="💻 System Monitoring Stop" Style="{StaticResource ModernButton}"/>
@@ -1293,7 +1488,7 @@ $xaml = @"
             </StackPanel>
         </Border>
         <!-- WATERMARK -->
-		<Border Margin="0,0,0,0" Background="Transparent">
+		<Border Style="{StaticResource Card}" Margin="0,0,0,0" Padding="16,10">
 		<Grid VerticalAlignment="Center">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto"/> <!-- LEFT: Version -->
@@ -1303,16 +1498,20 @@ $xaml = @"
 				<ColumnDefinition Width="Auto"/> <!-- RIGHT: All Rights -->
 			</Grid.ColumnDefinitions>
 			<!-- LEFT: VERSION -->
-			<TextBlock Text="⚙️ AutoPilot Dashboard" FontSize="15" FontWeight="Bold" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Opacity="0.8" Foreground="#F0F0F0"/>
+			<StackPanel Orientation="Horizontal" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center">
+				<TextBlock Text="⚙️ AutoPilot Dashboard" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#E6E6E6"/>
+			</StackPanel>
 			<!-- CENTER (logo + text) -->
 			<StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Column="2">
 				<Image Source="$AppRoot\media\autopilot.ico" Width="28" Height="28" Margin="0,0,6,0"/>
-				<TextBlock Text=" AutoPilot Automation System by Ivance" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" Opacity="0.8" Foreground="#F0F0F0"/>
+				<TextBlock Text=" AutoPilot Automation System" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#E6E6E6"/>
 			</StackPanel>
 			<!-- RIGHT -->
-			<TextBlock Text=" © All Rights Reserved" FontSize="15" FontWeight="Bold" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Opacity="0.8" Foreground="#F0F0F0"/>
+			<StackPanel Orientation="Horizontal" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center">
+				<TextBlock Text=" © All Rights Reserved" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#E6E6E6"/>
+			</StackPanel>
 		</Grid>
-      </Border>
+		</Border>
     </StackPanel>
    </ScrollViewer>
 </Window>
@@ -1690,11 +1889,19 @@ function New-VlcPanelButton {
         [string]$Text,
         [string]$Color = '#303A49'
     )
-    $button = New-Object System.Windows.Controls.Button
-    $button.Content = $Text
-    $button.Background = [System.Windows.Media.SolidColorBrush]::new(
+    $baseColor = [System.Windows.Media.Color](
         [System.Windows.Media.ColorConverter]::ConvertFromString($Color)
     )
+    # Lighter hover color based on the original button color
+    $hoverColor = [System.Windows.Media.Color]::FromArgb(
+        255,
+        [byte][Math]::Min(255, [Math]::Round($baseColor.R * 1.2)),
+        [byte][Math]::Min(255, [Math]::Round($baseColor.G * 1.2)),
+        [byte][Math]::Min(255, [Math]::Round($baseColor.B * 1.2))
+    )
+    $button = New-Object System.Windows.Controls.Button
+    $button.Content = $Text
+    $button.Background = [System.Windows.Media.SolidColorBrush]::new($baseColor)
     $button.Foreground = [System.Windows.Media.Brushes]::White
     $button.BorderThickness = [System.Windows.Thickness]::new(0)
     $button.Padding = [System.Windows.Thickness]::new(14, 8, 14, 8)
@@ -1704,6 +1911,69 @@ function New-VlcPanelButton {
     $button.FontWeight = 'SemiBold'
     $button.MinHeight = 40
     $button.Cursor = [System.Windows.Input.Cursors]::Hand
+    $button.HorizontalContentAlignment = 'Center'
+    $button.VerticalContentAlignment = 'Center'
+    $button.Focusable = $false
+    $button.OverridesDefaultStyle = $true
+    # Build a custom WPF template without XML/XAML
+    $template = [System.Windows.Controls.ControlTemplate]::new(
+        [System.Windows.Controls.Button]
+    )
+    $border = [System.Windows.FrameworkElementFactory]::new(
+        [System.Windows.Controls.Border]
+    )
+    $border.SetValue(
+        [System.Windows.Controls.Border]::CornerRadiusProperty,
+        [System.Windows.CornerRadius]::new(8)
+    )
+    $backgroundBinding = [System.Windows.Data.Binding]::new('Background')
+    $backgroundBinding.RelativeSource = [System.Windows.Data.RelativeSource]::new(
+        [System.Windows.Data.RelativeSourceMode]::TemplatedParent
+    )
+    $border.SetBinding(
+        [System.Windows.Controls.Border]::BackgroundProperty,
+        $backgroundBinding
+    )
+    $paddingBinding = [System.Windows.Data.Binding]::new('Padding')
+    $paddingBinding.RelativeSource = [System.Windows.Data.RelativeSource]::new(
+        [System.Windows.Data.RelativeSourceMode]::TemplatedParent
+    )
+    $border.SetBinding(
+        [System.Windows.Controls.Border]::PaddingProperty,
+        $paddingBinding
+    )
+    $content = [System.Windows.FrameworkElementFactory]::new(
+        [System.Windows.Controls.ContentPresenter]
+    )
+    $content.SetValue(
+        [System.Windows.Controls.ContentPresenter]::ContentSourceProperty,
+        'Content'
+    )
+    $content.SetValue(
+        [System.Windows.FrameworkElement]::HorizontalAlignmentProperty,
+        [System.Windows.HorizontalAlignment]::Center
+    )
+    $content.SetValue(
+        [System.Windows.FrameworkElement]::VerticalAlignmentProperty,
+        [System.Windows.VerticalAlignment]::Center
+    )
+    $border.AppendChild($content)
+    $template.VisualTree = $border
+    $button.Template = $template
+    # Hover
+    $button.Add_MouseEnter({
+        param($sender, $e)
+        $sender.Background = [System.Windows.Media.SolidColorBrush]::new(
+            $hoverColor
+        )
+    }.GetNewClosure())
+    # Restore original color
+    $button.Add_MouseLeave({
+        param($sender, $e)
+        $sender.Background = [System.Windows.Media.SolidColorBrush]::new(
+            $baseColor
+        )
+    }.GetNewClosure())
     return $button
 }
 # Button Vlc
@@ -1727,7 +1997,7 @@ if ($btnVlc) {
         $vlcWindow.MinHeight = 540
         $vlcWindow.WindowStartupLocation = 'CenterOwner'
         $vlcWindow.Background = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(20, 20, 20)
+            [System.Windows.Media.Color]::FromRgb(35, 39, 46)
         )
         if ($Global:VlcListOwnerWindow) { $vlcWindow.Owner = $Global:VlcListOwnerWindow }
         $vlcWindow.Add_Closed({
@@ -1769,10 +2039,10 @@ if ($btnVlc) {
         # Status message.
         $statusBorder = New-Object System.Windows.Controls.Border
         $statusBorder.Background = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(35, 35, 35)
+            [System.Windows.Media.Color]::FromRgb(25, 27, 33)
         )
         $statusBorder.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(65, 65, 65)
+            [System.Windows.Media.Color]::FromRgb(54, 58, 68)
         )
         $statusBorder.BorderThickness = [System.Windows.Thickness]::new(1)
         $statusBorder.CornerRadius = [System.Windows.CornerRadius]::new(4)
@@ -1816,10 +2086,10 @@ if ($btnVlc) {
         $Global:VlcStationTitleBox.FontFamily = 'Segoe UI'
         $Global:VlcStationTitleBox.Foreground = [System.Windows.Media.Brushes]::White
         $Global:VlcStationTitleBox.Background = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(31, 31, 31)
+            [System.Windows.Media.Color]::FromRgb(25, 27, 33)
         )
         $Global:VlcStationTitleBox.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(75, 75, 75)
+            [System.Windows.Media.Color]::FromRgb(59, 63, 74)
         )
         $Global:VlcStationTitleBox.CaretBrush = [System.Windows.Media.Brushes]::White
         $Global:VlcStationTitleBox.Margin = [System.Windows.Thickness]::new(0, 0, 0, 8)
@@ -1842,10 +2112,10 @@ if ($btnVlc) {
         $Global:VlcStationUrlBox.FontFamily = 'Segoe UI'
         $Global:VlcStationUrlBox.Foreground = [System.Windows.Media.Brushes]::White
         $Global:VlcStationUrlBox.Background = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(31, 31, 31)
+            [System.Windows.Media.Color]::FromRgb(25, 27, 33)
         )
         $Global:VlcStationUrlBox.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(75, 75, 75)
+            [System.Windows.Media.Color]::FromRgb(59, 63, 74)
         )
         $Global:VlcStationUrlBox.CaretBrush = [System.Windows.Media.Brushes]::White
         [System.Windows.Controls.Grid]::SetColumn($Global:VlcStationUrlBox, 1)
@@ -1856,11 +2126,11 @@ if ($btnVlc) {
         # Station list.
         $Global:VlcStationList = New-Object System.Windows.Controls.ListBox
         $Global:VlcStationList.Background = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(29, 29, 29)
+            [System.Windows.Media.Color]::FromRgb(25, 27, 33)
         )
         $Global:VlcStationList.Foreground = [System.Windows.Media.Brushes]::White
         $Global:VlcStationList.BorderBrush = [System.Windows.Media.SolidColorBrush]::new(
-            [System.Windows.Media.Color]::FromRgb(65, 65, 65)
+            [System.Windows.Media.Color]::FromRgb(54, 58, 68)
         )
         $Global:VlcStationList.BorderThickness = [System.Windows.Thickness]::new(1)
         $Global:VlcStationList.FontFamily = 'Segoe UI'
@@ -2074,8 +2344,9 @@ $btnSound.Content = "🔕"
 # create modern dark tooltip
 $tooltip = New-Object System.Windows.Controls.ToolTip
 # create a solid color brush for dark background
-$bgColor = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(45,45,48))
+$bgColor = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(32,35,42))
 $tooltip.Background = $bgColor
+$tooltip.BorderBrush = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(34,211,238))
 $tooltip.Foreground = [System.Windows.Media.Brushes]::White
 $tooltip.Padding = [System.Windows.Thickness]::new(13)
 $tooltip.HasDropShadow = $true
@@ -2156,7 +2427,7 @@ $btnSound.Add_Click({
 
 # ===================== Theme Color Button =====================
 $btnThemeColor = $window.FindName("btnThemeColor")
-$Global:ThemeColors = @("#0F0F0F","#22304A","#2B3D34","#44355B","#552B2B","#5A4632","#244B52","#3D3D3D","#23272F","#1F2937","#283149","#4C566A","#4B3621","#22313F","#919191","#006100","#15777A","#151D7A","#9E9913","#821175","#4B1182","#A30F0F","#0F47BF","#3D6E3D")
+$Global:ThemeColors = @("#0F0F0F","#22304A","#2B3D34","#44355B","#552B2B","#5A4632","#244B52","#3D3D3D","#23272F","#1F2937","#283149","#4C566A","#4B3621","#22313F","#919191","#006100","#15777A","#151D7A","#9E9913","#821175","#4B1182","#A30F0F","#0F47BF","#3D6E3D","#1A1C22")
 $Global:CurrentThemeColor = 0
 function Set-WindowBackgroundColor {
     param([string]$HexColor)
@@ -2262,10 +2533,10 @@ function Update-AutoPilotStatusUI {
     }
     if ($autoPilotRunning) {
         $txtAutoPilotStatus.Text = "▶️ ACTIVE"
-        $borderAutoPilotStatus.Background = [System.Windows.Media.Brushes]::Green
+        $borderAutoPilotStatus.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(56,142,104)))
     } else {
         $txtAutoPilotStatus.Text = "⏹️ STOPPED"
-        $borderAutoPilotStatus.Background = [System.Windows.Media.Brushes]::Red
+        $borderAutoPilotStatus.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(201,76,76)))
     }
 }
 
@@ -2316,10 +2587,10 @@ function Update-SystemStatusUI {
     }
     if ($systemRunning) {
         $txtSystemStatus.Text = "▶️ ACTIVE"
-        $borderSystemStatus.Background = [System.Windows.Media.Brushes]::Green
+        $borderSystemStatus.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(56,142,104)))
     } else {
         $txtSystemStatus.Text = "⏹️ STOPPED"
-        $borderSystemStatus.Background = [System.Windows.Media.Brushes]::Red
+        $borderSystemStatus.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(201,76,76)))
     }
 }
 
@@ -2330,10 +2601,10 @@ function Update-TrafficStatusUI {
     }
     if ($trafficRunning) {
         $txtTrafficStatus.Text = "▶️ ACTIVE"
-        $borderTrafficStatus.Background = [System.Windows.Media.Brushes]::Green
+        $borderTrafficStatus.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(56,142,104)))
     } else {
         $txtTrafficStatus.Text = "⏹️ STOPPED"
-        $borderTrafficStatus.Background = [System.Windows.Media.Brushes]::Red
+        $borderTrafficStatus.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(201,76,76)))
     }
 }
 
@@ -2356,8 +2627,9 @@ $btnPauseAutoPilot.Add_Click({
     if (Test-Path $Global:pauseFlagPath) {
         Resume-AutopilotGUI
     } else {
-        Show-DarkWarning -Title "Warning!" `
-                         -Message "Using *PAUSE* will stop all AUTOMATIC processes in AutoPilot!"
+	if (-not (Show-AbortWarning -Title "⚛️ AutoPilot Pause" -Message "Using ⏸️ Pause will stop all AUTOMATIC processes in AutoPilot!`nAutoPilot will 🔄 Restart when you ⏯️ Resume!")) {
+		return
+	}
         Pause-AutopilotGUI
     }
     Update-PauseUI
@@ -2382,7 +2654,7 @@ $txtPauseState = $window.FindName("txtPauseState")
 function Update-PauseUI {
     if (-not (Get-AutoPilotRunning)) {
         $txtPauseState.Text = "STOPPED"
-		$txtPauseState.Foreground = [System.Windows.Media.Brushes]::Red 
+		$txtPauseState.Foreground = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(201,76,76))) 
         $txtPauseButton.Text = "Pause ⏸️"
         $btnPauseAutoPilot.Background = [System.Windows.Media.Brushes]::Gray
         return
@@ -2390,13 +2662,13 @@ function Update-PauseUI {
     if (Test-Path $Global:pauseFlagPath) {
         # PAUSED
         $txtPauseButton.Text = "Resume ⏯️"
-        $btnPauseAutoPilot.Background = [System.Windows.Media.Brushes]::Goldenrod
+        $btnPauseAutoPilot.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(206,167,84)))
         $txtPauseState.Text = "PAUSED"
-        $txtPauseState.Foreground = [System.Windows.Media.Brushes]::Goldenrod
+        $txtPauseState.Foreground = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(206,167,84)))
     } else {
         # RUNNING
         $txtPauseButton.Text = "Pause ⏸️"
-        $btnPauseAutoPilot.Background = [System.Windows.Media.Brushes]::Green
+        $btnPauseAutoPilot.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(56,142,104)))
         $txtPauseState.Text = "RUNNING"
         $txtPauseState.Foreground = [System.Windows.Media.Brushes]::LightGreen
     }
@@ -2457,18 +2729,18 @@ function Update-BotStatusUI {
         # --- AutoPilot Bot ---
         if ($settings.AUTOPILOT_TELEGRAM_ENABLED) {
             $txtAutoPilotBot.Text = "✔️ ENABLED"
-            $borderAutoPilotBot.Background = [System.Windows.Media.Brushes]::Green
+            $borderAutoPilotBot.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(56,142,104)))
         } else {
             $txtAutoPilotBot.Text = "❌ DISABLED"
-            $borderAutoPilotBot.Background = [System.Windows.Media.Brushes]::Red
+            $borderAutoPilotBot.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(201,76,76)))
         }
         # --- Media Bot ---
         if ($settings.MEDIA_TELEGRAM_ENABLED) {
             $txtMediaBot.Text = "✔️ ENABLED"
-            $borderMediaBot.Background = [System.Windows.Media.Brushes]::Green
+            $borderMediaBot.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(56,142,104)))
         } else {
             $txtMediaBot.Text = "❌ DISABLED"
-            $borderMediaBot.Background = [System.Windows.Media.Brushes]::Red
+            $borderMediaBot.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(201,76,76)))
         }
     } catch {
         Write-Host "Error updating Bot statuses: $_"
@@ -2492,12 +2764,12 @@ function Update-ModeUI {
         } else {
             # ===== PRO MODE =====
             $txtMode.Text = "⚡ PRO MODE"
-            $borderMode.Background = [System.Windows.Media.Brushes]::Blue
+            $borderMode.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(48,94,227)))
         }
     }
     catch {
         $txtMode.Text = "⚠️ ERROR"
-        $borderMode.Background = [System.Windows.Media.Brushes]::Red
+        $borderMode.Background = ([System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(201,76,76)))
     }
 }
 
@@ -2524,7 +2796,7 @@ $btnAbout.Add_Click({
         $aboutWindow.WindowStartupLocation = "CenterScreen"
         $aboutWindow.ResizeMode = "NoResize"
         # Background со RGB (30,30,30)
-		$color = [System.Windows.Media.Color]::FromRgb(30,30,30)
+		$color = [System.Windows.Media.Color]::FromRgb(38,41,48)
 		$aboutWindow.Background = New-Object System.Windows.Media.SolidColorBrush $color
 
         # StackPanel за содржина
@@ -2537,7 +2809,7 @@ $btnAbout.Add_Click({
         $lblTitle.Text = "AutoPilot Automation System"
         $lblTitle.FontSize = 22
         $lblTitle.FontWeight = "Bold"
-        $lblTitle.Foreground = [System.Windows.Media.Brushes]::White
+        $lblTitle.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(228,228,231))
         $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,10)
         $stack.Children.Add($lblTitle)
 
@@ -2679,7 +2951,7 @@ $btnCheck.Add_Click({
 	# Текст под логото
 	$lblFooter = New-Object System.Windows.Controls.TextBlock
 	$lblFooter.FontSize = 16
-	$lblFooter.Foreground = [System.Windows.Media.Brushes]::White
+	$lblFooter.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(161,161,170))
 	$lblFooter.HorizontalAlignment = "Center"
 
 	# Автоматски ја добива тековната година
@@ -2711,7 +2983,7 @@ $btnLock.Add_Click({
         $lockWindow.Height = 530
         $lockWindow.WindowStartupLocation = "CenterScreen"
         $lockWindow.ResizeMode = "NoResize"
-        $lockWindow.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(30,30,30))
+        $lockWindow.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(38,41,48))
 
         $stack = New-Object System.Windows.Controls.StackPanel
         $stack.Margin = [System.Windows.Thickness]::new(20)
@@ -2722,7 +2994,7 @@ $btnLock.Add_Click({
         $lblTitle.Text = "AutoPilot Dashboard Password Protect"
         $lblTitle.FontSize = 22
         $lblTitle.FontWeight = "Bold"
-        $lblTitle.Foreground = [System.Windows.Media.Brushes]::White
+        $lblTitle.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(228,228,231))
         $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,30)
         $stack.Children.Add($lblTitle)
 
@@ -2736,7 +3008,7 @@ $btnLock.Add_Click({
         $pwdBox = New-Object System.Windows.Controls.PasswordBox
         $pwdBox.Width = 250
         $pwdBox.FontSize = 18
-        $pwdBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(50,50,50))
+        $pwdBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(34,37,44))
         $pwdBox.Foreground = [System.Windows.Media.Brushes]::White
         $pwdBox.Margin = [System.Windows.Thickness]::new(0,0,10,0)
         $pwdRow.Children.Add($pwdBox)
@@ -2745,7 +3017,7 @@ $btnLock.Add_Click({
         $txtBox = New-Object System.Windows.Controls.TextBox
         $txtBox.Width = 250
         $txtBox.FontSize = 18
-        $txtBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(50,50,50))
+        $txtBox.Background = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(34,37,44))
         $txtBox.Foreground = [System.Windows.Media.Brushes]::White
         $txtBox.Margin = [System.Windows.Thickness]::new(0,0,10,0)
         $txtBox.Visibility = "Collapsed"
@@ -2839,7 +3111,7 @@ $btnLock.Add_Click({
 
         $lblFooter = New-Object System.Windows.Controls.TextBlock
         $lblFooter.FontSize = 16
-        $lblFooter.Foreground = [System.Windows.Media.Brushes]::White
+        $lblFooter.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(161,161,170))
         $lblFooter.HorizontalAlignment = "Center"
         $lblFooter.Text = "AutoPilot Dashboard Password Protect "
         $stackBottom.Children.Add($lblFooter)
@@ -3065,7 +3337,31 @@ function Update-TimelineList {
 		$_.Name -eq "powershell.exe" -and
 		$_.CommandLine -match [regex]::Escape("$AppRoot\AutoPilot.ps1")
 	}
+    $autoPilotRunning = [bool]$autoPilotRunning
 	$isPaused = Test-Path $Global:pauseFlagPath
+    $stuckCommand = $null
+    $stuckScript = $null
+    $stuckIndex = -1
+    $stuckStatusPath = Join-Path $AppRoot 'JSON\autopilot_stuck_status.json'
+    if ($autoPilotRunning -and (Test-Path -LiteralPath $stuckStatusPath)) {
+        try {
+            $stuckStatus = Get-Content -LiteralPath $stuckStatusPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $stuckExpiry = [datetime]::Parse(
+                [string]$stuckStatus.ExpiresAt,
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::RoundtripKind
+            ).ToUniversalTime()
+            if ($stuckExpiry -gt [datetime]::UtcNow) {
+                if (-not [string]::IsNullOrWhiteSpace([string]$stuckStatus.Command) -and
+                    -not [string]::IsNullOrWhiteSpace([string]$stuckStatus.Script) -and
+                    $global:timeline.Count -gt 0) {
+                    $stuckIndex = $index
+                }
+            }
+        } catch {
+            Write-Host "Unable to read stuck-command status for timeline list: $_"
+        }
+    }
     if(-not $global:timeline -or $global:timeline.Count -eq 0) {
         $lbItem = New-Object System.Windows.Controls.ListBoxItem
         $lbItem.Content = "🚫 Timeline List is Empty. Nothing to 🔄 Refresh."
@@ -3081,8 +3377,13 @@ function Update-TimelineList {
         $lbItem.Padding = [System.Windows.Thickness]::new(5)
         $isTypeBlue = $global:timeline[$i].Type -match "weekly|monthly|yearly"
         $isModeMagenta = $global:timeline[$i].Mode -eq "fixed"
+        if ($i -eq $stuckIndex) {
+            $lbItem.Foreground = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(255, 190, 75))
+            $lbItem.FontWeight = 'Bold'
+            $lbItem.Content += " - ⚠️ Stuck"
+        }
         # ===== AUTOPILOT STOPPED =====
-		if (-not $autoPilotRunning) {
+		elseif (-not $autoPilotRunning) {
 			if($i -lt $index){
 				$lbItem.Foreground = [System.Windows.Media.Brushes]::Gray
 			} 
@@ -3153,6 +3454,9 @@ $btnTimelineList.Add_Click({
         if ($Global:TimelineListWindow.WindowState -eq [System.Windows.WindowState]::Minimized) {
             $Global:TimelineListWindow.WindowState = [System.Windows.WindowState]::Normal
         }
+        if ($Global:TimelineListBox) {
+            Update-TimelineList -listBox $Global:TimelineListBox
+        }
         $Global:TimelineListWindow.Activate()
         return
     }
@@ -3173,7 +3477,7 @@ $btnTimelineList.Add_Click({
     $listWindow.Width = 1555
     $listWindow.Height = 900
     $listWindow.WindowStartupLocation = "CenterScreen"
-    $listWindow.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(20, 20, 20)))
+    $listWindow.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(38,42,48)))
     # ================= Grid =================
     $grid = New-Object System.Windows.Controls.Grid
     $grid.Margin = [System.Windows.Thickness]::new(10)
@@ -3374,7 +3678,7 @@ $btnTimelineList.Add_Click({
     Add-LegendItem ([System.Windows.Media.Brushes]::Magenta)     "Next Command (Fixed)"
     # ================= ListBox =================
     $listBox = New-Object System.Windows.Controls.ListBox
-	$listBox.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(30, 30, 30)))
+	$listBox.Background = (New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromRgb(25,27,33)))
 	$listBox.BorderThickness = 0
 	$listBox.FontSize = 19
 	$listBox.FontFamily = "Segoe UI"
@@ -3476,6 +3780,7 @@ $btnTimelineList.Add_Click({
 }
     $listWindow.Content = $grid
     $listWindow.Show()
+    Update-TimelineList -listBox $Global:TimelineListBox
 })
 
 # ===================== LOAD TIMELINE =====================
@@ -3601,16 +3906,34 @@ function Load-Timeline {
 				if ($null -ne $state -and $null -ne $state.total) {
 					$stateTotal = ([string]$state.total).Trim()
 				}
-				# FINITE LOOP: prikazi oznaka samo pred posledniot ciklus.
+				# Is this FIXED command inside the current 24h cycle window? (start = JSON timestamp)
+				$fixedInWindow = $false
+				try {
+					if ($null -ne $state -and $null -ne $state.timestamp) {
+						$cycleStartState = if ($state.timestamp -is [datetime]) {
+							$state.timestamp
+						} else {
+							[datetime]::ParseExact(
+								[string]$state.timestamp, "yyyy-MM-dd HH:mm:ss",
+								[System.Globalization.CultureInfo]::InvariantCulture
+							)
+						}
+						$fixedInWindow = ($dt -lt $cycleStartState.AddHours(24).AddSeconds(15))
+					}
+				}
+				catch { $fixedInWindow = $false }
+				# FINITE LOOP: prikazi oznaka samo ako FIXED ne e vo tekovniot 24h cycle.
 				if ($stateTotal -match '^\d+$' -and [int]$stateTotal -gt 0) {
 					$totalR = [int]$stateTotal
-					if ($currentR -lt $totalR) {
+					if (-not $fixedInWindow) {
 						$outOfLoopText = "  🡸 ⚠️ Out of Loop (Rep:$currentR/$totalR)"
 					}
 				}
-				# BESKONECEN LOOP: FIXED se preskoknuvaat neograniceno.
+				# BESKONECEN LOOP: oznaka samo ako FIXED ne e vo tekovniot 24h cycle.
 				elseif ($stateTotal -ieq "LOOP") {
-					$outOfLoopText = "  🡸 ⚠️ Out of Loop (Rep:$currentR/Loop)"
+					if (-not $fixedInWindow) {
+						$outOfLoopText = "  🡸 ⚠️ Out of Loop (Rep:$currentR/Loop)"
+					}
 				}
 				# Ako sostojbata ne e dostapna, zadrzi ja starata oznaka.
 				else {
@@ -3709,22 +4032,127 @@ function Load-Timeline {
         }
     }
     # Сортирање по вистинско време
-    $global:timeline = $timeline | Sort-Object Time
+    $global:timeline = @($timeline | Sort-Object Time)
 }
 
 # ===================== UPDATE DISPLAY GLOBAL =====================
 $Global:lastDate = (Get-Date).Date
 $Global:lastNextText = ""
 
+# AutoPilot Status Dot Image
+function New-AutoPilotStatusDotImage {
+    param([System.Windows.Media.Color]$Color)
+    $dotDrawing = [System.Windows.Media.GeometryDrawing]::new()
+    $dotDrawing.Brush = [System.Windows.Media.SolidColorBrush]::new($Color)
+    $dotDrawing.Geometry = [System.Windows.Media.EllipseGeometry]::new(
+        [System.Windows.Rect]::new(1, 1, 23, 23)
+    )
+    return [System.Windows.Media.DrawingImage]::new($dotDrawing)
+}
+
 # ===================== UPDATE DISPLAY =====================
 function Update-TimelineDisplay {
     # ===================== UI ELEMENTS =====================
     $liveTimelinePanel   = $window.FindName("liveTimelineStack")
     $liveTimelineMessage = $window.FindName("txtLiveTimelineMessage")
-    # ===================== CHECK AUTOPILOT =====================
     $autoPilotRunning = Get-CimInstance Win32_Process | Where-Object {
         $_.Name -eq "powershell.exe" -and $_.CommandLine -match [regex]::Escape("$AppRoot\AutoPilot.ps1")
     }
+    $autoPilotRunning = [bool]$autoPilotRunning
+    $stuckStatusPath = Join-Path $AppRoot 'JSON\autopilot_stuck_status.json'
+    if ($autoPilotRunning -and $liveTimelineMessage -and (Test-Path -LiteralPath $stuckStatusPath)) {
+        try {
+            $stuckStatus = Get-Content -LiteralPath $stuckStatusPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $statusExpiry = [datetime]::Parse(
+                [string]$stuckStatus.ExpiresAt,
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::RoundtripKind
+            ).ToUniversalTime()
+            if ($statusExpiry -gt [datetime]::UtcNow -and
+                -not [string]::IsNullOrWhiteSpace([string]$stuckStatus.Command) -and
+                -not [string]::IsNullOrWhiteSpace([string]$stuckStatus.Script)) {
+                if ($liveTimelinePanel) { $liveTimelinePanel.Visibility = 'Collapsed' }
+                $liveTimelineMessage.Inlines.Clear()
+                $liveTimelineMessage.FontSize = 22
+                $liveTimelineMessage.Margin = [System.Windows.Thickness]::new(12)
+                $stuckTitle = [System.Windows.Documents.Run]::new('⚠  Command Stuck')
+                $stuckTitle.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                    [System.Windows.Media.Color]::FromRgb(255, 190, 75)
+                )
+                $stuckTitle.FontWeight = [System.Windows.FontWeights]::Bold
+                if ($stuckStatus.TestMode) {
+                    $testModeRun = [System.Windows.Documents.Run]::new('  ·  Test Mode')
+                    $testModeRun.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                        [System.Windows.Media.Color]::FromRgb(134, 239, 172)
+                    )
+                    $testModeRun.FontWeight = [System.Windows.FontWeights]::Bold
+                    $liveTimelineMessage.Inlines.Add($stuckTitle)
+                    $liveTimelineMessage.Inlines.Add($testModeRun)
+                } else {
+                    $liveTimelineMessage.Inlines.Add($stuckTitle)
+                }
+                $stuckCommand = [System.Windows.Documents.Run]::new(
+                    "Command $($stuckStatus.Command)  •  $($stuckStatus.Script)"
+                )
+                $stuckCommand.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                    [System.Windows.Media.Color]::FromRgb(100, 210, 220)
+                )
+                $stuckCommand.FontWeight = [System.Windows.FontWeights]::SemiBold
+                switch ([string]$stuckStatus.Action) {
+                    'AwaitingConfirmation' {
+                        $actionText = 'Waiting for your choice  ·  up to 5 min'
+                        $actionColor = [System.Windows.Media.Color]::FromRgb(245, 190, 85)
+                    }
+                    'RestartAutoPilot' {
+                        $actionText = 'Restarting AutoPilot...'
+                        $actionColor = [System.Windows.Media.Color]::FromRgb(100, 190, 245)
+                    }
+                    'RestartPC' {
+                        $actionText = 'Restarting PC...'
+                        $actionColor = [System.Windows.Media.Color]::FromRgb(245, 160, 85)
+                    }
+                    'ShutdownPC' {
+                        $actionText = 'Shutting down PC...'
+                        $actionColor = [System.Windows.Media.Color]::FromRgb(235, 115, 115)
+                    }
+                    'CancelledRestart' {
+                        $actionText = 'Restarting AutoPilot  ·  PC action cancelled'
+                        $actionColor = [System.Windows.Media.Color]::FromRgb(100, 190, 245)
+                    }
+                    default {
+                        $actionText = 'Recovery in progress...'
+                        $actionColor = [System.Windows.Media.Color]::FromRgb(245, 190, 85)
+                    }
+                }
+                $stuckAction = [System.Windows.Documents.Run]::new($actionText)
+                $stuckAction.Foreground = [System.Windows.Media.SolidColorBrush]::new($actionColor)
+                $liveTimelineMessage.Inlines.Add([System.Windows.Documents.LineBreak]::new())
+                $liveTimelineMessage.Inlines.Add($stuckCommand)
+                $liveTimelineMessage.Inlines.Add([System.Windows.Documents.LineBreak]::new())
+                $liveTimelineMessage.Inlines.Add($stuckAction)
+                $liveTimelineMessage.Visibility = 'Visible'
+                if ($imgStatus) {
+                    $imgStatus.Source = New-AutoPilotStatusDotImage (
+                        [System.Windows.Media.Color]::FromRgb(100, 210, 220)
+                    )
+                }
+                $txtCountdown.Text = "AutoPilot Recovery 🛡️"
+                $txtCountdown.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                    [System.Windows.Media.Color]::FromRgb(170, 180, 195)
+                )
+                $txtCountdown.FontWeight = "SemiBold"
+                return
+            }
+        } catch {
+            Write-Host "Unable to read stuck-command dashboard status: $_"
+        }
+    }
+    if ($liveTimelineMessage) {
+        $liveTimelineMessage.Inlines.Clear()
+        $liveTimelineMessage.FontSize = 28
+        $liveTimelineMessage.Margin = [System.Windows.Thickness]::new(27)
+    }
+    # ===================== CHECK AUTOPILOT =====================
     if (-not $autoPilotRunning) {
         if ($liveTimelinePanel)   { $liveTimelinePanel.Visibility = 'Collapsed' }
         if ($liveTimelineMessage) {
@@ -3735,8 +4163,8 @@ function Update-TimelineDisplay {
             $liveTimelineMessage.Visibility = 'Visible'
         }
 		if($imgStatus){
-		$imgStatus.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
-			[System.Uri]::new("$AppRoot\media\stop.png")
+		$imgStatus.Source = New-AutoPilotStatusDotImage (
+			[System.Windows.Media.Color]::FromRgb(220, 120, 120)
 		)
 	    }
         $txtPrev.Text     = "none"
@@ -3759,8 +4187,8 @@ function Update-TimelineDisplay {
             $liveTimelineMessage.Visibility = 'Visible'
         }
 		if($imgStatus){
-		$imgStatus.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
-			[System.Uri]::new("$AppRoot\media\pause.png")
+		$imgStatus.Source = New-AutoPilotStatusDotImage (
+			[System.Windows.Media.Color]::FromRgb(253, 186, 116)
 		)
 	    }
         $txtPrev.Text     = "none"
@@ -3833,8 +4261,8 @@ function Update-TimelineDisplay {
 			$liveTimelineMessage.Visibility = 'Visible'
 		}
 		if ($imgStatus){
-			$imgStatus.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
-				[System.Uri]::new("$AppRoot\media\info.png")
+			$imgStatus.Source = New-AutoPilotStatusDotImage (
+				[System.Windows.Media.Color]::FromRgb(147, 197, 253)
 			)
 		}
 		$txtPrev.Text     = "none"
@@ -3849,8 +4277,8 @@ function Update-TimelineDisplay {
     if ($liveTimelinePanel)   { $liveTimelinePanel.Visibility = 'Visible' }
     if ($liveTimelineMessage) { $liveTimelineMessage.Visibility = 'Collapsed' }
 	if($imgStatus){
-    $imgStatus.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
-        [System.Uri]::new("$AppRoot\media\play.png")
+    $imgStatus.Source = New-AutoPilotStatusDotImage (
+        [System.Windows.Media.Color]::FromRgb(134, 239, 172)
     )
     }
     if (-not $global:timeline) { 
@@ -4435,35 +4863,49 @@ Show-DarkWarning `
     Invoke-ManualCommand "/task-del"
 })
 $window.FindName("btnTask_show").Add_Click({ Invoke-ManualCommand "/task-show" })
+# ===================== AutoPilot SETTINGS =====================
 $window.FindName("btnSettings").Add_Click({
-    $exePath = "$AppRoot\Settings.exe"
-    if (Get-Process -Name "Settings" -ErrorAction SilentlyContinue) {
-        Show-DarkWarning -Title "⚙️ AutoPilot Settings" -Message "⚠️ Settings.exe is already running!"
+    $exeName = "Settings.exe"
+    $processName = "Settings"
+    $autoPilotRunning = Get-CimInstance Win32_Process |
+        Where-Object { $_.CommandLine -like "*AutoPilot.ps1*" }
+    if ($autoPilotRunning) {
+        Show-DarkWarning -Title "⚠️ AutoPilot is Active" -Message "AutoPilot is currently Running! The Settings works only when AutoPilot is ⏹️ STOPPED."
         return
     }
-    Show-DarkWarning -Title "⚙️ AutoPilot Settings" -Message "Changes in this SETTINGS Block will become active after 🔄 Refreshing AutoPilot!"
-    if (Test-Path $exePath) {
-        Start-Process $exePath
+    $settingsPath = if ($AppRoot) {
+        Join-Path $AppRoot $exeName
     } else {
-        Show-DarkWarning `
-            -Title "⚠️ Error" `
-            -Message "⛔ Settings.exe not found!`nPath: $exePath"
+        Join-Path (Get-Location) $exeName
     }
+    Start-SingleInstanceExe `
+        -ExePath $settingsPath `
+        -ProcessName $processName `
+        -DisplayName "AutoPilot Settings" `
+        -StartTitle "⚙️ AutoPilot Settings Started" `
+        -StartMessage "🛠️ Edit AutoPilot Settings!"
 })
+# ===================== AutoPilot SCRIPTS SETTINGS =====================
 $window.FindName("btnSettingsScripts").Add_Click({
-    $exePath = "$AppRoot\SettingsScripts.exe"
-    if (Get-Process -Name "SettingsScripts" -ErrorAction SilentlyContinue) {
-        Show-DarkWarning -Title "📝 Scripts Settings" -Message "⚠️ SettingsScripts.exe is already running!"
+    $exeName = "SettingsScripts.exe"
+    $processName = "SettingsScripts"
+    $autoPilotRunning = Get-CimInstance Win32_Process |
+        Where-Object { $_.CommandLine -like "*AutoPilot.ps1*" }
+    if ($autoPilotRunning) {
+        Show-DarkWarning -Title "⚠️ AutoPilot is Active" -Message "AutoPilot is currently Running! The Scripts Settings works only when AutoPilot is ⏹️ STOPPED."
         return
     }
-    Show-DarkWarning -Title "📝 Scripts Settings" -Message "Changes in this SCRIPTS SETTINGS Block will take effect after 🔄 Refreshing AutoPilot!"
-    if (Test-Path $exePath) {
-        Start-Process $exePath
+    $settingsScriptsPath = if ($AppRoot) {
+        Join-Path $AppRoot $exeName
     } else {
-        Show-DarkWarning `
-            -Title "⚠️ Error" `
-            -Message "⛔ SettingsScripts.exe not found!`nPath: $exePath"
+        Join-Path (Get-Location) $exeName
     }
+    Start-SingleInstanceExe `
+        -ExePath $settingsScriptsPath `
+        -ProcessName $processName `
+        -DisplayName "Scripts Settings" `
+        -StartTitle "📝 Scripts Settings Started" `
+        -StartMessage "✏️ Edit Scripts Settings!"
 })
 $window.FindName("btnSystem_Data").Add_Click({
     $exePath = "$AppRoot\Data.exe"
@@ -4479,6 +4921,22 @@ $window.FindName("btnSystem_Data").Add_Click({
         Show-DarkWarning `
             -Title "⚠️ Error" `
             -Message "⛔ Data.exe not found!`nPath: $exePath"
+    }
+})
+$window.FindName("btnProcessManager").Add_Click({
+    $exePath = "$AppRoot\ProcessManager.exe"
+    if (Get-Process -Name "ProcessManager" -ErrorAction SilentlyContinue) {
+        Show-DarkWarning -Title "🛡️ Process Manager" -Message "⚠️ ProcessManager.exe is already running!"
+        return
+    }
+    Show-DarkWarning -Title "🛡️ Process Manager" -Message "Process Control Center!"
+    if (Test-Path $exePath) {
+        Start-Process $exePath
+    }
+    else {
+        Show-DarkWarning `
+            -Title "⚠️ Error" `
+            -Message "⛔ ProcessManager.exe not found!`nPath: $exePath"
     }
 })
 $window.FindName("btnShowCmd").Add_Click({ Invoke-ManualCommand "/show_cmd" })
@@ -4523,6 +4981,7 @@ $window.FindName("btnTraffic_Log").Add_Click({ Invoke-ManualCommand "/traffic_lo
 $window.FindName("btnData_Log").Add_Click({ Invoke-ManualCommand "/data_log" })
 $window.FindName("btnNetwork_Log").Add_Click({ Invoke-ManualCommand "/network_log" })
 $window.FindName("btnUpdate_Log").Add_Click({ Invoke-ManualCommand "/update_log" })
+$window.FindName("btnProcess_Log").Add_Click({ Invoke-ManualCommand "/process_log" })
 
 # Monitoring
 $window.FindName("btnSysMon_Start").Add_Click({ Invoke-ManualCommand "/monitoring_start" })

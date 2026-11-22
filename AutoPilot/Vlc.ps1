@@ -345,15 +345,16 @@ $navigationRow2 = @(
         $startIndex + $pageSize,
         $totalStations
     )
-    $text = @(
-        "🎵 VLC Radio Stations"
-        "━━━━━━━━━━━━━━━━━━━━"
-        "📝 Stations: $firstStation-$lastStation of $totalStations"
-        "📄 Page: $Page of $totalPages"
-        ""
-        "Select a station to play:"
-    ) -join "`n"
-
+	$text = @(
+			"🎵 VLC Radio Stations"
+			"━━━━━━━━━━━━━━━━━━━━"
+			"📝 Stations: $firstStation-$lastStation of $totalStations"
+			"📄 Page: $Page of $totalPages"
+			""
+			"Select a station to play:"
+		) -join "`n"
+	$Footer = "`n" + ("-" * 18) + "`n🔰 AutoPilot | Start Menu - /start"
+	$text  += $Footer
     return @{
         Page           = $Page
         TotalPages     = $totalPages
@@ -577,4 +578,5 @@ function VLC-Status {
         return "ℹ️ VLC is not active."
     }
 }
+
 #################### END VLC PLAYER ########################################

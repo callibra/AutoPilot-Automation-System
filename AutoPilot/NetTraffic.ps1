@@ -382,15 +382,15 @@ function Show-TrafficStatus {
     }
 }
 
-# --- PRIKAZI POSLEDNI 50 MONITOR LOG ZAPISI ---
+# --- PRIKAZI POSLEDNI 30 MONITOR LOG ZAPISI ---
 function Monitor-Log {
     if (Test-Path $Global:monitorLogFile) {
-        $logContent = Get-Content $Global:monitorLogFile -Tail 50
-        Write-Host "`n=== Last 50 Net Monitoring Log entries ===`n" -ForegroundColor Cyan
+        $logContent = Get-Content $Global:monitorLogFile -Tail 30
+        Write-Host "`n=== Last 30 Net Monitoring Log entries ===`n" -ForegroundColor Cyan
         $logContent | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
 
         if ($BotToken -and $ChatID) {
-            $msg = "=== Last 50 Net Monitoring Log entries ===`n" + ($logContent -join "`n")
+            $msg = "=== Last 30 Net Monitoring Log entries ===`n" + ($logContent -join "`n")
             Start-Sleep -Seconds 5
             Send-TelegramMessage -message $msg
         }

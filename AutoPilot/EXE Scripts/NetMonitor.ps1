@@ -13,6 +13,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase
 # Load the NetMonitor DLL
 Add-Type -Path "$AppRoot\Dll\NetMonitor.dll"
 
+# Format Size
 function Format-Size {
     param([long]$bytes)
     if ($bytes -ge 1GB) { "{0:N2} GB" -f ($bytes / 1GB) }
@@ -21,105 +22,190 @@ function Format-Size {
     else { "$bytes B" }
 }
 
+# Elapsed Time Clock
+function Format-Elapsed {
+    param([datetime]$Start)
+    $elapsed = (Get-Date) - $Start
+    $time = "{0:hh\:mm\:ss}" -f $elapsed
+
+    if ($elapsed.Days -gt 0) {
+        $dayText = if ($elapsed.Days -eq 1) { "Day" } else { "Days" }
+        return "Elapsed: $($elapsed.Days) $dayText $time"
+    }
+    return "Elapsed: $time"
+}
+
 # --- XAML GUI ---
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Live Network Monitor"
-        Width="600" Height="488"
-        Background="#1E1E1E"
+        Width="720" Height="670"
+        Background="#1E2128"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         FontFamily="Segoe UI">
+        <Window.Resources>
+            <Style x:Key="ModernButton" TargetType="Button">
+                <Setter Property="Foreground" Value="#E4E4E7"/>
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#2C3039" Offset="0.0"/>
+                            <GradientStop Color="#22252C" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Padding" Value="18,10"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="BorderBrush" Value="#3B3F4A"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="11">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background">
+                                        <Setter.Value>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Color="#1E3A44" Offset="0.0"/>
+                                                <GradientStop Color="#172D35" Offset="1.0"/>
+                                            </LinearGradientBrush>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#D4D4D8"/>
+                                    <Setter TargetName="border" Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect Color="#D4D4D8" BlurRadius="14" ShadowDepth="0" Opacity="0.35"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#12222A"/>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#E4E4E7"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </Window.Resources>
+        <Grid Margin="26">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+            <Grid Margin="0,0,0,22">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="$AppRoot\media\table.png" Width="48" Height="48" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Network Monitor" FontSize="27" FontWeight="Bold" Foreground="#F8FAFC"/>
+                        <TextBlock Text="Live connection &amp; traffic analytics" FontSize="13" Foreground="#94A3B8" Margin="1,3,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+                <Border Grid.Column="1" Background="#272B34" BorderBrush="#3B3F4A" BorderThickness="1" CornerRadius="14" Padding="14,8" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="netLight" Width="10" Height="10" Fill="Red" Margin="0,0,9,0"/>
+                        <TextBlock x:Name="lblStatus" FontSize="14" FontWeight="SemiBold" Foreground="#E2E8F0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,15">
-		    <Image Source="$AppRoot\media\table.png" Width="50" Height="50" VerticalAlignment="Center" Margin="3,0,8,0"/>		
-            <TextBlock Text="Live Network Monitor"
-                       FontSize="28"
-                       FontWeight="Bold"
-                       Foreground="#F0F0F0"
-                       VerticalAlignment="Center"/>
-	    	<Ellipse x:Name="netLight" Width="28" Height="28" Fill="Red" VerticalAlignment="Center" Margin="8,3,8,0"/>	   
-        </StackPanel>
+            <Grid Grid.Row="1" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Background="#272B34" BorderBrush="#3B3F4A" BorderThickness="1" CornerRadius="14" Padding="16,13">
+                    <StackPanel>
+                        <TextBlock Text="NETWORK INTERFACE" FontSize="12" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,7"/>
+                        <TextBlock x:Name="lblInterface" FontSize="17" FontWeight="SemiBold" Foreground="#FBBF24" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Background="#272B34" BorderBrush="#3B3F4A" BorderThickness="1" CornerRadius="14" Padding="16,13">
+                    <StackPanel>
+                        <TextBlock Text="MONITORING SINCE" FontSize="12" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,7"/>
+                        <TextBlock x:Name="lblStart" FontSize="17" FontWeight="SemiBold" Foreground="#93C5FD"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
-        <Border Grid.Row="1"
-                Background="#2D2D30"
-                CornerRadius="18"
-                Padding="20"
-                BorderBrush="#444"
-                BorderThickness="1">
-            <StackPanel>
+            <Grid Grid.Row="2" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Background="#202B2B" BorderBrush="#31564F" BorderThickness="1" CornerRadius="14" Padding="17,15">
+                    <StackPanel>
+                        <TextBlock Text="⬇  DOWNLOAD" FontSize="13" FontWeight="Bold" Foreground="#5EEAD4" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="lblDown" FontSize="19" FontWeight="SemiBold" Foreground="#CCFBF1" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="lblDownSpeed" FontSize="14" Foreground="#99F6E4" Margin="0,7,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Background="#302528" BorderBrush="#614047" BorderThickness="1" CornerRadius="14" Padding="17,15">
+                    <StackPanel>
+                        <TextBlock Text="⬆  UPLOAD" FontSize="13" FontWeight="Bold" Foreground="#FDA4AF" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="lblUp" FontSize="19" FontWeight="SemiBold" Foreground="#FFE4E6" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="lblUpSpeed" FontSize="14" Foreground="#FECDD3" Margin="0,7,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
-                <TextBlock x:Name="lblInterface" FontSize="20" Margin="0,4" Foreground="#FFD700"/>
-                <TextBlock x:Name="lblStart" FontSize="20" Margin="0,4" Foreground="#63A5FF"/>
-                <TextBlock x:Name="lblStatus" FontSize="20" Margin="0,4" Foreground="#FFA500"/>
-                <Separator Margin="0,10" Background="#555"/>
-
-                <DockPanel Margin="0,2">
-                    <TextBlock x:Name="lblDown" FontSize="20" Foreground="#4EC9B0" DockPanel.Dock="Left"/>
-                    <TextBlock x:Name="lblDownSpeed" FontSize="20" Foreground="#4EC9B0" Margin="20,0,0,0"/>
+            <Border Grid.Row="3" Background="#272B34" BorderBrush="#3B3F4A" BorderThickness="1" CornerRadius="14" Padding="17,14" Margin="0,0,0,12">
+                <DockPanel>
+                    <TextBlock Text="↕" FontSize="25" Foreground="#A5B4FC" Margin="0,0,13,0" VerticalAlignment="Center"/>
+                    <StackPanel>
+                        <TextBlock Text="TOTAL DATA TRANSFERRED" FontSize="12" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,5"/>
+                        <TextBlock x:Name="lblTotal" FontSize="21" FontWeight="Bold" Foreground="#C7D2FE"/>
+                    </StackPanel>
                 </DockPanel>
+            </Border>
 
-                <DockPanel Margin="0,2">
-                    <TextBlock x:Name="lblUp" FontSize="20" Foreground="#D16969" DockPanel.Dock="Left"/>
-                    <TextBlock x:Name="lblUpSpeed" FontSize="20" Foreground="#D16969" Margin="20,0,0,0"/>
-                </DockPanel>
-
-                <TextBlock x:Name="lblTotal" FontSize="21" FontWeight="SemiBold" Margin="0,4" Foreground="#569CD6"/>
-
-                <!-- Internet Strength Meter with text -->
-                <DockPanel Margin="0,10,0,0" LastChildFill="False">
-                    <Border x:Name="netMeter" Height="20" Width="288" CornerRadius="5" Background="#444" DockPanel.Dock="Left">
-                        <Rectangle x:Name="netMeterFill" Height="20" Width="0" Fill="#4EC9B0" RadiusX="5" RadiusY="5"/>
-                    </Border>
-                    <TextBlock x:Name="lblNetSpeed" FontSize="18" FontWeight="SemiBold" Margin="10,0,0,0" Foreground="White" VerticalAlignment="Center"/>
-                </DockPanel>
-
-            </StackPanel>
-        </Border>
-        
-        <Grid Grid.Row="2" Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Elapsed Text -->
-            <TextBlock x:Name="lblElapsed" FontSize="18" Foreground="#569CD6" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-
-            <!-- Reset Button -->
-            <Button x:Name="btnReset" Width="100" Height="28" Grid.Row="2" HorizontalAlignment="Right" Margin="0,0,0,0" Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" CornerRadius="5" Background="#3D3D3D">
-                            <TextBlock x:Name="text"
-                                       Text="Reset"
-                                       FontFamily="Segoe UI"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Foreground="#569CD6"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
+            <Border Grid.Row="4" MinHeight="130" Background="#272B34" BorderBrush="#3B3F4A" BorderThickness="1" CornerRadius="14" Padding="17,15">
+                <StackPanel>
+                    <TextBlock Text="⚡  LIVE NETWORK ACTIVITY" FontSize="13" FontWeight="Bold" Foreground="#CBD5E1" Margin="0,0,0,15"/>
+                    <DockPanel LastChildFill="False">
+                        <Border x:Name="netMeter" Height="16" Width="288" CornerRadius="8" Background="#414754" DockPanel.Dock="Left" ClipToBounds="True">
+                            <Rectangle x:Name="netMeterFill" Height="16" Width="0" Fill="#4EC9B0" RadiusX="8" RadiusY="8" HorizontalAlignment="Left"/>
                         </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#4F4F4F"/>
-                                <Setter TargetName="text" Property="Foreground" Value="Red"/> 
-                                <Setter TargetName="text" Property="FontSize" Value="18"/>  
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                        <TextBlock x:Name="lblNetSpeed" FontSize="16" FontWeight="SemiBold" Margin="14,0,0,0" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <TextBlock Text="Current combined download and upload speed" FontSize="12" Foreground="#94A3B8" Margin="0,12,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Grid Grid.Row="5" Margin="0,17,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="lblElapsed" FontSize="15" Foreground="#93C5FD" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                <Button x:Name="btnReset" Grid.Column="1" Content="↻  Reset totals" Width="145" Height="42" Style="{StaticResource ModernButton}"/>
+            </Grid>
         </Grid>
-    </Grid>
 </Window>
 "@
 
@@ -186,7 +272,7 @@ $refresh.Add_Tick({
         $lblUp.Text    = "Upload:   {0}" -f (Format-Size $totals.Upload)
         $lblUpSpeed.Text = " * Speed: 0 MB/s"
         $lblTotal.Text = "Total:    {0}" -f (Format-Size ($totals.Download + $totals.Upload))
-        $lblElapsed.Text = "Elapsed: {0:hh\:mm\:ss}" -f ((Get-Date) - $startTime)
+        $lblElapsed.Text = Format-Elapsed $startTime
         return
     }
 
@@ -224,7 +310,7 @@ $refresh.Add_Tick({
     $lblUp.Text    = "Upload:   {0}" -f (Format-Size $totals.Upload)
     $lblUpSpeed.Text   = " * Speed: {0:N2} MB/s" -f ($deltaUp / 1MB)
     $lblTotal.Text = "Total:    {0}" -f (Format-Size $totalBytes)
-    $lblElapsed.Text = "Elapsed: {0:hh\:mm\:ss}" -f ((Get-Date) - $startTime)
+    $lblElapsed.Text = Format-Elapsed $startTime
 })
 
 $refresh.Start()

@@ -1,8 +1,8 @@
-{
+﻿{
   "AutoCommands": {
     "/screen": {
       "Cmd": "Take-Screenshot",
-      "Description": "Automatically captures a screenshot at scheduled time",
+      "Description": "Automatically 📸 captures a screenshot at scheduled time",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -11,7 +11,7 @@
     },
     "/cam_start": {
       "Cmd": "Start-CameraRecording",
-      "Description": "Starts camera video recording automatically",
+      "Description": "Automatically starts 🎥 camera video recording. Maximum duration: 10 minutes (Recording is Automatically ⛔ Aborted).",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -20,7 +20,7 @@
     },
     "/cam_stop": {
       "Cmd": "Stop-CameraRecording",
-      "Description": "Stops the active camera video recording",
+      "Description": "Stops the active 🎥 camera video recording. Maximum duration: 10 minutes (Recording is Automatically ⛔ Aborted).",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -29,7 +29,7 @@
     },
     "/record": {
       "Cmd": "Take-ScreenRecord",
-      "Description": "Records the screen for a predefined duration",
+      "Description": "Automatically 🎞️ records the screen for 35 seconds. Recording Stops Automatically.",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -38,7 +38,7 @@
     },
     "/rec_start": {
       "Cmd": "Start-Recording",
-      "Description": "Starts system audio or screen recording process",
+      "Description": "Automatically starts 🎞️ system audio or screen recording. Maximum duration: 10 minutes (Recording is Automatically ⛔ Aborted).",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -47,7 +47,7 @@
     },
     "/rec_stop": {
       "Cmd": "Stop-Recording",
-      "Description": "Stops the currently running recording process",
+      "Description": "Stops the currently running 🎞️ recording process. Maximum duration: 10 minutes (Recording is Automatically ⛔ Aborted).",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -56,7 +56,7 @@
     },
     "/load_day": {
       "Cmd": "Generate-LoadGraph-Day",
-      "Description": "Generates daily system load graph",
+      "Description": "Generates daily system 📈 load graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -65,7 +65,7 @@
     },
     "/load_week": {
       "Cmd": "Generate-LoadGraph-Week",
-      "Description": "Generates weekly system load graph",
+      "Description": "Generates weekly system 📈 load graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -74,7 +74,7 @@
     },
     "/load_month": {
       "Cmd": "Generate-LoadGraph-Month",
-      "Description": "Generates monthly system load graph",
+      "Description": "Generates monthly system 📈 load graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -83,7 +83,7 @@
     },
     "/load_year": {
       "Cmd": "Generate-LoadGraph-Year",
-      "Description": "Generates yearly system load graph",
+      "Description": "Generates yearly system 📈 load graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -92,7 +92,7 @@
     },
     "/load_all": {
       "Cmd": "Generate-LoadGraph-All",
-      "Description": "Generates full historical system load graph",
+      "Description": "Generates full historical system 📈 load graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -101,7 +101,7 @@
     },
     "/temp_day": {
       "Cmd": "Generate-TempGraph-Day",
-      "Description": "Generates daily temperature graph",
+      "Description": "Generates daily 🌡️ temperature graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -110,7 +110,7 @@
     },
     "/temp_week": {
       "Cmd": "Generate-TempGraph-Week",
-      "Description": "Generates weekly temperature graph",
+      "Description": "Generates weekly 🌡️ temperature graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -119,7 +119,7 @@
     },
     "/temp_month": {
       "Cmd": "Generate-TempGraph-Month",
-      "Description": "Generates monthly temperature graph",
+      "Description": "Generates monthly 🌡️ temperature graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -128,7 +128,7 @@
     },
     "/temp_year": {
       "Cmd": "Generate-TempGraph-Year",
-      "Description": "Generates yearly temperature graph",
+      "Description": "Generates yearly 🌡️ temperature graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -137,7 +137,7 @@
     },
     "/temp_all": {
       "Cmd": "Generate-TempGraph-All",
-      "Description": "Generates full historical temperature graph",
+      "Description": "Generates full historical 🌡️ temperature graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -146,7 +146,7 @@
     },
     "/disk_day": {
       "Cmd": "Generate-DiskGraph-Day",
-      "Description": "Generates daily disk usage graph",
+      "Description": "Generates daily 💽 disk usage graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -155,7 +155,7 @@
     },
     "/disk_week": {
       "Cmd": "Generate-DiskGraph-Week",
-      "Description": "Generates weekly disk usage graph",
+      "Description": "Generates weekly 💽 disk usage graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -164,7 +164,7 @@
     },
     "/disk_month": {
       "Cmd": "Generate-DiskGraph-Month",
-      "Description": "Generates monthly disk usage graph",
+      "Description": "Generates monthly 💽 disk usage graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -173,7 +173,7 @@
     },
     "/disk_year": {
       "Cmd": "Generate-DiskGraph-Year",
-      "Description": "Generates yearly disk usage graph",
+      "Description": "Generates yearly 💽 disk usage graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -182,7 +182,7 @@
     },
     "/disk_all": {
       "Cmd": "Generate-DiskGraph-All",
-      "Description": "Generates full historical disk usage graph",
+      "Description": "Generates full historical 💽 disk usage graph",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -191,7 +191,7 @@
     },
     "/table_day": {
       "Cmd": "Generate-TableGraph-Day",
-      "Description": "Generates daily statistics table",
+      "Description": "Generates daily statistics 📊 table",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -200,7 +200,7 @@
     },
     "/table_week": {
       "Cmd": "Generate-TableGraph-Week",
-      "Description": "Generates weekly statistics table",
+      "Description": "Generates weekly statistics 📊 table",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -209,7 +209,7 @@
     },
     "/table_month": {
       "Cmd": "Generate-TableGraph-Month",
-      "Description": "Generates monthly statistics table",
+      "Description": "Generates monthly statistics 📊 table",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -218,7 +218,7 @@
     },
     "/table_year": {
       "Cmd": "Generate-TableGraph-Year",
-      "Description": "Generates yearly statistics table",
+      "Description": "Generates yearly statistics 📊 table",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -227,7 +227,7 @@
     },
     "/table_all": {
       "Cmd": "Generate-TableGraph-All",
-      "Description": "Generates full historical statistics table",
+      "Description": "Generates full historical statistics 📊 table",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -236,7 +236,7 @@
     },
     "/monitoring_start": {
       "Cmd": "Start-Monitoring",
-      "Description": "Starts system monitoring and data collection",
+      "Description": "Starts system 🖥️ monitoring and data collection",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -245,7 +245,7 @@
     },
     "/monitoring_stop": {
       "Cmd": "Stop-Monitoring",
-      "Description": "Stops system monitoring and data collection",
+      "Description": "Stops system 🖥️ monitoring and data collection",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -254,7 +254,7 @@
     },
     "/monitoring_status": {
       "Cmd": "Get-MonitoringStatus",
-      "Description": "Checks current monitoring service status",
+      "Description": "Checks current 🖥️ monitoring service status",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -263,7 +263,7 @@
     },
     "/data": {
       "Cmd": "Data-CameraRecording",
-      "Description": "Processes and archives recorded camera data",
+      "Description": "Start background Media 💾 Data processing Server",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -272,7 +272,7 @@
     },
     "/data_stop": {
       "Cmd": "Stop-DataServer",
-      "Description": "Stops background Media Data processing Server",
+      "Description": "Stops background Media 💾 Data processing Server",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -281,7 +281,7 @@
     },
     "/shutdownPC": {
       "Cmd": "Auto-Shutdown-System",
-      "Description": "Automation command to Shutdown PC",
+      "Description": "Automation command to ⛔ Shutdown PC",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -290,7 +290,7 @@
     },
     "/restartPC": {
       "Cmd": "Auto-Restart-System",
-      "Description": "Automation command to Restart PC",
+      "Description": "Automation command to 🔄 Restart PC",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -299,7 +299,7 @@
     },
     "/pauseAP": {
       "Cmd": "Pause-AutoPilot",
-      "Description": "Automation command to Pause AutoPilot",
+      "Description": "Automation command to ⏸️ Pause AutoPilot",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -308,16 +308,34 @@
     },
     "/resetAP": {
       "Cmd": "Reset-AutoPilot",
-      "Description": "Automation command to Reset AutoPilot",
+      "Description": "Automation command to 🔃 Reset AutoPilot",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
       "Mode": [],
       "Day": []
     },
+	"/process_start": {
+	  "Cmd": "ProcessManager-Start",
+	  "Description": "Starts 🛡️ Process Manager",
+	  "Times": [],
+	  "RepeatIntervalMinutes": [],
+	  "Type": [],
+	  "Mode": [],
+	  "Day": []
+	},
+	"/process_stop": {
+	  "Cmd": "ProcessManager-Stop",
+	  "Description": "Stops 🛡️ Process Manager",
+	  "Times": [],
+	  "RepeatIntervalMinutes": [],
+	  "Type": [],
+	  "Mode": [],
+	  "Day": []
+	},
 	"/vlc_play": {
       "Cmd": "Play-Radio",
-      "Description": "Starts the selected VLC radio station",
+      "Description": "Starts the selected VLC 📻 radio station",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -326,7 +344,7 @@
     },
     "/vlc_stop": {
       "Cmd": "Stop-Radio",
-      "Description": "Stops VLC player",
+      "Description": "Stops ⏹️ VLC player",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -335,7 +353,7 @@
     },
     "/vlc_next": {
       "Cmd": "Next-Radio",
-      "Description": "Plays the next VLC radio station",
+      "Description": "Plays the ⏭️ next VLC radio station",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],
@@ -344,7 +362,7 @@
     },
     "/vlc_prev": {
       "Cmd": "Prev-Radio",
-      "Description": "Plays the previous VLC radio station",
+      "Description": "Plays the ⏮️ previous VLC radio station",
       "Times": [],
       "RepeatIntervalMinutes": [],
       "Type": [],

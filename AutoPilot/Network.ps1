@@ -93,6 +93,55 @@ function Get-CurrentWifi {
     }
 }
 
+# === REAL INTERNET CONNECTIVITY CHECK ===
+function Test-InternetConnectivity {
+    # Enable TLS 1.2 for compatibility with Windows PowerShell 5.1.
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    }
+    catch {
+        # Continue with the system's current TLS settings if this cannot be changed.
+    }
+
+    $internetTests = @()
+    $internetTests += [PSCustomObject]@{
+        Uri = 'https://www.msftconnecttest.com/connecttest.txt'
+        ExpectedStatusCode = 200
+        ExpectedText = 'Microsoft Connect Test'
+    }
+    $internetTests += [PSCustomObject]@{
+        Uri = 'https://www.google.com/generate_204'
+        ExpectedStatusCode = 204
+        ExpectedText = $null
+    }
+    $internetTests += [PSCustomObject]@{
+        Uri = 'https://connectivitycheck.gstatic.com/generate_204'
+        ExpectedStatusCode = 204
+        ExpectedText = $null
+    }
+
+    foreach ($internetTest in $internetTests) {
+        try {
+            $response = Invoke-WebRequest -Uri $internetTest.Uri -UseBasicParsing -TimeoutSec 4 -ErrorAction Stop
+            $statusCode = [int]$response.StatusCode
+
+            if ($statusCode -eq $internetTest.ExpectedStatusCode) {
+                if (-not $internetTest.ExpectedText -or ([string]$response.Content -match [regex]::Escape($internetTest.ExpectedText))) {
+                    Write-Log -Message ("Real internet traffic verified via {0} (HTTP {1})." -f $internetTest.Uri, $statusCode) -NoDisplay
+                    return $true
+                }
+            }
+        }
+        catch {
+            # Try the next independent public endpoint.
+            Write-Log -Message ("Internet check via {0} failed: {1}" -f $internetTest.Uri, $_.Exception.Message) -NoDisplay
+        }
+    }
+
+    Write-Log -Message 'No public HTTP/HTTPS endpoint confirmed working internet traffic.' -NoDisplay
+    return $false
+}
+
 # === Switch Network Function ===
 function Connect-ToNetwork {
     param (
@@ -105,8 +154,24 @@ function Connect-ToNetwork {
         return $false
     }
 
-    # Добиј тековна мрежа
+    # Добиј тековна мрежа и проверувај интернет ако веќе сме на целната мрежа.
     $currentWifi = Get-CurrentWifi
+    if ($currentWifi -eq $targetSSID) {
+        Write-Log -Message ("Already connected to '{0}'. Checking real internet access before switching." -f $targetSSID) -NoDisplay
+        Write-Host ("Already connected to '{0}'. Checking real internet access..." -f $targetSSID) -ForegroundColor Cyan
+
+        if (Test-InternetConnectivity) {
+            $msg = "'$targetSSID' is already connected and real internet traffic is working. No reconnect is needed."
+            Write-Log -Message $msg -NoDisplay
+            Write-Host $msg -ForegroundColor Green
+            return $true
+        }
+
+        $msg = "'$targetSSID' is connected, but internet traffic is not working. Starting the existing reconnect attempts..."
+        Write-Log -Message $msg -NoDisplay
+        Write-Host $msg -ForegroundColor Yellow
+    }
+
     if (-not $currentWifi) {
         Write-Log "No WiFi network currently connected."  -NoDisplay
         Write-Host "No WiFi network currently connected." -ForegroundColor Yellow
@@ -146,9 +211,18 @@ function Connect-ToNetwork {
             # Proverka na stvarnata povrzanost
             $currentAfterAttempt = Get-CurrentWifi
             if ($currentAfterAttempt -eq $targetSSID) {
-                Write-Log "Successfully connected to $targetSSID!"  -NoDisplay
-				Write-Host "Successfully connected to $targetSSID!" -ForegroundColor Green
-                $success = $true
+                Write-Log "Connected to $targetSSID. Verifying real internet traffic..." -NoDisplay
+                Write-Host "Connected to $targetSSID. Verifying real internet traffic..." -ForegroundColor Cyan
+
+                if (Test-InternetConnectivity) {
+                    Write-Log "Successfully connected to $targetSSID and verified real internet traffic!" -NoDisplay
+                    Write-Host "Successfully connected to $targetSSID and verified real internet traffic!" -ForegroundColor Green
+                    $success = $true
+                }
+                else {
+                    Write-Log "Connected to '$targetSSID', but no real internet traffic was verified. Treating this attempt as failed." -NoDisplay
+                    Write-Host "Connected to '$targetSSID', but no real internet traffic was verified. Treating this attempt as failed." -ForegroundColor Yellow
+                }
             }
             else {
                 # Analiza na rezultatot za tocna pricina
@@ -602,6 +676,84 @@ function Restart-NetworkAdapters {
     }
 }
 
+# --- Output helper for the new network check, including optional Telegram ---
+function Write-NetworkCheckMessage {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        [ConsoleColor]$Color = 'White',
+        [switch]$Telegram
+    )
+
+    Write-Log -Message $Message -Color $Color -NoDisplay
+    Write-Host $Message -ForegroundColor $Color
+
+    if ($Telegram -and $BotToken -and $ChatID) {
+        $telegramCommand = Get-Command -Name 'Send-TelegramMessage' -ErrorAction SilentlyContinue
+        if ($telegramCommand) {
+            try {
+                Send-TelegramMessage -message $Message
+            }
+            catch {
+                $telegramError = "Telegram notification failed: $($_.Exception.Message)"
+                Write-Log -Message $telegramError -Color Yellow -NoDisplay
+                Write-Host $telegramError -ForegroundColor Yellow
+            }
+        }
+    }
+}
+
+# === CHECK WI-FI AND REAL INTERNET ACCESS ===
+function Check-NetworkConnection {
+    $msg = 'Checking the current connection and real internet traffic...'
+    Write-NetworkCheckMessage -Message $msg -Color Cyan -Telegram
+
+    $currentWifi = Get-CurrentWifi
+    if (Test-InternetConnectivity) {
+        $wifiLabel = if ($currentWifi) { "'$currentWifi'" } else { 'no Wi-Fi SSID detected' }
+        $msg = "Internet traffic is working. Current Wi-Fi: $wifiLabel. No recovery is needed."
+        Write-NetworkCheckMessage -Message $msg -Color Green -Telegram
+        return $true
+    }
+
+    $msg = 'No real internet traffic detected. Trying the configured Wi-Fi networks...'
+    Write-NetworkCheckMessage -Message $msg -Color Yellow
+
+    $targetNetworks = @()
+    if (-not [string]::IsNullOrWhiteSpace([string]$wifi2)) {
+        $targetNetworks += [string]$wifi2
+    }
+    if (-not [string]::IsNullOrWhiteSpace([string]$wifi1) -and $wifi1 -ne $wifi2) {
+        $targetNetworks += [string]$wifi1
+    }
+
+    if ($targetNetworks.Count -eq 0) {
+        $msg = 'Neither Wi-Fi SSID is configured in settings_scripts.json. Cannot recover the connection.'
+        Write-NetworkCheckMessage -Message $msg -Color Red -Telegram
+        return $false
+    }
+
+    for ($round = 1; $round -le 3; $round++) {
+        foreach ($targetSSID in $targetNetworks) {
+            $msg = "Round $round/3: trying '$targetSSID' and checking internet traffic..."
+            Write-NetworkCheckMessage -Message $msg -Color Cyan
+
+            # Reuse the existing connection logic; a connection counts as success only if internet works.
+            $success = Connect-ToNetwork -targetSSID $targetSSID -maxAttempts 1
+            if ($success) {
+                $msg = "Internet access restored through '$targetSSID' in round $round/3."
+                Write-NetworkCheckMessage -Message $msg -Color Green -Telegram
+                return $true
+            }
+        }
+    }
+
+    $targetsLabel = $targetNetworks -join ', '
+    $msg = "Internet access could not be restored after 3 rounds. Configured Wi-Fi networks tried: $targetsLabel."
+    Write-NetworkCheckMessage -Message $msg -Color Red -Telegram
+    return $false
+}
+
 # === MAPA NA OPCII ===
 $FunctionMap = @{
     "1" = { Switch-ToBeni }
@@ -613,6 +765,7 @@ $FunctionMap = @{
 	"7" = { Network-Log }
 	"8" = { Network-Status }
 	"9" = { Restart-NetworkAdapters }
+    "10" = { Check-NetworkConnection }
 }
 
 # === AUTOMATSKO IZVRSUVANJE AKO IMA PARAMETRI ===
@@ -651,15 +804,16 @@ function Show-Menu {
         Write-Host " [7] Net Log_File" -ForegroundColor DarkCyan
         Write-Host " [8] Network Status" -ForegroundColor DarkGreen
         Write-Host " [9] Network Restart" -ForegroundColor DarkMagenta
+        Write-Host " [10] Check Network Connection" -ForegroundColor DarkCyan
         Write-Host ""
         Write-Host "============ Exit ============" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host " [10] Exit" -ForegroundColor Red
+        Write-Host " [11] Exit" -ForegroundColor Red
         Write-Host ""
 
-        $selection = Read-Host "Enter a number (1-10) to select"
+        $selection = Read-Host "Enter a number (1-11) to select"
 
-        if ($selection -eq "10") {
+        if ($selection -eq "11") {
             Write-Log "Exiting..." White
             break
         }

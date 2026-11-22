@@ -23,6 +23,137 @@ $global:ScreenCaptureConfigured = $false
 $global:CameraCaptureConfigured = $false
 $global:MediaFolderConfigured  = $false
 
+################# FUNCTIONS Auto-Detect ffmpeg Devices #####################
+# Patterns used to pick the right device when settings.json is empty or the saved device does not work
+$global:LoopbackPattern = 'stereo\s*mix|stereomix|what u hear|wave out|loopback|стерео|микс'
+$global:MicPattern      = 'microphone|mic\b|mikrofon|микрофон|array'
+$global:MainMicPattern  = '^(microphone|mikrofon|микрофон)\b'   # standard Windows name: "Microphone (Realtek ...)"
+$global:VirtualCamPattern = 'virtual|obs|droidcam|manycam|snap camera|epoccam|ndi'
+
+# Returns @{ Ok; Video = @(...); Audio = @(...) } from: ffmpeg -list_devices true -f dshow -i dummy
+function Get-FfmpegDshowDevices {
+    $result = @{ Ok = $false; Video = @(); Audio = @() }
+    $ffmpegExe = Join-Path -Path $PSScriptRoot -ChildPath "ffmpeg\bin\ffmpeg.exe"
+    if (-not (Test-Path $ffmpegExe)) { return $result }
+
+    $ErrorActionPreference = 'Continue'
+    $oldEnc = $null
+    $lines = @()
+    try {
+        try { $oldEnc = [Console]::OutputEncoding; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $ffmpegExe
+        $psi.Arguments = '-hide_banner -list_devices true -f dshow -i dummy'
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        $psi.RedirectStandardError = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+        $p = [System.Diagnostics.Process]::Start($psi)
+        $errTask = $p.StandardError.ReadToEndAsync()
+        $outText = $p.StandardOutput.ReadToEnd()
+        $p.WaitForExit()
+        $lines = @(($errTask.Result + "`n" + $outText) -split "`r?`n")
+    } catch {
+        return $result
+    } finally {
+        if ($oldEnc) { try { [Console]::OutputEncoding = $oldEnc } catch {} }
+    }
+
+    foreach ($line in $lines) {
+        if ($line -match 'Alternative name') { continue }
+        if ($line -match '"([^"]+)"\s+\(([^)]*)\)') {
+            $name = $matches[1]
+            $type = $matches[2]
+            if ($type -match 'video') { $result.Video += $name }
+            if ($type -match 'audio') { $result.Audio += $name }
+        }
+    }
+    $result.Ok = $true
+    return $result
+}
+
+# Sets $Config.<Section>.<Name> = $Value (creates the section / property if missing)
+function Set-SettingsValue {
+    param($Config, [string]$Section, [string]$Name, $Value)
+    if (-not $Config.$Section) {
+        $new = [PSCustomObject]@{}
+        if ($Config.PSObject.Properties[$Section]) { $Config.$Section = $new }
+        else { Add-Member -InputObject $Config -NotePropertyName $Section -NotePropertyValue $new }
+    }
+    $sec = $Config.$Section
+    if ($sec.PSObject.Properties[$Name]) { $sec.$Name = $Value }
+    else { Add-Member -InputObject $sec -NotePropertyName $Name -NotePropertyValue $Value }
+}
+
+# If the devices in settings.json are empty or do not exist -> find them with ffmpeg and save them to settings.json
+# If they are filled in and they exist -> nothing is changed
+function Initialize-MediaDevices {
+    param($Config, [string]$ConfigPath)
+
+    $devs = Get-FfmpegDshowDevices
+    if (-not $devs.Ok) { return }   # ffmpeg missing or failed -> leave settings as they are
+    $videoList = @($devs.Video)
+    $audioList = @($devs.Audio)
+    $changed = $false
+    # ---- ScreenCapture (audio device is needed only if IncludeAudio = true) ----
+    $scrExists  = [bool]$Config.ScreenCapture
+    $scrAudioOn = if ($scrExists) { [bool]$Config.ScreenCapture.IncludeAudio } else { $true }
+    if ($scrAudioOn) {
+        $cur = if ($scrExists) { "$($Config.ScreenCapture.AudioDevice)".Trim() } else { "" }
+        if (-not $cur -or ($audioList -notcontains $cur)) {
+            $found = $audioList | Where-Object { $_ -match $global:LoopbackPattern } | Select-Object -First 1
+            if ($found) {
+                if (-not $scrExists) { Set-SettingsValue -Config $Config -Section "ScreenCapture" -Name "IncludeAudio" -Value $true }
+                Set-SettingsValue -Config $Config -Section "ScreenCapture" -Name "AudioDevice" -Value $found
+                $changed = $true
+                Write-Host "ScreenCapture AudioDevice auto-detected: $found" -ForegroundColor Cyan
+            }
+        }
+    }
+    # ---- CameraCapture: video device ----
+    $camExists = [bool]$Config.CameraCapture
+    $curV = if ($camExists) { "$($Config.CameraCapture.VideoDevice)".Trim() } else { "" }
+    if (-not $curV -or ($videoList -notcontains $curV)) {
+        $real  = @($videoList | Where-Object { $_ -notmatch $global:VirtualCamPattern })
+        $found = if ($real.Count -gt 0) { $real[0] } elseif ($videoList.Count -gt 0) { $videoList[0] } else { $null }
+        if ($found) {
+            Set-SettingsValue -Config $Config -Section "CameraCapture" -Name "VideoDevice" -Value $found
+            $changed = $true
+            Write-Host "CameraCapture VideoDevice auto-detected: $found" -ForegroundColor Cyan
+        }
+    }
+    # ---- CameraCapture: audio device (microphone) - only if a working camera exists ----
+    $camVideoNow = if ([bool]$Config.CameraCapture) { "$($Config.CameraCapture.VideoDevice)".Trim() } else { "" }
+    $camVideoOk  = ($camVideoNow -and ($videoList -contains $camVideoNow))
+    if ($camVideoOk) {
+        $curA = "$($Config.CameraCapture.AudioDevice)".Trim()
+        if (-not $curA -or ($audioList -notcontains $curA)) {
+            # System audio (Stereo Mix / the ScreenCapture device) is never used as a camera microphone
+            $scrDev = if ([bool]$Config.ScreenCapture) { "$($Config.ScreenCapture.AudioDevice)".Trim() } else { "" }
+            $mics   = @($audioList | Where-Object { $_ -notmatch $global:LoopbackPattern -and $_ -ne $scrDev })
+            # Priority: standard "Microphone (...)" first, then other microphones (Headset, etc.)
+            $found = $mics | Where-Object { $_ -match $global:MainMicPattern } | Select-Object -First 1
+            if (-not $found) { $found = $mics | Where-Object { $_ -match $global:MicPattern } | Select-Object -First 1 }
+            if ($found) {
+                Set-SettingsValue -Config $Config -Section "CameraCapture" -Name "AudioDevice" -Value $found
+                $changed = $true
+                Write-Host "CameraCapture AudioDevice auto-detected: $found" -ForegroundColor Cyan
+            }
+        }
+    }
+    # ---- Save to settings.json only if something was found/changed ----
+    if ($changed) {
+        try {
+            $Config | ConvertTo-Json -Depth 20 | Set-Content -Path $ConfigPath -Encoding UTF8
+            Write-Host "SETTINGS updated with auto-detected devices: $ConfigPath" -ForegroundColor Green
+        } catch {
+            Write-Host "Cannot save auto-detected devices to SETTINGS: $_" -ForegroundColor Red
+        }
+    }
+}
+
 if ($global:ConfigValid) {
     # MEDIA_FOLDER_URL
     if ($config.MEDIA_FOLDER_URL -and $config.MEDIA_FOLDER_URL.Trim() -ne "") {
@@ -32,6 +163,9 @@ if ($global:ConfigValid) {
         Write-Host "MEDIA_FOLDER_URL missing in AutoPilot Settings (Empty)!" -ForegroundColor Yellow
 		Start-Sleep -Seconds 3
     }
+    # Auto-detect audio/video devices (only if missing in settings.json or they do not work)
+    try { Initialize-MediaDevices -Config $config -ConfigPath $configPath }
+    catch { Write-Host "Auto-detect of media devices failed: $_" -ForegroundColor Yellow }
     # ScreenCapture
 	if ($config.ScreenCapture) {
 		$ScreenIncludeAudio = [bool]$config.ScreenCapture.IncludeAudio
@@ -39,9 +173,9 @@ if ($global:ConfigValid) {
 
 		if ($ScreenIncludeAudio) {
 			if (-not $ScreenAudioDevice -or $ScreenAudioDevice.Trim() -eq "") {
-				Write-Host "ScreenCapture audio is ON, but the *Screen Audio Device* is missing in AutoPilot Settings (Empty)!" -ForegroundColor DarkYellow
+				Write-Host "ScreenCapture audio is ON, but the *Screen Audio Device* is missing in AutoPilot Settings (Empty)! Screen recording will be WITHOUT audio." -ForegroundColor DarkYellow
 				Start-Sleep -Seconds 3
-				$global:ScreenCaptureConfigured = $false
+				$global:ScreenCaptureConfigured = $true
 			} else {
 				$global:ScreenCaptureConfigured = $true
 			}
@@ -67,6 +201,19 @@ if ($global:ConfigValid) {
 		}
         $global:CameraCaptureConfigured = ($CameraVideoDevice -and $CameraVideoDevice.Trim() -ne "")
     }
+}
+
+################# FUNCTION Screen Audio Check #####################
+# Returns $true if the system audio device from settings exists in ffmpeg (or if ffmpeg cannot list devices -> trust settings).
+# Returns $false if it is missing -> the screen recording is then made WITHOUT audio instead of failing.
+function Test-ScreenAudioAvailable {
+    $devs = Get-FfmpegDshowDevices
+    if (-not $devs.Ok) { return $true }
+    if (@($devs.Audio) -contains "$ScreenAudioDevice".Trim()) { return $true }
+    $msg = "🔇 System audio device not found: $ScreenAudioDevice`n🎦 Recording will be made WITHOUT audio."
+    Write-Host $msg -ForegroundColor Yellow
+    try { Send-TelegramMessage -message $msg } catch {}
+    return $false
 }
 
 ################# FUNCTION Screenshot #####################
@@ -148,7 +295,7 @@ function Take-ScreenRecord {
     # Подготовка на фајл патека
     $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
     $filePath = Join-Path -Path $OutputFolder -ChildPath "recording.mp4"
-    if ($ScreenIncludeAudio -and $ScreenAudioDevice) {
+    if ($ScreenIncludeAudio -and $ScreenAudioDevice -and (Test-ScreenAudioAvailable)) {
     $args = "-y -f gdigrab -framerate 25 -i desktop -f dshow -i audio=`"$ScreenAudioDevice`" -t $Duration -vcodec libx264 -pix_fmt yuv420p `"$filePath`""
 	}
 	else {
@@ -170,8 +317,23 @@ function Take-ScreenRecord {
     $process.EnableRaisingEvents = $true
     $process.Start() | Out-Null
 
+	# === Ako ffmpeg se zatvori vednas zaradi zvukot (Windows Privacy / zafaten / drajver) -> povtorno BEZ zvuk ===
+    if ($args -match '-f dshow') {
+        if ($process.WaitForExit(3000) -and $process.ExitCode -ne 0) {
+            $msg = "🔇 System audio cannot be opened (Windows Privacy / in use / driver): $ScreenAudioDevice`n🎦 Recording is restarted WITHOUT audio."
+            Send-TelegramMessage -message $msg
+            Write-Host $msg -ForegroundColor Yellow
+            $psi.Arguments = "-y -f gdigrab -framerate 25 -i desktop -t $Duration -vcodec libx264 -pix_fmt yuv420p `"$filePath`""
+            $process = New-Object System.Diagnostics.Process
+            $process.StartInfo = $psi
+            $process.EnableRaisingEvents = $true
+            $process.Start() | Out-Null
+        }
+    }
+
     # Се чуваат глобалните вредности
     $global:ScreenRecordingProcess = $process
+    try { Start-FfmpegWatchdog } catch {}   # on-demand watchdog: starts only if it is not already running
     $global:ScreenRecordingFile = $filePath
     $global:ScreenRecordingStartTime = Get-Date
     $global:ScreenRecordingDuration = $Duration
@@ -254,7 +416,7 @@ function Start-Recording {
     if (-not (Test-Path $OutputFolder)) { New-Item -Path $OutputFolder -ItemType Directory | Out-Null }
 
     $filePath = Join-Path $OutputFolder "rec.mp4"
-    if ($ScreenIncludeAudio -and $ScreenAudioDevice) {
+    if ($ScreenIncludeAudio -and $ScreenAudioDevice -and (Test-ScreenAudioAvailable)) {
     $args = "-y -f gdigrab -framerate 25 -i desktop -f dshow -i audio=`"$ScreenAudioDevice`" -vcodec libx264 -pix_fmt yuv420p `"$filePath`""
 	}
 	else {
@@ -274,8 +436,22 @@ function Start-Recording {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
     $process.Start() | Out-Null
+	
+	# === Ako ffmpeg se zatvori vednas zaradi zvukot (Windows Privacy / zafaten / drajver) -> povtorno BEZ zvuk ===
+    if ($args -match '-f dshow') {
+        if ($process.WaitForExit(3000) -and $process.ExitCode -ne 0) {
+            $msg = "🔇 System audio cannot be opened (Windows Privacy / in use / driver): $ScreenAudioDevice`n🖥️ Recording is restarted WITHOUT audio."
+            Send-TelegramMessage -message $msg
+            Write-Host $msg -ForegroundColor Yellow
+            $psi.Arguments = "-y -f gdigrab -framerate 25 -i desktop -vcodec libx264 -pix_fmt yuv420p `"$filePath`""
+            $process = New-Object System.Diagnostics.Process
+            $process.StartInfo = $psi
+            $process.Start() | Out-Null
+        }
+    }
 
     $global:DesktopRecordingProcess = $process
+    try { Start-FfmpegWatchdog } catch {}   # on-demand watchdog: starts only if it is not already running
     $global:DesktopRecordingFile = $filePath
     $global:DesktopRecordingStartTime = Get-Date
 
@@ -398,6 +574,17 @@ function Start-CameraRecording {
         Write-Host $msg -ForegroundColor Red
         return
     }
+	
+	# === Проверка дали mikrofonot postoi - ako ne, kamerata se snima BEZ zvuk (ne se prekinuva) ===
+    if ($audioDevice) {
+        $audioFound = $ffmpegOutput | Where-Object { $_ -match ('"' + [regex]::Escape($audioDevice) + '"\s+\([^)]*audio[^)]*\)') }
+        if (-not $audioFound) {
+            $msg = "🎙️ Camera microphone not found: $audioDevice`n📸 Recording will be made WITHOUT audio."
+            Send-TelegramMessage -message $msg
+            Write-Host $msg -ForegroundColor Yellow
+            $audioDevice = $null
+        }
+    }
 
     if ($global:RecordingProcess -and -not $global:RecordingProcess.HasExited) {
         $msg = "📸 Camera is already Started!`n🕒 Start time: $($global:RecordingStartTime)`nTo ⏹️ Stop it press: /cam_stop"
@@ -426,8 +613,22 @@ function Start-CameraRecording {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
     $process.Start() | Out-Null
+	
+	# === Ako ffmpeg se zatvori vednas (mikrofonot e blokiran vo Windows Privacy, zafaten ili problem so drajver) -> povtorno BEZ zvuk ===
+    if ($audioDevice) {
+        if ($process.WaitForExit(3000) -and $process.ExitCode -ne 0) {
+            $msg = "🎙️ Camera microphone cannot be opened (Windows Privacy / in use / driver): $audioDevice`n📸 Recording is restarted WITHOUT audio."
+            Send-TelegramMessage -message $msg
+            Write-Host $msg -ForegroundColor Yellow
+            $psi.Arguments = "-y -f dshow -rtbufsize 64M -i video=`"$cameraName`" -vcodec libx264 -b:v 1M -maxrate 1M -bufsize 2M -pix_fmt yuv420p `"$filePath`""
+            $process = New-Object System.Diagnostics.Process
+            $process.StartInfo = $psi
+            $process.Start() | Out-Null
+        }
+    }
 
     $global:RecordingProcess = $process
+    try { Start-FfmpegWatchdog } catch {}   # on-demand watchdog: starts only if it is not already running
     $global:RecordingFile = $filePath
     $global:RecordingStartTime = Get-Date
 
@@ -520,10 +721,10 @@ Load-CameraRecordingState
 
 ################### DATA FOLDER Function #######################
 
-# Funkcija za start na Python skriptata
+# Funkcija za start na FileStorage.exe
 function Data-CameraRecording {
     param (
-        [string]$ScriptPath = "$PSScriptRoot\Camera.exe"
+        [string]$ScriptPath = "$PSScriptRoot\FileStorage.exe"
     )
     # === Media Bot Guard ===
     if (-not (Is-MediaTelegramOperational)) {
@@ -556,10 +757,10 @@ function Data-CameraRecording {
     Write-Host "DATA Server $(if ($processes) {"already Started"} else {"is Started"})!"
 }
 
-# Funkcija za stop na Python skriptata
+# Funkcija za stop na FileStorage.exe
 function Stop-DataServer {
     param (
-        [string]$ScriptPath = "$PSScriptRoot\Camera.exe"
+        [string]$ScriptPath = "$PSScriptRoot\FileStorage.exe"
     )
     $processes = Get-CimInstance Win32_Process | Where-Object {
         $_.CommandLine -match [regex]::Escape($ScriptPath)
@@ -579,4 +780,86 @@ function Stop-DataServer {
     }
 }
 
-############################################################################# Media Script End.
+################# FFMPEG WATCHDOG (on demand: started when an ffmpeg recording starts, closes ffmpeg.exe that runs too long, stops itself when no ffmpeg is left) #####################
+$global:FfmpegMaxMinutes = 12      # every ffmpeg.exe running longer than this is closed
+$global:FfmpegCheckSeconds = 300    # how often the watchdog checks while it is active
+
+function Start-FfmpegWatchdog {
+    param([int]$MaxMinutes = $global:FfmpegMaxMinutes, [int]$CheckSeconds = $global:FfmpegCheckSeconds)
+    # Already watching -> the running watchdog covers every ffmpeg (1st, 2nd, 3rd ...), so do not start another one
+    if (Get-EventSubscriber -SourceIdentifier "FfmpegWatchdog" -ErrorAction SilentlyContinue) { return }
+    # Remove the leftover of a previous watchdog that stopped itself
+    try { Get-Job -Name "FfmpegWatchdog" -ErrorAction SilentlyContinue | Remove-Job -Force -ErrorAction SilentlyContinue } catch {}
+    # Timer event: runs in the main session, so Write-Log and Write-Host work the same as everywhere else in the script
+    $timer = New-Object System.Timers.Timer
+    $timer.Interval  = $CheckSeconds * 1000
+    $timer.AutoReset = $true
+    Register-ObjectEvent -InputObject $timer -EventName Elapsed -SourceIdentifier "FfmpegWatchdog" -MessageData @{ MaxMinutes = $MaxMinutes } -Action {
+        $cfg = $Event.MessageData
+        try {
+            $closed = @()
+            $alive  = 0     # ffmpeg processes that are still running after this check
+            foreach ($p in [System.Diagnostics.Process]::GetProcessesByName('ffmpeg')) {
+                try {
+                    # Any ffmpeg.exe older than MaxMinutes
+                    $procId  = $p.Id
+                    $started = $p.StartTime
+                    $age     = [DateTime]::Now - $started
+                    if ($age.TotalMinutes -ge $cfg.MaxMinutes) {
+                        $p.Kill()
+                        [void]$p.WaitForExit(3000)
+                        $closed += ("PID {0} (started {1}, was running {2:N1} min)" -f $procId, $started.ToString('HH:mm:ss'), $age.TotalMinutes)
+                    } else {
+                        $alive++
+                    }
+                } catch { $alive++ }   # could not be checked/closed -> keep watching it
+                finally { $p.Dispose() }
+            }
+            # Terminal + log (Write-Log)
+            if ($closed.Count -gt 0) {
+                $now   = [DateTime]::Now.ToString('yyyy-MM-dd HH:mm:ss')
+                $lines = @("⛔ FFMPEG watchdog: closed $($closed.Count) ffmpeg.exe process(es) running longer than $($cfg.MaxMinutes) min 🕒 at $now")
+                foreach ($c in $closed) { $lines += "🎬 $c" }
+				# Telegram: the same text, sent as one message
+				try {
+					Send-TelegramMessage -message ($lines -join "`n")
+					Write-Log "✅ FFMPEG watchdog Telegram message sent."
+				}
+				catch {
+					try {
+						Write-Log "⚠️ FFMPEG watchdog Telegram error: $($_.Exception.Message)"
+					} catch {}
+				}
+                # Terminal: UTF-8 output
+                $oldEnc = $null; $oc = $null
+                try {
+                    $oldEnc = [Console]::OutputEncoding
+                    $oc     = [Console]::ForegroundColor
+                    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+                    [Console]::ForegroundColor = 'DarkYellow'
+                    foreach ($l in $lines) { [Console]::WriteLine($l) }
+                } catch {}
+                finally {
+                    try { if ($oc -ne $null)     { [Console]::ForegroundColor = $oc } } catch {}
+                    try { if ($oldEnc -ne $null) { [Console]::OutputEncoding = $oldEnc } } catch {}
+                }
+                # Log: plain Write-Log
+                foreach ($l in $lines) { try { Write-Log $l } catch {} }
+            }
+            # No ffmpeg left -> the watchdog is not needed any more: stop it and remove it (it is started again with the next ffmpeg)
+            if ($alive -eq 0) {
+                $t = $Sender
+                if (-not $t) { $t = $global:FfmpegWatchdogTimer }
+                try { if ($t) { $t.Stop() } } catch {}
+                try { Unregister-Event -SourceIdentifier "FfmpegWatchdog" -ErrorAction SilentlyContinue } catch {}
+                try { if ($t) { $t.Dispose() } } catch {}
+                $global:FfmpegWatchdogTimer = $null
+            }
+        } catch {}
+    } | Out-Null
+    $timer.Start()
+    $global:FfmpegWatchdogTimer = $timer   # keep a reference so the timer is not garbage collected
+}
+# The watchdog is not started on load. It is started by the functions that start ffmpeg (Take-ScreenRecord, Start-Recording, Start-CameraRecording).
+
+########################################################################################################################## Media Script End.
