@@ -1449,7 +1449,7 @@ function Show-Dashboard {
 			$countLabel.ForeColor = [Drawing.Color]::FromArgb(255, 255, 255)
 			$countLabel.Font = New-Object Drawing.Font("Segoe UI Emoji",18,[Drawing.FontStyle]::Bold)
 			$countLabel.AutoSize = $true
-			$countLabel.Location = New-Object Drawing.Point(788,18)
+			$countLabel.Location = New-Object Drawing.Point(755,18)
 			$countLabel.Text = "🔢 Count: $(@($items).Count)"
 			$titleLabel.BackColor = [System.Drawing.Color]::Transparent
 			$countLabel.BackColor = [System.Drawing.Color]::Transparent
