@@ -116,7 +116,7 @@ var
   ResultCode: Integer;
 begin
   { --- CLOSE AUTOPILOT APPLICATIONS --- }
-  Exec('taskkill', '/IM Dashboard.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/IM AutoPilot.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM CommandsEditor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM ScriptsEditor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM FileStorage.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
@@ -141,6 +141,12 @@ begin
     '$_.CommandLine -like ''*NetTraffic.ps1*'' -or ' +
     '$_.CommandLine -like ''*SetDocker.ps1*'' -or ' +
     '$_.CommandLine -like ''*PowerPlan.ps1*'' -or ' +
+    '$_.CommandLine -like ''*Media.ps1*'' -or ' +
+    '$_.CommandLine -like ''*Vlc.ps1*'' -or ' +
+    '$_.CommandLine -like ''*Graph.ps1*'' -or ' +
+    '$_.CommandLine -like ''*System.ps1*'' -or ' +
+    '$_.CommandLine -like ''*NetTrafficTabel.ps1*'' -or ' +
+    '$_.CommandLine -like ''*Loading.ps1*'' -or ' +
     '$_.CommandLine -like ''*TrafficMonitorWorker.ps1*'' -or ' +
     '$_.CommandLine -like ''*SystemMonitorWorker.ps1*''} ' +
     '| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"',
