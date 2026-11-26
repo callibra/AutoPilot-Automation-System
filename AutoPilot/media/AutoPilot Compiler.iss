@@ -10,12 +10,18 @@ DefaultGroupName=AutoPilot
 OutputBaseFilename=AutoPilot_SetUp
 Compression=lzma
 SolidCompression=yes
-WizardStyle=modern
+WizardStyle=classic
 PrivilegesRequired=admin
 UninstallFilesDir={app}
 DisableDirPage=no
 SetupIconFile=AutoPilot\media\autopilot.ico
+WizardSmallImageFile=AutoPilot\media\autopilot.bmp
+WizardSmallImageBackColor=none
+WizardImageAlphaFormat=defined
 UninstallDisplayIcon={app}\AutoPilot.exe
+
+[Messages]
+BeveledLabel=AutoPilot Automation System
 
 [Files]
 ; Main application files – exclude runtime data folders
@@ -23,6 +29,15 @@ Source: "AutoPilot\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; Ex
 
 ; JSON folder – copy only if JSON folder не постои (fresh install)
 Source: "AutoPilot\JSON\*"; DestDir: "{app}\JSON"; Flags: recursesubdirs ignoreversion onlyifdoesntexist
+
+; Embed PawnIO setup for silent installation during AutoPilot setup.
+Source: "AutoPilot\installers\PawnIO_setup.exe"; DestName: "PawnIO_setup.exe"; Flags: dontcopy
+
+; Keep a copy with AutoPilot so the same PawnIO package can silently uninstall it.
+Source: "AutoPilot\installers\PawnIO_setup.exe"; DestDir: "{app}"; DestName: "PawnIO_setup.exe"; Flags: ignoreversion
+
+; Embed the setup-page logo.
+Source: "AutoPilot\media\autopilot.bmp"; Flags: dontcopy
 
 [Icons]
 Name: "{commondesktop}\AutoPilot"; Filename: "{app}\AutoPilot.exe"; WorkingDir: "{app}"
@@ -45,7 +60,53 @@ RunOnceId: "DeleteAppVerifierLogs"
 [Code]
 var
   ResultCode: Integer;
-  IsFirstInstall: Boolean;
+  SetupFinished: Boolean;
+  LogMemo: TNewMemo;
+  DetailsButton: TNewButton;
+  DetailsVisible: Boolean;
+  LastStatus: string;
+  LastFile: string;
+
+function SendMessageW(hWnd: HWND; Msg: UINT; wParam: Longint; lParam: Longint): Longint;
+  external 'SendMessageW@user32.dll stdcall';
+
+procedure AddLog(const S: string);
+begin
+  if LogMemo = nil then
+    Exit;
+  LogMemo.Lines.Add(S);
+  SendMessageW(LogMemo.Handle, $00B6, 0, LogMemo.Lines.Count);
+  LogMemo.Repaint;
+end;
+
+procedure ShowDetailsClick(Sender: TObject);
+begin
+  DetailsVisible := not DetailsVisible;
+  LogMemo.Visible := DetailsVisible;
+  if DetailsVisible then
+    DetailsButton.Caption := 'Hide details'
+  else
+    DetailsButton.Caption := 'Show details';
+end;
+
+procedure CurInstallProgressChanged(CurProgress, MaxProgress: Integer);
+var
+  S, F: string;
+begin
+  S := WizardForm.StatusLabel.Caption;
+  F := WizardForm.FilenameLabel.Caption;
+  if (S <> '') and (S <> LastStatus) then
+  begin
+    LastStatus := S;
+    AddLog('- ' + S);
+  end;
+  if (F <> '') and (F <> LastFile) then
+  begin
+    LastFile := F;
+    AddLog('    ' + F);
+  end;
+  WizardForm.StatusLabel.Caption := 'Output folder: ' + WizardForm.DirEdit.Text;
+end;
   
 { ===================================================
   FORCE CLOSE RUNNING AUTOPILOT COMPONENTS
@@ -80,7 +141,7 @@ begin
     '$_.CommandLine -like ''*NetTraffic.ps1*'' -or ' +
     '$_.CommandLine -like ''*SetDocker.ps1*'' -or ' +
     '$_.CommandLine -like ''*PowerPlan.ps1*'' -or ' +
-    '$_.CommandLine -like ''*TrafficMonitorWorker.ps1*''} ' +
+    '$_.CommandLine -like ''*TrafficMonitorWorker.ps1*'' -or ' +
     '$_.CommandLine -like ''*SystemMonitorWorker.ps1*''} ' +
     '| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
@@ -90,43 +151,169 @@ end;
   INITIALIZE WIZARD
 =================================================== }
 procedure InitializeWizard();
+var
+  LogoPath: string;
+  DetailsTop: Integer;
 begin
   // Дозволи корисникот да го избере патот (first install)
   WizardForm.DirEdit.ReadOnly := False;
+
+  try
+    ExtractTemporaryFile('autopilot.bmp');
+    LogoPath := ExpandConstant('{tmp}\autopilot.bmp');
+    if FileExists(LogoPath) then
+    begin
+      { Use the AutoPilot logo in place of the standard folder picture
+        on the Select Destination Location page. }
+      WizardForm.SelectDirBitmapImage.Bitmap.LoadFromFile(LogoPath);
+      WizardForm.SelectDirBitmapImage.Bitmap.AlphaFormat := afDefined;
+      WizardForm.SelectDirBitmapImage.Stretch := True;
+      WizardForm.SelectDirLabel.Caption :=
+        'Setup will install AutoPilot Automation System into the following folder.';
+      WizardForm.SelectDirBrowseLabel.Caption :=
+        'To continue, click Next. To choose a different folder, click Browse.';
+    end;
+  except
+    { Keep Setup usable if the optional header logo cannot be loaded. }
+  end;
+
+  { Keep the standard installation page with the logo in its upper-right corner. }
+  WizardForm.FilenameLabel.Visible := False;
+  WizardForm.ProgressGauge.Top := WizardForm.StatusLabel.Top +
+    WizardForm.StatusLabel.Height + ScaleY(4);
+  DetailsTop := WizardForm.ProgressGauge.Top + WizardForm.ProgressGauge.Height + ScaleY(8);
+
+  DetailsButton := TNewButton.Create(WizardForm);
+  DetailsButton.Parent := WizardForm.InstallingPage;
+  DetailsButton.Caption := 'Show details';
+  DetailsButton.Left := ScaleX(4);
+  DetailsButton.Top := DetailsTop;
+  DetailsButton.Width := ScaleX(88);
+  DetailsButton.Height := ScaleY(23);
+  DetailsButton.OnClick := @ShowDetailsClick;
+  DetailsButton.Visible := True;
+
+  LogMemo := TNewMemo.Create(WizardForm);
+  LogMemo.Parent := WizardForm.InstallingPage;
+  LogMemo.Left := 0;
+  LogMemo.Top := DetailsTop + ScaleY(30);
+  LogMemo.Width := WizardForm.InstallingPage.ClientWidth;
+  LogMemo.Height := WizardForm.InstallingPage.ClientHeight - LogMemo.Top;
+  LogMemo.ScrollBars := ssVertical;
+  LogMemo.ReadOnly := True;
+  LogMemo.WordWrap := True;
+  LogMemo.Font.Name := 'Segoe UI';
+  LogMemo.Font.Size := 9;
+  LogMemo.Anchors := [akLeft, akTop, akRight, akBottom];
+  LogMemo.Visible := False;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpFinished then
+    SetupFinished := True;
+
+  if CurPageID = wpInstalling then
+  begin
+    WizardForm.PageDescriptionLabel.Visible := True;
+    WizardForm.StatusLabel.Caption := 'Output folder: ' + WizardForm.DirEdit.Text;
+  end;
+end;
+
+procedure DeinitializeSetup();
+begin
+  if SetupFinished then
+    DeleteFile(ExpandConstant('{app}\PawnIO_setup.exe'));
 end;
 
 { ===================================================
-  INSTALL LOCAL EXE WITH USER CONFIRMATION
+  PAWNIO SILENT INSTALL AND UNINSTALL
 =================================================== }
-procedure InstallExeLocal(Name, FileName, Params: string);
+function GetPawnIODir: string;
 var
-  FilePath: string;
+  InstallDir: string;
 begin
-  FilePath := ExpandConstant('{app}\installers\' + FileName);
-  if MsgBox('Do you want to install ' + Name + '?'#13#10 +
-            'IMPORTANT: This package is required for proper functionality of AutoPilot.',
-            mbConfirmation, MB_YESNO) = IDYES then
+  InstallDir := '';
+  if not RegQueryStringValue(HKLM64,
+    'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO',
+    'InstallLocation', InstallDir) then
+    RegQueryStringValue(HKLM32,
+      'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO',
+      'InstallLocation', InstallDir);
+
+  if InstallDir = '' then
+    InstallDir := 'C:\Program Files\PawnIO';
+  Result := RemoveBackslash(InstallDir);
+end;
+
+function IsPawnIOInstalled: Boolean;
+var
+  PawnIODir: string;
+begin
+  PawnIODir := GetPawnIODir;
+  Result :=
+    (RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\PawnIO') or
+     RegKeyExists(HKLM32, 'SYSTEM\CurrentControlSet\Services\PawnIO')) and
+    FileExists(PawnIODir + '\PawnIOLib.dll') and
+    FileExists(PawnIODir + '\PawnIOUtil.exe');
+end;
+
+function HasPawnIORemnants: Boolean;
+begin
+  Result :=
+    RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\PawnIO') or
+    RegKeyExists(HKLM32, 'SYSTEM\CurrentControlSet\Services\PawnIO') or
+    RegKeyExists(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO') or
+    RegKeyExists(HKLM32, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO') or
+    DirExists(GetPawnIODir);
+end;
+
+procedure InstallPawnIOSilent;
+var
+  InstallerPath: string;
+  Code: Integer;
+  InstallSucceeded: Boolean;
+begin
+  if IsPawnIOInstalled then
   begin
-    WizardForm.StatusLabel.Caption := 'Installing ' + Name + '...';
-    WizardForm.ProgressGauge.Position := 0;
-    WizardForm.Repaint;
+    AddLog('PawnIO is already installed. Skipping installation.');
+    Exit;
+  end;
 
-    if Exec(FilePath, Params, '', SW_SHOW, ewWaitUntilTerminated, ResultCode) then
-    begin
-      if ResultCode <> 0 then
-        MsgBox(Name + ' installer returned error code: ' + IntToStr(ResultCode), mbError, MB_OK);
-    end
-    else
-      MsgBox('Failed to start ' + Name + ' installer.', mbError, MB_OK);
+  ExtractTemporaryFile('PawnIO_setup.exe');
+  InstallerPath := ExpandConstant('{tmp}\PawnIO_setup.exe');
+  if not FileExists(InstallerPath) then
+  begin
+    AddLog('PawnIO installer package is missing.');
+    Exit;
+  end;
 
-    WizardForm.StatusLabel.Caption := Name + ' installed.';
-    WizardForm.ProgressGauge.Position := 100;
-    WizardForm.Repaint;
-  end
+  if HasPawnIORemnants then
+  begin
+    AddLog('Removing incomplete PawnIO installation...');
+    Exec(InstallerPath, '-uninstall -silent', ExtractFilePath(InstallerPath), SW_HIDE, ewWaitUntilTerminated, Code);
+  end;
+
+  AddLog('Installing PawnIO...');
+  InstallSucceeded := Exec(InstallerPath, '-install -silent', ExtractFilePath(InstallerPath), SW_HIDE, ewWaitUntilTerminated, Code);
+  if InstallSucceeded and ((Code = 0) or (Code = 3010)) then
+    AddLog('PawnIO is now installed.')
+  else if IsPawnIOInstalled then
+    AddLog('PawnIO is installed.')
   else
+    AddLog('PawnIO is not installed.');
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  PawnIOSetupPath: string;
+  Code: Integer;
+begin
+  if CurUninstallStep = usUninstall then
   begin
-    MsgBox('WARNING: If you skip installing ' + Name + ', AutoPilot may not work properly!',
-           mbInformation, MB_OK);
+    PawnIOSetupPath := ExpandConstant('{app}\PawnIO_setup.exe');
+    if FileExists(PawnIOSetupPath) then
+      Exec(PawnIOSetupPath, '-uninstall -silent', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
   end;
 end;
 
@@ -206,10 +393,11 @@ begin
   if CurStep = ssInstall then
 begin
   { --- CLOSE RUNNING AUTOPILOT COMPONENTS --- }
+  AddLog('Preparing installation...');
   CloseRunningAutoPilotProcesses();
 
   InstallPath := WizardForm.DirEdit.Text;
-  IsFirstInstall := not DirExists(InstallPath);
+  AddLog('Installing AutoPilot to: ' + InstallPath);
 end;
 
   if CurStep = ssPostInstall then
@@ -217,8 +405,8 @@ end;
     WizardForm.StatusLabel.Caption := 'Finalizing installation...';
     WizardForm.Repaint;
 
-    { --- INSTALL PACKAGES WITH CONFIRMATION --- }
-    InstallExeLocal('PawnIO', 'PawnIO_setup.exe', '');
+    { Install PawnIO silently, without prompts or PawnIO-specific messages. }
+    InstallPawnIOSilent();
 
     { --- CLEAN UP INSTALLER FILES --- }
     WizardForm.StatusLabel.Caption := 'Cleaning up installer files...';
@@ -240,7 +428,6 @@ end;
     { --- ORIGINAL COMPLETION MESSAGE --- }
     MsgBox(
       'Installation completed!'#13#10 +
-      'IMPORTANT: If you skipped installing any dependency, AutoPilot may not work properly.'#13#10 +
       'The installer files have been removed.',
       mbInformation, MB_OK
     );

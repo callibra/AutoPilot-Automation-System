@@ -1,0 +1,60 @@
+--- Docker ---
+
+Docker Setup Change Drive
+
+Docker Setup Change Drive
+
+C:\Windows\system32>cd C:\Users\ASUS\Downloads
+
+Old - C:\Users\ASUS\Downloads>start /w "" "Docker Desktop Installer.exe" install -accept-license --installation-dir="F:\Miner\Docker" --wsl-default-data-root="F:\Miner\Docker\wsl" --windows-containers-default-data-root="F:\\Miner\Docker"
+
+New - C:\Users\ASUS\Downloads>start /w "" "Docker Desktop Installer.exe" install --accept-license --installation-dir="D:\Miner\Docker" --wsl-default-data-root="D:\Miner\DockerData\wsl"
+
+
+
+--- Pi Node Change Data Drive ---
+
+Move-Item "C:\Users\ASUS\AppData\Roaming\Pi Network" "F:\Miner\Pi Network"
+
+cmd /c mklink /J "C:\Users\ASUS\AppData\Roaming\Pi Network" "F:\Miner\Pi Network"
+
+New-Item -ItemType Junction -Path "C:\Users\ASUS\AppData\Roaming\Pi Network" -Target "F:\Miner\Pi Network"
+
+https://medium.com/@zhangkd5/pi-node-using-too-much-storage-what-should-you-do-b17a93df4af1 - WebSite
+
+
+
+--- Settings PowerShell ---
+
+PowerShell schortcut create
+
+Направи десктоп shortcut:
+
+Десен клик → New → Shortcut
+
+Во полето за патека залепи:
+
+powershell.exe -ExecutionPolicy Bypass -File "F:\Miner\security.ps1"
+
+
+Замени ја патеката според твојата локација.
+
+$oldPath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+$newPaths = "C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32"
+$newPath = "$oldPath;$newPaths"
+[System.Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
+
+
+Za .vbs file hide Start PowerShell:
+- wscript.exe
+- "C:\Scripts\StartBot.vbs"
+
+
+--- PowerShell PID Scanner ---
+
+Get-CimInstance Win32_Process | Where-Object { $_.Name -like "powershell*.exe" } | Select-Object ProcessId, CommandLine
+
+
+
+
+
