@@ -27,14 +27,11 @@ BeveledLabel=AutoPilot Automation System
 ; Main application files – exclude runtime data folders
 Source: "AutoPilot\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; Excludes: Autopilot_Data\*,Data\*,Camera\*,JSON\*
 
-; JSON folder – copy only if JSON folder не постои (fresh install)
+; JSON folder – copy only if JSON folder (fresh install)
 Source: "AutoPilot\JSON\*"; DestDir: "{app}\JSON"; Flags: recursesubdirs ignoreversion onlyifdoesntexist
 
 ; Embed PawnIO setup for silent installation during AutoPilot setup.
 Source: "AutoPilot\installers\PawnIO_setup.exe"; DestName: "PawnIO_setup.exe"; Flags: dontcopy
-
-; Keep a copy with AutoPilot so the same PawnIO package can silently uninstall it.
-Source: "AutoPilot\installers\PawnIO_setup.exe"; DestDir: "{app}"; DestName: "PawnIO_setup.exe"; Flags: ignoreversion
 
 ; Embed the setup-page logo.
 Source: "AutoPilot\media\autopilot.bmp"; Flags: dontcopy
@@ -60,7 +57,6 @@ RunOnceId: "DeleteAppVerifierLogs"
 [Code]
 var
   ResultCode: Integer;
-  SetupFinished: Boolean;
   LogMemo: TNewMemo;
   DetailsButton: TNewButton;
   DetailsVisible: Boolean;
@@ -114,9 +110,9 @@ end;
 procedure CloseRunningAutoPilotProcesses;
 var
   ResultCode: Integer;
+  I: Integer;
 begin
   { --- CLOSE AUTOPILOT APPLICATIONS --- }
-  Exec('taskkill', '/IM AutoPilot.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM CommandsEditor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM ScriptsEditor.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill', '/IM FileStorage.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
@@ -151,6 +147,14 @@ begin
     '$_.CommandLine -like ''*SystemMonitorWorker.ps1*''} ' +
     '| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  { Stop AutoPilot last so the updater or another AutoPilot component cannot
+    relaunch it while the other components are being closed. }
+  for I := 1 to 6 do
+  begin
+    Exec('taskkill', '/IM AutoPilot.exe /T /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Sleep(500);
+  end;
 end;
 
 { ===================================================
@@ -216,20 +220,11 @@ end;
 
 procedure CurPageChanged(CurPageID: Integer);
 begin
-  if CurPageID = wpFinished then
-    SetupFinished := True;
-
   if CurPageID = wpInstalling then
   begin
     WizardForm.PageDescriptionLabel.Visible := True;
     WizardForm.StatusLabel.Caption := 'Output folder: ' + WizardForm.DirEdit.Text;
   end;
-end;
-
-procedure DeinitializeSetup();
-begin
-  if SetupFinished then
-    DeleteFile(ExpandConstant('{app}\PawnIO_setup.exe'));
 end;
 
 { ===================================================
@@ -312,14 +307,18 @@ end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  PawnIOSetupPath: string;
+  PawnIOUninstallExe: string;
   Code: Integer;
 begin
-  if CurUninstallStep = usUninstall then
+  { After AutoPilot has been uninstalled: run PawnIO's own silent uninstaller. }
+  if CurUninstallStep = usPostUninstall then
   begin
-    PawnIOSetupPath := ExpandConstant('{app}\PawnIO_setup.exe');
-    if FileExists(PawnIOSetupPath) then
-      Exec(PawnIOSetupPath, '-uninstall -silent', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
+    PawnIOUninstallExe := GetPawnIODir + '\uninstall.exe';
+    if FileExists(PawnIOUninstallExe) then
+      Exec(PawnIOUninstallExe, '-uninstall -silent', GetPawnIODir, SW_HIDE, ewWaitUntilTerminated, Code);
+
+    if DirExists(GetPawnIODir) then
+      DelTree(GetPawnIODir, True, True, True);
   end;
 end;
 
